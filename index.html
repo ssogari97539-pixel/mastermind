@@ -500,7 +500,7 @@
 </div>
 
 <script>
-const GAME_BUILD = '2ee4440cdc'; // 빌드 식별값(자동 생성)
+const GAME_BUILD = 'a466c1a470'; // 빌드 식별값(자동 생성)
 // ================= 기본 설정 =================
 // 판 크기는 스테이지마다 다를 수 있음 - loadStage가 setBoardSize로 바꿈(모든 사용처가 함수 안이라 바뀐 값이 바로 반영됨)
 let COLS = 20;
@@ -1113,7 +1113,7 @@ const SYSTEMS = {};
 function registerSystem(name, fn) { (SYSTEMS[name] = SYSTEMS[name] || []).push(fn); }
 function runSystems(name, ...args) { for (const fn of (SYSTEMS[name] || [])) fn(...args); }
 
-const STAT_MODS = { atk: [], def: [], dmgIncrease: [], critChance: [], critMult: [], turnStartAp: [], dmgTaken: [], braceMult: [] };
+const STAT_MODS = { atk: [], def: [], dmgIncrease: [], critChance: [], critMult: [], turnStartAp: [], dmgTaken: [], braceMult: [], healTaken: [] }; // healTaken: 받는 회복량 배율(곱, healUnit)
 function registerModifier(kind, fn) { STAT_MODS[kind].push(fn); }
 function sumMods(kind, ...args) { let s = 0; for (const fn of STAT_MODS[kind]) s += fn(...args) || 0; return s; }
 function productMods(kind, ...args) { let p = 1; for (const fn of STAT_MODS[kind]) p *= fn(...args); return p; }
@@ -1244,6 +1244,16 @@ function applyFreeze(target, source, vfxDelay = 0) {
   ensureVfxLoop(); // 빙결 파티클 표시 시작
 }
 // 스킬 피해 공통 처리 (치명타/회피/엄폐 없음, 방어력 차감 + 최소 10% 보장)
+// ---- 체력 회복(공용): 모든 회복은 이 함수로(받는 회복량 보정 healTaken - 메딕 효율적 치료 등이 적용되게) ----
+// base = 원래 회복량(이미 반올림된 값). amount = 보정 후 회복량(최대체력 넘김 포함, 표시용), real = 실제로 오른 체력
+function healUnit(target, base) {
+  if (!target || target.dead || !(base > 0)) return { real: 0, amount: 0 };
+  const amount = Math.round(base * productMods('healTaken', target));
+  const real = Math.max(0, Math.min(amount, target.maxHp - target.hp));
+  target.hp += real;
+  return { real, amount };
+}
+
 function dealSkillDamage(target, srcAtk, mult, srcDmgInc, attacker, opts) {
   opts = opts || {};
   const dmg = applyDefenseWithFloor(srcAtk * mult * srcDmgInc * effectiveDmgTakenRate(target), target);
@@ -2151,9 +2161,8 @@ characters.push(
 // ---- 블레이드 패시브(흡혈): 입힌 피해량의 70% 회복 (방어막 흡수분/과잉 피해 포함) ----
 function applyLifesteal(attacker, dmg) {
   if (dmg <= 0 || attacker.dead) return;
-  const real = Math.min(Math.round(dmg * 0.7), attacker.maxHp - attacker.hp);
+  const { real } = healUnit(attacker, Math.round(dmg * 0.7));
   if (real <= 0) return;
-  attacker.hp += real;
   spawnFloatText(attacker, '+' + real, '#7fffa0');
   addLog(`블레이드 패시브(흡혈): 체력 +${real}`, 'logInfo');
 }
@@ -2577,9 +2586,7 @@ const RIOBE_WISH_LABELS = ['최대체력의 50% 회복', '이번 턴 공격력 +
 // 소망의 선율 실행: choice = 0 체력 50% 회복 / 1 이번 턴 공격력 +50% / 2 대상의 모든 스킬 쿨타임 -3
 function riobeSkill2(caster, target, choice) {
   if (choice === 0) {
-    const heal = Math.round(target.maxHp * 0.5);
-    const real = Math.min(heal, target.maxHp - target.hp);
-    target.hp += real;
+    const { real } = healUnit(target, Math.round(target.maxHp * 0.5));
     spawnFloatText(target, '+' + real, '#7fffa0');
     noteRise(target, '#5fe08a', 10, '#b8ffd0'); healGlow(target, 8); // 체력 회복: 녹빛 음표
     addLog(`${caster.name}: 소망의 선율 -> ${target.name} 체력 +${real}`, 'logSkill');
@@ -2621,8 +2628,7 @@ defineHooks('riobe', {
       healGlow(c, 9); // 치료 받는 아군에게 녹빛 기운이 번짐
       noteRise(c, '#5fe08a', 4, '#b8ffd0');
       if (heal > 0 && c.hp < c.maxHp) {
-        const real = Math.min(heal, c.maxHp - c.hp);
-        c.hp += real;
+        const { real } = healUnit(c, heal);
         addLog(`리오베 패시브(포근한 선율): ${c.name} 체력 +${real}`, 'logInfo');
         spawnFloatText(c, '+' + real, '#7fffa0');
       }
@@ -2646,8 +2652,8 @@ characters.push(
     dmgIncrease:1.0, dmgTakenRate:1.0, range:6, color:'#7fd4c1', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
     passives:[
-      { name:'구조팀', desc:'편성 시 긴급강하 1회 추가 획득',
-        infoText:`편성시 긴급 강하 1회 추가로 획득(긴급 강하- 일반적인 3×3 강하와는 다른 횟수 제한이 있는 강하. 전장의 한 캐릭터를 즉시 빼내고 그 자리에 다른 한 캐릭터를 배치함)` }
+      { name:'효율적 치료', desc:'메딕이 전장에 있는 동안, 전장에 있는 모든 아군이 받는 체력 회복량 +20% (배치구역 회복은 제외)',
+        infoText:`전장에 있는 모든 아군의 체력 회복 효과가 20% 증가합니다.` }
     ],
     skills: [
       {
@@ -2655,9 +2661,8 @@ characters.push(
         desc:'6칸 이내 아군 지정, 공격력의 150%만큼 회복',
         infoText:`6칸 이내 아군 1명을 지정하고 공격력의 150%만큼 회복시킴`,
         effect(caster, target) {
-          const heal = Math.round(effectiveAtk(caster) * 1.5);
           const hpBefore = target.hp;
-          target.hp = Math.min(target.maxHp, target.hp + heal); // 회복은 즉시 적용
+          const { amount: heal } = healUnit(target, Math.round(effectiveAtk(caster) * 1.5)); // 회복은 즉시 적용(받는 회복 보정 포함)
           const arrive = throwHealStick(caster, target);          // 녹색 막대기가 포물선을 그리며 날아감
           presentHeal(target, heal, arrive, hpBefore);            // 닿는 순간: 체력바가 차오르고 +수치와 녹색 십자가
           enqueueFx(() => {}, arrive);                            // 막대기가 닿기 전엔 다음 행동/적 턴이 끼어들지 않게
@@ -2673,8 +2678,8 @@ characters.push(
           const reserveAllies = characters.filter(c => c.side === caster.side && c.inReserve && !c.dead && !c.notInBattle);
           crossAroundSprite(caster, 16); // 메딕 본인 SD 둘레에서 녹색 십자가가 떠오름 (회복 대상은 전장 밖 배치구역)
           for (const a of reserveAllies) {
-            a.hp = Math.min(a.maxHp, a.hp + heal);
-            spawnFloatText(a, '+' + heal, '#7fffa0');
+            const { amount } = healUnit(a, heal);
+            spawnFloatText(a, '+' + amount, '#7fffa0');
           }
           addLog(`${caster.name}: 후방 케어 - 배치구역 아군 ${reserveAllies.length}명 체력 +${heal}`, 'logSkill');
         }
@@ -2684,11 +2689,12 @@ characters.push(
 
 defineHooks('medic', {
   basicAttackVfx(c, target, info) { return playBulletAttack(c, target, info && info.delay); }, // 기본공격: 총탄
-  onFormation() { // 구조팀: 편성 시 긴급 강하 1회 추가
-    emergencyDropsLeft += 1;
-    addLog('메딕 패시브(구조팀): 편성에 포함되어 긴급강하 +1 (총 ' + emergencyDropsLeft + '회)', 'logSkill');
-  },
 });
+
+// 효율적 치료(v11.76, 구조팀 대체): 같은 진영 메딕이 전장에 있으면 전장에 있는 아군(메딕 자신·소환물 포함)이 받는 회복 x1.2.
+// 배치구역(대기 회복, 후방 케어)은 대상 아님. 대전은 자기 진영 메딕만 자기 진영에 적용. 회복은 healUnit을 거쳐야 적용됨
+const onFieldUnit = u => !u.dead && !u.inReserve && !u.notInBattle;
+registerModifier('healTaken', t => (onFieldUnit(t) && characters.some(m => baseIdOf(m) === 'medic' && m.side === t.side && onFieldUnit(m))) ? 1.2 : 1);
 
 // ================= 시타 (전위) =================
 characters.push(
@@ -2800,8 +2806,7 @@ defineHooks('sita', {
 defineHooks('sita', {
   onAllyTurnEnd(c) { // 용의 핏줄: 턴이 끝날 때 최대 체력의 15% 회복
     if (c.hp >= c.maxHp) return;
-    const real = Math.min(Math.round(c.maxHp * 0.15), c.maxHp - c.hp);
-    c.hp += real;
+    const { real } = healUnit(c, Math.round(c.maxHp * 0.15));
     spawnFloatText(c, '+' + real, '#7fffa0');
     addLog(`시타 패시브(용의 핏줄): 턴 종료 - 체력 +${real}`, 'logInfo');
   },
@@ -4037,7 +4042,7 @@ Object.assign(ENEMY_TEMPLATES, {
     hooks: {
       aiTurnStart(c) {
         if (c.airborne) { princessLand(c); return 'end'; } // 처형 착지 후 턴 종료
-        if (c.gloryPending && !(c.shield > 0)) { c.gloryPending = false; addLog(`${c.name}: 방어막이 깨져 운명이 무산되었다`, 'logInfo'); }
+        if (c.gloryPending && !(c.shieldAtTurnStart > 0)) { c.gloryPending = false; addLog(`${c.name}: 방어막이 깨져 운명이 무산되었다`, 'logInfo'); } // 턴 시작 소멸 직전 값으로 판정(expireSideShields)
         if (!c.princessStarted) { c.princessStarted = true; princessEnterStealth(c); } // 작별의 바람: 첫 턴 시작 시 은신
       },
       beforeAiAttack(c) { princessBreakStealth(c, '공격'); },
@@ -4047,18 +4052,18 @@ Object.assign(ENEMY_TEMPLATES, {
       target: { huntMark: 10, kill: 2, damage: 1 },                         // 표식 대상 우선(사냥감 = 표식 대상)
       postAttackMove: { cover: 3, approach: -2 }, postAttackBonusSteps: 5,   // 추격자의 의지: 완전엄폐 우선, 아군에게서 먼 쪽
       skills: [ // start: 5 -> 6 -> 4 / afterMove: 2 -> 1 (기본 공격과 함께) / afterAttack: 3
-        { name: '끝나지 않을 영광', cooldown: 0, desc: '체력 50% 이하 최초 진입 후 1회: 방어막 +10000, 은신 해제, 턴 종료. 다음 턴 시작까지 방어막이 남아 있으면 피할 수 없던 운명',
+        { name: '끝나지 않을 영광', cooldown: 0, desc: '체력 50% 이하 최초 진입 후 1회: 방어막 +10000, 은신 해제, 턴 종료. 다음 턴 시작까지 방어막이 남아 있으면 피할 수 없던 운명(방어막은 다음 자기 턴 시작에 소멸)',
           cond: c => !c.gloryUsed && c.hp <= c.maxHp * 0.5,
           run: (c, done) => { c.gloryUsed = true; c.shield = (c.shield || 0) + 10000; princessBreakStealth(c, '끝나지 않을 영광'); c.gloryPending = true; spawnFloatText(c, '방어막 +10000', '#9fd3ff'); done(); }, after: 'end' },
         { name: '피할 수 없던 운명', cooldown: 0, desc: '전장의 모든 행에 오른쪽부터 얼음 파편, 부딪히는 첫 아군에게 공격력 200%. 첫 사용으로 2명 이상 사망하면 1번 더. 이후 턴 종료',
-          cond: c => c.gloryPending && c.shield > 0, run: princessSkill6, after: 'end' },
+          cond: c => c.gloryPending && c.shieldAtTurnStart > 0, run: princessSkill6, after: 'end' }, // 방어막은 이 턴 시작에 이미 소멸, 남아 있었는지는 기록값으로
         { name: '처형', cooldown: 8, desc: '도약해 사라지고 턴 종료. 다음 턴 시작에 표식 대상 근처(2칸)에 착지해 공격력 300% + 부상 3턴, 대상 맨해튼 3칸 안 아군에게 절반 피해 + 부상 2턴. 표식 대상이 없으면 처음 자리에 착지',
           cond: c => !c.stealthed && !!huntMarkedUnit(), run: princessSkill4, after: 'end' },
         { name: '살점 뜯기', cooldown: 3, phase: 'afterMove', desc: '상하좌우 한 방향 3×3에 공격력 110% + 부상 1턴',
           cond: c => { const b = princessBestBlock(c); return !!b && b.hit.length >= 2; }, run: princessSkill2 },
         { name: '복수를 위하여', cooldown: 4, phase: 'afterMove', desc: '사거리 4칸 적 1명에게 공격력 75% × 3회 원거리 공격, 치명타마다 부상 1턴',
           cond: c => princessFlankTargets(c).length > 0, run: princessSkill1 },
-        { name: '사라지는 바람', cooldown: 2, phase: 'afterAttack', desc: '기본 공격 후: 자신의 디버프 해제, 은신, 무작위 아군에게서 4칸 떨어진 곳으로 순간이동 후 턴 종료',
+        { name: '사라지는 바람', cooldown: 3, phase: 'afterAttack', desc: '기본 공격 후: 자신의 디버프 해제, 은신, 무작위 아군에게서 4칸 떨어진 곳으로 순간이동 후 턴 종료',
           cond: c => !c.stealthed && !huntMarkedUnit() && !!princessTeleportSpot(), run: princessSkill3 },
       ] } },
 });
@@ -5612,6 +5617,17 @@ function endTurn() {
   if (braced.length) setTimeout(afterShields, ICON_POP_MS); else afterShields();
 }
 
+// 진영 방어막 소멸: 방어막은 주인 진영의 다음 턴 시작에 사라짐(길버트는 shieldCarryMax까지 이월).
+// 아군(및 대전 양 진영)은 startSideTurn에서, 싱글 적 진영은 beginEnemyPhase에서 이 함수로.
+// 지우기 직전 값은 shieldAtTurnStart에 기록(왕녀 '피할 수 없던 운명': 다음 자기 턴 시작에 방어막이 남아 있었는가)
+function expireSideShields(side) {
+  for (const c of characters) {
+    if (c.side !== side || c.dead) continue;
+    c.shieldAtTurnStart = c.shield || 0;
+    c.shield = Math.min(c.shield || 0, c.shieldCarryMax || 0);
+  }
+}
+
 function beginEnemyPhase() {
   // 턴 종료 연출이 모두 끝난 뒤에 비로소 '적 턴 진행 중' 표시(버튼 문구 + 화면 테두리 붉은 아우라)
   const endTurnBtn = document.getElementById('endTurnBtn');
@@ -5625,6 +5641,7 @@ function beginEnemyPhase() {
     if (c.side !== 'enemy' || c.dead) continue;
     if (c.zoneControlArmed) c.zoneControlArmed = false;
   }
+  expireSideShields('enemy'); // 적 진영 방어막도 자기 턴 시작에 소멸(아군과 같은 규칙 - 이전엔 싱글 적 방어막이 영구 유지되던 문제)
   enemyDamageDealtThisTurn = {}; // 글로리아 패시브(복수자의 한) 추적용 - 이번 적 턴 시작하며 초기화
 
   if (objectiveDefendBreached()) { addLog('수비 실패: 적이 수비 지점을 차지했습니다', 'logMiss'); endBattle('defeat'); return; }
@@ -5709,9 +5726,8 @@ function startSideTurn(side) {
       if (c.notInBattle) continue; // 이번 전투에 아예 참여하지 않는 캐릭터는 대상 아님
       // 배치구역 대기 중: 턴마다 최대체력 10% 회복
       if (c.hp < c.maxHp) {
-        const heal = Math.round(c.maxHp * 0.10);
-        c.hp = Math.min(c.maxHp, c.hp + heal);
-        addLog(`${c.name} (배치구역): 체력 +${heal}`, 'logInfo');
+        const { amount } = healUnit(c, Math.round(c.maxHp * 0.10));
+        addLog(`${c.name} (배치구역): 체력 +${amount}`, 'logInfo');
       }
       if (c.redeployLockTurns > 0) c.redeployLockTurns -= 1; // 퇴각 후 재배치 잠금 카운트다운
       continue;

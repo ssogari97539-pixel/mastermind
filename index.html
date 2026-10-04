@@ -68,10 +68,42 @@
   .stageRow { display: flex; align-items: center; margin: 8px; }
   .stageRow .stageCard { margin: 0; }
   /* 멀티플레이: 대기실 선택지, 핫시트 가림막, 턴 타이머 */
-  .mpLobbyLabel { color: #9fd3ff; font-size: 13px; margin: 10px 0 6px; }
   .mpChoiceRow { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
   .mpChoice { padding: 8px 14px; border-radius: 6px; border: 1px solid #555; background: #26262c; color: #ccc; cursor: pointer; font-size: 13px; }
   .mpChoice.selected { border-color: #9fd3ff; background: #20304a; color: #fff; }
+  /* 대기실(v11.74): 왼쪽 P1 / 가운데 모드·맵·미리보기 / 오른쪽 P2. 좁은 화면은 세로로 쌓음 */
+  #mpRoomCodeBox { font-size: 15px; color: #e0c23c; margin-bottom: 12px; }
+  .mpLobbyLayout { display: flex; gap: 18px; align-items: stretch; justify-content: center; max-width: 920px; width: calc(100% - 32px); }
+  .mpPlayerCard { flex: 0 0 170px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 18px 12px; border-radius: 8px; background: #1c1c22; border: 1px solid #333; }
+  .mpP1 { border-color: #3c5ea8; box-shadow: inset 0 3px 0 #5aa0ff; }
+  .mpP2 { border-color: #8a3c3c; box-shadow: inset 0 3px 0 #ff6b6b; }
+  .mpPlayerTag { font-size: 22px; font-weight: bold; }
+  .mpP1 .mpPlayerTag { color: #7fb6ff; }
+  .mpP2 .mpPlayerTag { color: #ff8f8f; }
+  .mpPlayerName { font-size: 16px; color: #fff; word-break: break-all; text-align: center; min-height: 20px; }
+  .mpPlayerRole { font-size: 12px; color: #999; }
+  #mpP2NameInput { padding: 6px 10px; font-size: 14px; border-radius: 5px; border: 1px solid #555; background: #15151a; color: #eee; width: 130px; text-align: center; }
+  .mpLobbyCenter { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 14px; border-radius: 8px; background: #1a1a20; border: 1px solid #333; }
+  .mpModeBanner { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 16px 10px; border-radius: 6px; background: #20263a; border: 1px solid #3c5ea8; }
+  .mpModeName { font-size: 24px; font-weight: bold; color: #fff; text-align: center; flex: 1; }
+  .mpModeArrow { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #3c5ea8; background: #2c3f7a; color: #fff; font-size: 16px; cursor: pointer; }
+  .mpModeArrow:disabled { background: #2a2a30; border-color: #3a3a40; color: #555; cursor: default; }
+  .mpChoice:disabled { cursor: default; }
+  .mpChoice:not(.selected):disabled { opacity: 0.6; }
+  .mpMapPreview { width: 100%; max-width: 360px; height: auto; aspect-ratio: 25 / 9; border-radius: 4px; border: 1px solid #333; background: #202026; image-rendering: pixelated; }
+  .mpPreviewLegend { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; font-size: 11px; color: #999; }
+  .mpPreviewLegend span::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: -1px; border-radius: 2px; }
+  .mpPreviewLegend .lgP1::before { background: #3f6fc0; }
+  .mpPreviewLegend .lgP2::before { background: #b84a4a; }
+  .mpPreviewLegend .lgFull::before { background: #77778a; }
+  .mpPreviewLegend .lgHalf::before { background: #9a7444; }
+  @media (max-width: 760px) {
+    .mpLobbyLayout { flex-direction: column; align-items: stretch; }
+    .mpPlayerCard { flex: 0 0 auto; flex-direction: row; padding: 10px 14px; }
+    .mpLobbyCenter { order: 0; }
+    .mpP2 { order: 1; }
+    #screenMpLobby { justify-content: flex-start; padding: 60px 0 24px; overflow-y: auto; }
+  }
   #pvpCoverOverlay { position: fixed; inset: 0; z-index: 2450; background: #101014; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
   #pvpCoverText { font-size: 28px; font-weight: bold; color: #fff; }
   #pvpCoverSub { font-size: 14px; color: #aaa; }
@@ -337,13 +369,30 @@
 <div id="screenMpLobby" class="menuScreen" style="display:none;">
   <button class="backBtn" id="btnMpLobbyBack">← 뒤로</button>
   <h2 id="mpLobbyTitle">대기실</h2>
-  <div id="mpRoomCodeBox" style="display:none; font-size:15px; color:#e0c23c; margin-bottom:6px;"></div>
-  <div id="mpPlayersBox" style="display:none; font-size:14px; color:#cfe3ff; margin-bottom:6px; line-height:1.6;"></div>
-  <div class="mpLobbyLabel">게임 모드</div>
-  <div id="mpModeList" class="mpChoiceRow"></div>
-  <div class="mpLobbyLabel">맵</div>
-  <div id="mpMapList" class="mpChoiceRow"></div>
-  <div id="mpP2Row" class="mpLobbyLabel" style="margin-top:14px;">2P 닉네임 <input id="mpP2NameInput" maxlength="12" value="2P" style="padding:6px 10px; font-size:14px; border-radius:5px; border:1px solid #555; background:#1c1c22; color:#eee; width:140px; text-align:center; margin-left:8px;"></div>
+  <div id="mpRoomCodeBox" style="display:none;"></div>
+  <div class="mpLobbyLayout">
+    <div class="mpPlayerCard mpP1">
+      <div class="mpPlayerTag">P1</div>
+      <div id="mpP1Name" class="mpPlayerName"></div>
+      <div id="mpP1Role" class="mpPlayerRole"></div>
+    </div>
+    <div class="mpLobbyCenter">
+      <div class="mpModeBanner">
+        <button id="btnMpModePrev" class="mpModeArrow" aria-label="이전 모드">◀</button>
+        <div id="mpModeName" class="mpModeName"></div>
+        <button id="btnMpModeNext" class="mpModeArrow" aria-label="다음 모드">▶</button>
+      </div>
+      <div id="mpMapList" class="mpChoiceRow"></div>
+      <canvas id="mpMapPreview" class="mpMapPreview" width="300" height="108" aria-label="맵 미리보기"></canvas>
+      <div class="mpPreviewLegend"><span class="lgP1">P1 시작</span><span class="lgP2">P2 시작</span><span class="lgFull">완전 엄폐</span><span class="lgHalf">반엄폐</span></div>
+    </div>
+    <div class="mpPlayerCard mpP2">
+      <div class="mpPlayerTag">P2</div>
+      <div id="mpP2Name" class="mpPlayerName"></div>
+      <div id="mpP2Role" class="mpPlayerRole"></div>
+      <div id="mpP2Row" style="display:none;"><input id="mpP2NameInput" maxlength="12" value="2P" aria-label="2P 닉네임"></div>
+    </div>
+  </div>
   <button class="menuBtn" id="btnMpLobbyStart" style="margin-top:18px;">시작</button>
   <div id="mpLobbyNotice" style="display:none; color:#e0c23c; font-size:13px; margin-top:8px;"></div>
 </div>
@@ -451,7 +500,7 @@
 </div>
 
 <script>
-const GAME_BUILD = '8e3492c2ce'; // 빌드 식별값(자동 생성)
+const GAME_BUILD = '2ee4440cdc'; // 빌드 식별값(자동 생성)
 // ================= 기본 설정 =================
 // 판 크기는 스테이지마다 다를 수 있음 - loadStage가 setBoardSize로 바꿈(모든 사용처가 함수 안이라 바뀐 값이 바로 반영됨)
 let COLS = 20;
@@ -667,6 +716,34 @@ const STAGE_CONFIGS = {
       '?  .  .  .  .  !  !  .  !  .  !  .  .  .  !  .  !  .  !  !  .  .  .  .  ?',
       '!  ?  .  .  .  !  !  .  ?  .  .  .  .  .  .  .  ?  .  !  !  .  .  .  ?  !',
       '!  !  ?  .  ?  !  !  .  .  .  .  .  .  .  .  .  .  .  !  !  ?  .  ?  !  !',
+    ],
+  },
+  // 대전 2번 맵 '외나무다리에서' (25x9, 사용자 제공, 좌우 대칭)
+  'pvp-2': {
+    map: [
+      '?  ?  !  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  !  ?  ?',
+      '?  ?  ?  !  .  .  .  !  .  .  ?  .  .  .  ?  .  .  !  .  .  .  !  ?  ?  ?',
+      '!  ?  ?  ?  !  .  .  !  .  .  ?  .  .  .  ?  .  .  !  .  .  !  ?  ?  ?  !',
+      '!  !  @  @  @  .  .  .  .  .  .  .  !  .  .  .  .  .  .  .  #  #  #  !  !',
+      '!  !  @  @  @  .  .  .  .  .  .  .  !  .  .  .  .  .  .  .  #  #  #  !  !',
+      '!  !  @  @  @  .  .  .  .  .  .  .  !  .  .  .  .  .  .  .  #  #  #  !  !',
+      '!  ?  ?  ?  !  .  .  !  .  .  ?  .  .  .  ?  .  .  !  .  .  !  ?  ?  ?  !',
+      '?  ?  ?  !  .  .  .  !  .  .  ?  .  .  .  ?  .  .  !  .  .  .  !  ?  ?  ?',
+      '?  ?  !  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  !  ?  ?',
+    ],
+  },
+  // 대전 3번 맵 '내려올 곳은 없다' (25x9, 사용자 제공, 좌우 대칭)
+  'pvp-3': {
+    map: [
+      '!  !  !  !  !  ?  .  .  .  .  .  .  .  .  .  .  .  .  .  ?  !  !  !  !  !',
+      '!  !  !  !  !  ?  .  .  ?  .  .  ?  .  ?  .  .  ?  .  .  ?  !  !  !  !  !',
+      '?  ?  ?  ?  ?  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  ?  ?  ?  ?  ?',
+      '?  @  @  @  .  .  .  ?  .  .  .  .  !  .  .  .  .  ?  .  .  .  #  #  #  ?',
+      '?  @  @  @  .  .  .  .  .  !  .  .  .  .  .  !  .  .  .  .  .  #  #  #  ?',
+      '?  @  @  @  .  .  .  ?  .  .  .  .  !  .  .  .  .  ?  .  .  .  #  #  #  ?',
+      '?  ?  ?  ?  ?  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  ?  ?  ?  ?  ?',
+      '!  !  !  !  !  ?  .  .  ?  .  .  ?  .  ?  .  .  ?  .  .  ?  !  !  !  !  !',
+      '!  !  !  !  !  ?  .  .  .  .  .  .  .  .  .  .  .  .  .  ?  !  !  !  !  !',
     ],
   },
   // 1-9 (25x9, 1지역 마지막: 보스 복수의 왕녀 단독) - BOSSES.md
@@ -8819,7 +8896,7 @@ function initPvpBattle({ squad1, squad2, firstSide, names, seed }) {
 
 // ================= 멀티플레이 메뉴 / 핫시트 진행 (MULTIPLAYER.md 1장) =================
 const PVP_MODES = [{ id: 'normal', name: '일반전 (1 vs 1)' }];          // 이후 드래프트 등 추가
-const PVP_MAPS = { normal: [{ id: 'pvp-1', name: '일반전 1번 맵' }] };
+const PVP_MAPS = { normal: [{ id: 'pvp-1', name: '중앙 경쟁' }, { id: 'pvp-2', name: '외나무다리에서' }, { id: 'pvp-3', name: '내려올 곳은 없다' }] };
 const PVP_TURN_MS = 3 * 60 * 1000; // 매 턴 3분
 let pvpSetup = null;        // { kind: 'hotseat', mode, map, names: { player, enemy }, squad1 }
 let pvpFormationStep = 0;   // 0: 대전 편성 아님 / 1: 1P 편성 중 / 2: 2P 편성 중 / 3: 온라인 편성 중(내 진영)
@@ -8855,35 +8932,45 @@ document.getElementById('btnMpLobbyBack').addEventListener('click', () => {
 });
 
 // 대기실: 모드 -> 맵 (방장이 선택, 핫시트는 그 자리에서). 온라인: 방 코드/참가자 표시, 참가자는 보기만
+// 대기실(v11.74): 왼쪽 P1 / 가운데 모드(◀ ▶)·맵 목록·맵 미리보기 / 오른쪽 P2. 모드·맵은 방장(핫시트는 본인)만 바꿈 - 참가자 화면은 방 정보로 같이 바뀜
 function renderMpLobby() {
   const online = pvpSetup.kind === 'online';
   const canEdit = !online || net.isHost;
-  const modeBox = document.getElementById('mpModeList'), mapBox = document.getElementById('mpMapList');
-  modeBox.innerHTML = ''; mapBox.innerHTML = '';
-  const codeBox = document.getElementById('mpRoomCodeBox'), playersBox = document.getElementById('mpPlayersBox');
+  const $ = id => document.getElementById(id);
+  const codeBox = $('mpRoomCodeBox');
   codeBox.style.display = online ? 'block' : 'none';
-  playersBox.style.display = online ? 'block' : 'none';
-  document.getElementById('mpP2Row').style.display = online ? 'none' : 'block';
-  const startBtn = document.getElementById('btnMpLobbyStart');
+  if (online) codeBox.textContent = `방 코드: ${net.roomCode}  (상대에게 알려 주세요)`;
+  // 플레이어 칸
+  $('mpP1Name').textContent = pvpSetup.names.player || '';
+  $('mpP1Role').textContent = online ? '방장' : '1P';
+  $('mpP2Row').style.display = online ? 'none' : 'block';
+  $('mpP2Name').style.display = online ? 'block' : 'none';
   if (online) {
-    codeBox.textContent = `방 코드: ${net.roomCode}  (상대에게 알려 주세요)`;
-    playersBox.innerHTML = `1P (방장): ${pvpSetup.names.player}<br>2P: ${pvpSetup.names.enemy || '<span style="color:#888;">참가 대기 중...</span>'}`;
+    $('mpP2Name').textContent = pvpSetup.names.enemy || '';
+    $('mpP2Role').textContent = pvpSetup.names.enemy ? '참가자' : '참가 대기 중...';
+  } else $('mpP2Role').textContent = '닉네임 입력';
+  // 시작 버튼 / 안내
+  const startBtn = $('btnMpLobbyStart'), n = $('mpLobbyNotice');
+  if (online) {
     startBtn.style.display = net.isHost ? 'inline-block' : 'none';
     startBtn.disabled = !pvpSetup.names.enemy;
-    const n = document.getElementById('mpLobbyNotice');
     if (!net.isHost) { n.textContent = '방장이 모드와 맵을 고르고 시작합니다'; n.style.display = 'block'; }
     else if (!pvpSetup.names.enemy) { n.textContent = '상대가 들어오면 시작할 수 있습니다'; n.style.display = 'block'; }
     else n.style.display = 'none';
-  } else { startBtn.style.display = 'inline-block'; startBtn.disabled = false; document.getElementById('mpLobbyNotice').style.display = 'none'; }
+  } else { startBtn.style.display = 'inline-block'; startBtn.disabled = false; n.style.display = 'none'; }
   const choose = (mode, map) => { if (online) netSetLobbyChoice(mode, map); else { pvpSetup.mode = mode; pvpSetup.map = map; renderMpLobby(); } };
-  for (const m of PVP_MODES) {
-    const b = document.createElement('button');
-    b.className = 'mpChoice' + (pvpSetup.mode === m.id ? ' selected' : '');
-    b.textContent = m.name;
-    b.disabled = !canEdit;
-    b.addEventListener('click', () => { if (canEdit) choose(m.id, PVP_MAPS[m.id][0].id); });
-    modeBox.appendChild(b);
+  // 모드(큰 표시 + ◀ ▶)
+  const mi = Math.max(0, PVP_MODES.findIndex(m => m.id === pvpSetup.mode));
+  $('mpModeName').textContent = PVP_MODES[mi].name;
+  const canCycle = canEdit && PVP_MODES.length > 1;
+  for (const [id, d] of [['btnMpModePrev', -1], ['btnMpModeNext', 1]]) {
+    const b = $(id);
+    b.disabled = !canCycle;
+    b.onclick = () => { if (!canCycle) return; const m = PVP_MODES[(mi + d + PVP_MODES.length) % PVP_MODES.length]; choose(m.id, PVP_MAPS[m.id][0].id); };
   }
+  // 맵 목록
+  const mapBox = $('mpMapList');
+  mapBox.innerHTML = '';
   for (const mp of (PVP_MAPS[pvpSetup.mode] || [])) {
     const b = document.createElement('button');
     b.className = 'mpChoice' + (pvpSetup.map === mp.id ? ' selected' : '');
@@ -8892,6 +8979,31 @@ function renderMpLobby() {
     b.addEventListener('click', () => { if (canEdit) choose(pvpSetup.mode, mp.id); });
     mapBox.appendChild(b);
   }
+  drawMapPreview($('mpMapPreview'), pvpSetup.map);
+}
+
+// 맵 미리보기: 지형만(엄폐물 + 양쪽 시작 구역). 맵 문자열을 게임과 같은 해석(parseStageMap)으로 읽어 별도 작은 캔버스에 그림
+// (loadStage는 게임 상태를 초기화하므로 쓰지 않음)
+const MAP_PREVIEW_COLORS = { floor: '#2a2a31', grid: '#202026', full: '#77778a', half: '#9a7444', deploy: '#3f6fc0', deploy2: '#b84a4a' };
+let mapPreviewLastDrawn = null; // (테스트 확인용) 마지막으로 그린 맵 id
+function drawMapPreview(canvasEl, mapId) {
+  const cfg = STAGE_CONFIGS[mapId];
+  if (!canvasEl || !cfg) return;
+  const g = canvasEl.getContext('2d');
+  if (!g) return;
+  const m = parseStageMap(cfg.map);
+  const cell = 12, W = m.cols * cell, H = m.rows * cell;
+  canvasEl.width = W; canvasEl.height = H;
+  const C = MAP_PREVIEW_COLORS;
+  g.fillStyle = C.floor; g.fillRect(0, 0, W, H);
+  const fill = (x, y, color, inset) => { g.fillStyle = color; g.fillRect(x * cell + inset, y * cell + inset, cell - inset * 2, cell - inset * 2); };
+  for (const z of m.deployZone) fill(z.x, z.y, C.deploy, 0);
+  for (const z of m.deployZone2) fill(z.x, z.y, C.deploy2, 0);
+  for (const o of m.obstacles) fill(o.x, o.y, o.type === 'full' ? C.full : C.half, o.type === 'full' ? 1 : 2.5); // 반엄폐는 조금 작게
+  g.strokeStyle = C.grid; g.lineWidth = 1;
+  for (let x = 1; x < m.cols; x++) { g.beginPath(); g.moveTo(x * cell + 0.5, 0); g.lineTo(x * cell + 0.5, H); g.stroke(); }
+  for (let y = 1; y < m.rows; y++) { g.beginPath(); g.moveTo(0, y * cell + 0.5); g.lineTo(W, y * cell + 0.5); g.stroke(); }
+  mapPreviewLastDrawn = mapId;
 }
 document.getElementById('btnMpLobbyStart').addEventListener('click', () => {
   if (pvpSetup.kind === 'online') { if (net.isHost && net.room && net.room.guest) net.roomRef.update({ status: 'formation' }); return; } // 온라인(N3에서 편성/전투 연결)

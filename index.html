@@ -109,6 +109,12 @@
   #pvpCoverSub { font-size: 14px; color: #aaa; }
   #pvpTimer { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 400; padding: 6px 14px; border-radius: 6px; background: #20263a; border: 1px solid #3c5ea8; color: #9fd3ff; font-size: 14px; font-weight: bold; }
   #pvpTimer.urgent { color: #ff6b6b; border-color: #a83c3c; }
+#mpRejoinOverlay { position: fixed; inset: 0; z-index: 2600; background: rgba(10,10,14,0.82); display: flex; align-items: center; justify-content: center; }
+.mpRejoinBox { background: #1c1c22; border: 1px solid #3c5ea8; border-radius: 8px; padding: 24px 28px; text-align: center; max-width: 360px; width: calc(100% - 40px); }
+#mpRejoinText { font-size: 18px; font-weight: bold; color: #fff; margin-bottom: 8px; }
+#mpRejoinSub { font-size: 13px; color: #aaa; line-height: 1.5; min-height: 18px; }
+.mpRejoinBtns { margin-top: 14px; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.mpRejoinBtns .menuBtn { margin: 0; display: inline-block; width: auto; min-width: 0; padding: 10px 22px; }
 #netStatusBar { position: fixed; top: 52px; left: 50%; transform: translateX(-50%); z-index: 400; padding: 6px 14px; border-radius: 6px; background: #3a2020; border: 1px solid #a83c3c; color: #ffb0b0; font-size: 13px; white-space: pre-line; text-align: center; }
   .stageCard.locked { border-color: #444; background: #232328; color: #666; cursor: not-allowed; }
   .stageEnemyBtn { margin-left: 8px; padding: 10px 12px; border-radius: 6px; border: 1px solid #a05a4a; background: #2e2020; color: #f0c0b0; cursor: pointer; font-size: 13px; }
@@ -366,6 +372,18 @@
   <div id="mpJoinNotice" style="display:none; color:#e0c23c; font-size:13px; margin-top:8px;"></div>
 </div>
 
+<!-- 재연결 확인 창: 메뉴 화면에서 뜨므로 gameContainer 밖(body 바로 아래) -->
+<div id="mpRejoinOverlay" style="display:none;" role="dialog" aria-labelledby="mpRejoinText">
+  <div class="mpRejoinBox">
+    <div id="mpRejoinText">진행 중인 온라인 대전이 있습니다</div>
+    <div id="mpRejoinSub"></div>
+    <div class="mpRejoinBtns">
+      <button class="menuBtn" id="btnMpRejoin">다시 참가</button>
+      <button class="menuBtn" id="btnMpRejoinQuit" style="background:#3a3a44; border-color:#4a4a56;">그만두기</button>
+    </div>
+  </div>
+</div>
+
 <div id="screenMpLobby" class="menuScreen" style="display:none;">
   <button class="backBtn" id="btnMpLobbyBack">← 뒤로</button>
   <h2 id="mpLobbyTitle">대기실</h2>
@@ -500,7 +518,7 @@
 </div>
 
 <script>
-const GAME_BUILD = 'a466c1a470'; // 빌드 식별값(자동 생성)
+const GAME_BUILD = 'f94a1392d7'; // 빌드 식별값(자동 생성)
 // ================= 기본 설정 =================
 // 판 크기는 스테이지마다 다를 수 있음 - loadStage가 setBoardSize로 바꿈(모든 사용처가 함수 안이라 바뀐 값이 바로 반영됨)
 let COLS = 20;
@@ -1002,6 +1020,8 @@ let emergencyHoverTile = null;  // 긴급강하 대상 선택 모드에서 마�
 let deployHoverTile = null;     // 배치 대상 선택 중 마우스가 가리키는 1칸 타일
 // ---- 효과 순차 실행 큐: 다단 타격/연속 발동 사이에 텀(HIT_INTERVAL_MS)을 둠 (스나이퍼 점사와 동일한 간격) ----
 const HIT_INTERVAL_MS = 100;
+// 빠른 재생 모드(재연결 복원 - MULTIPLAYER.md 2-4-1): 이동·효과 대기열·턴 종료 연출의 대기 시간만 0. 실행 순서는 그대로
+let replayFast = false;
 let fxQueue = [], fxRunning = false, fxIdleWaiters = [], fxGen = 0;
 // gap: 이 단계를 실행한 뒤 다음 단계까지 기다릴 시간(ms). 생략하면 HIT_INTERVAL_MS(다단 타격 기본 텀)
 function enqueueFx(fn, gap) {
@@ -1022,7 +1042,7 @@ function scheduleFxNext(gen, gap) {
     if (battleEnded) fxQueue = [];
     if (fxQueue.length) { const next = fxQueue.shift(); next.fn(); scheduleFxNext(gen, next.gap); }
     else { fxRunning = false; const waiters = fxIdleWaiters; fxIdleWaiters = []; waiters.forEach(cb => cb()); }
-  }, gap ?? HIT_INTERVAL_MS);
+  }, replayFast ? 0 : (gap ?? HIT_INTERVAL_MS));
 }
 function whenFxIdle(cb) { if (!fxRunning && fxQueue.length === 0) cb(); else fxIdleWaiters.push(cb); }
 function resetFx() { fxQueue = []; fxRunning = false; fxIdleWaiters = []; fxGen++; }
@@ -5612,9 +5632,9 @@ function endTurn() {
     const next = () => pvpMode ? beginPvpSideSwitch(side) : beginEnemyPhase(); // 대전: 상대 플레이어 턴 / 싱글: 적 AI 턴
     if (!armed.length) { next(); return; }
     for (const c of armed) spawnIconPop(c, 'swords');
-    setTimeout(() => { if (alive()) next(); }, ICON_POP_MS);
+    setTimeout(() => { if (alive()) next(); }, replayFast ? 0 : ICON_POP_MS);
   };
-  if (braced.length) setTimeout(afterShields, ICON_POP_MS); else afterShields();
+  if (braced.length) setTimeout(afterShields, replayFast ? 0 : ICON_POP_MS); else afterShields();
 }
 
 // 진영 방어막 소멸: 방어막은 주인 진영의 다음 턴 시작에 사라짐(길버트는 shieldCarryMax까지 이월).
@@ -5830,6 +5850,7 @@ function animateAlongPath(mover, path, { finalize } = {}) {
     if (last === null) last = now;
     let dt = Math.min(50, now - last); // 탭 전환 등으로 프레임이 크게 밀려도 한 번에 순간이동하지 않도록 상한
     last = now;
+    if (replayFast) { s = n; dt = 0; } // 빠른 재생: 한 번에 끝까지(칸 도착 처리는 아래에서 순서대로 전부)
     while (dt > 0 && s < n) { // 작은 조각으로 나눠 적분(속도가 계속 변하므로)
       const step = Math.min(4, dt);
       s = Math.min(n, s + speedAt(s / n) * step / BASE_TILE_MS);
@@ -5854,10 +5875,12 @@ function animateAlongPath(mover, path, { finalize } = {}) {
     mover.renderX = a.x + (b.x - a.x) * f;
     mover.renderY = a.y + (b.y - a.y) * f;
     draw();
-    requestAnimationFrame(frame);
+    nextMoveFrame(frame);
   }
-  requestAnimationFrame(frame);
+  nextMoveFrame(frame);
 }
+// 다음 이동 프레임 예약. 빠른 재생 중엔 setTimeout(탭이 숨겨져도 멈추지 않게)
+function nextMoveFrame(fn) { if (replayFast) setTimeout(() => fn(performance.now()), 0); else requestAnimationFrame(fn); }
 
 function moveAlongPath(character, path) {
   character.hasMovedThisTurn = true;
@@ -8620,7 +8643,7 @@ document.getElementById('battleResultBackBtn').addEventListener('click', () => {
   showMenuScreen('screenStageSelect');
 });
 
-document.getElementById('btnGameStart').addEventListener('click', () => showMenuScreen('screenModeSelect'));
+document.getElementById('btnGameStart').addEventListener('click', () => { showMenuScreen('screenModeSelect'); mpOfferRejoin(); }); // 진행 중인 온라인 대전이 있으면 재참가 확인(17_pvp)
 document.getElementById('btnSinglePlayer').addEventListener('click', () => showMenuScreen('screenSPMenu'));
 document.getElementById('btnSPMenuBack').addEventListener('click', () => showMenuScreen('screenModeSelect'));
 document.getElementById('btnCharInfoBack').addEventListener('click', () => showMenuScreen('screenModeSelect'));
@@ -8917,6 +8940,31 @@ const PVP_TURN_MS = 3 * 60 * 1000; // 매 턴 3분
 let pvpSetup = null;        // { kind: 'hotseat', mode, map, names: { player, enemy }, squad1 }
 let pvpFormationStep = 0;   // 0: 대전 편성 아님 / 1: 1P 편성 중 / 2: 2P 편성 중 / 3: 온라인 편성 중(내 진영)
 
+// ---- 재연결(MULTIPLAYER.md 2-4-1): 진행 중인 온라인 대전 기록이 있으면 "다시 참가 / 그만두기" ----
+// 그만두기 = 기록만 지움(2분 끊김 규칙으로 상대 승리). 기록이 없으면 Firebase도 불러오지 않음
+function mpOfferRejoin() {
+  const active = netLoadActive();
+  if (!active) return;
+  const ov = document.getElementById('mpRejoinOverlay'), sub = document.getElementById('mpRejoinSub');
+  const btnJoin = document.getElementById('btnMpRejoin'), btnQuit = document.getElementById('btnMpRejoinQuit');
+  document.getElementById('mpRejoinText').textContent = '진행 중인 온라인 대전이 있습니다';
+  sub.textContent = `방 코드 ${active.code} - 끊긴 지 2분이 지나면 상대 승리로 끝납니다`;
+  btnJoin.style.display = ''; btnJoin.disabled = false; btnJoin.textContent = '다시 참가'; btnQuit.textContent = '그만두기';
+  ov.style.display = 'flex';
+  btnQuit.onclick = () => { netClearActive(); ov.style.display = 'none'; };
+  btnJoin.onclick = async () => {
+    btnJoin.disabled = true; sub.textContent = '연결 중...';
+    try { await netRejoinBattle(active.code); ov.style.display = 'none'; }
+    catch (e) {
+      if (e.definite) netClearActive(); // 다시 해도 안 되는 경우만 기록 지움(연결 문제면 남겨 둠)
+      document.getElementById('mpRejoinText').textContent = '다시 참가할 수 없습니다';
+      sub.textContent = e.message || '연결에 실패했습니다';
+      btnJoin.style.display = e.definite ? 'none' : ''; btnJoin.disabled = false; btnJoin.textContent = '다시 시도';
+      btnQuit.textContent = e.definite ? '확인' : '그만두기';
+    }
+  };
+}
+
 function mpLoadNickname() { try { return localStorage.getItem('mm_nickname') || ''; } catch (e) { return ''; } }
 function mpSaveNickname(n) { try { localStorage.setItem('mm_nickname', n); } catch (e) {} }
 
@@ -9147,7 +9195,9 @@ let net = { ready: false, db: null, uid: null, roomCode: null, isHost: false, ro
   phase: 'lobby',                 // 'lobby' | 'formation' | 'battle' (MULTIPLAYER.md 2-3-4 status와 대응)
   battleRefs: [],                 // 전투 중 건 리스너 [{ref, ev, cb}] - 나갈 때 일괄 해제
   queue: [], pending: {}, nextSeq: 0, awaitTurnStart: false, pumpTimer: null, // 명령 재생 대기열(2-3-2)
-  turnNo: 0, turn: null, serverOffset: 0, desyncWarned: {}, oppDiscTimer: null, oppDiscAt: 0, status: {} };
+  turnNo: 0, turn: null, serverOffset: 0, desyncWarned: {}, oppDiscTimer: null, oppDiscAt: 0, status: {},
+  replaying: false, replayTarget: 0,          // 재연결 복원(명령 다시 재생) 중 - 부수 효과 금지(2-4-1)
+  unacked: {}, lastProgressAt: 0, lastFetchAt: 0, fetching: false, watchId: null }; // 전송 확인 대기 / 누락 복구(2-4-2)
 let NET_DISCONNECT_MS = 2 * 60 * 1000; // 상대가 끊긴 뒤 이 시간 안에 안 돌아오면 남은 쪽 승리(2-4)
 
 function netLoadScript(src) {
@@ -9164,8 +9214,14 @@ async function netConnect() {
     for (const f of ['firebase-app-compat.js', 'firebase-auth-compat.js', 'firebase-database-compat.js']) await netLoadScript(base + f);
   }
   if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(NET_FIREBASE_CONFIG);
-  const cred = await firebase.auth().signInAnonymously(); // 게스트 로그인(나중에 구글 계정 연동 가능)
-  net.uid = cred.user.uid;
+  // 게스트 로그인(나중에 구글 계정 연동 가능). 브라우저에 남은 로그인이 복원될 때까지 먼저 기다림 -
+  // 기다리지 않으면 새 익명 사용자가 만들어져 재연결(같은 사용자여야 방 구성원) 불가(MULTIPLAYER.md 2-4-1)
+  const auth = firebase.auth();
+  let unsub = null;
+  const restored = auth.onAuthStateChanged ? await new Promise(res => { unsub = auth.onAuthStateChanged(u => res(u)); }) : null;
+  if (typeof unsub === 'function') unsub();
+  const user = restored || (await auth.signInAnonymously()).user;
+  net.uid = user.uid;
   net.db = firebase.database();
   net.ready = true;
   return net;
@@ -9246,6 +9302,7 @@ function netEnterRoom(code, isHost) {
 function netLeaveRoom() {
   const ref = net.roomRef;
   netTeardownBattle();
+  netClearActive(); // 재연결 기록 지움(나가면 더 이상 돌아갈 대전 없음)
   if (!ref) return;
   ref.off();
   if (net.isHost) {
@@ -9312,7 +9369,31 @@ function netListen(path, ev, cb) { // 전투 중 리스너(나갈 때 일괄 해
   ref.on(ev, cb);
   net.battleRefs.push({ ref, ev, cb });
 }
-function netStartBattle(room) {
+// ---- 진행 중 대전 기록(재연결용, 같은 브라우저) ----
+const NET_ACTIVE_KEY = 'mm_activeBattle';
+function netSaveActive(code) { try { localStorage.setItem(NET_ACTIVE_KEY, JSON.stringify({ code })); } catch (e) {} }
+function netLoadActive() { try { const v = JSON.parse(localStorage.getItem(NET_ACTIVE_KEY) || 'null'); return v && v.code ? v : null; } catch (e) { return null; } }
+function netClearActive() { try { localStorage.removeItem(NET_ACTIVE_KEY); } catch (e) {} }
+
+// ---- 재참가: 방 확인 -> 같은 시작 상태 -> 서버 명령을 처음부터 빠르게 다시 재생(2-4-1) ----
+// 실패 시 Error(message). definite = true면 다시 시도해도 안 되는 경우(기록을 지움)
+async function netRejoinBattle(code) {
+  await netConnect();
+  const ref = net.db.ref('rooms/' + code);
+  const room = (await ref.once('value')).val();
+  const fail = (m) => { const e = new Error(m); e.definite = true; return e; };
+  if (!room) throw fail('대전이 이미 끝났거나 없어졌습니다');
+  const side = room.host && room.host.uid === net.uid ? 'player' : (room.guest && room.guest.uid === net.uid ? 'enemy' : null);
+  if (!side) throw fail('이 브라우저의 접속 정보로는 다시 참가할 수 없습니다');
+  if (room.ver !== GAME_BUILD) throw fail('게임 버전이 바뀌어 이 대전에는 다시 참가할 수 없습니다');
+  if (room.result) throw fail(`대전이 이미 끝났습니다 (${room.result.winner === side ? '승리' : '패배'})`);
+  if (room.status !== 'battle' || !room.start || !room.squads || !room.guest) throw fail('전투 중인 대전이 아닙니다');
+  net.roomCode = code; net.isHost = side === 'player'; net.roomRef = ref; net.room = room; net.phase = 'formation';
+  netStartBattle(room, { rejoin: true });
+  return side;
+}
+
+function netStartBattle(room, opts = {}) {
   net.phase = 'battle';
   net.roomRef.off(); // 방 전체 리스너 해제(명령이 쌓일 때마다 방 전체를 받지 않게)
   // 끊김 처리 전환: 방 삭제/자리 비움 예약 취소 -> 접속 표시(presence)
@@ -9324,7 +9405,10 @@ function netStartBattle(room) {
   loadStage(room.map);
   initPvpBattle({ squad1: room.squads.player, squad2: room.squads.enemy, firstSide: room.start.firstSide, names: pvpSetup.names, seed: room.start.seed });
   fixedViewSide = net.isHost ? 'player' : 'enemy'; // 화면 진영 고정(2-3-1)
-  Object.assign(net, { queue: [], pending: {}, nextSeq: 0, awaitTurnStart: false, turnNo: 0, turn: null, desyncWarned: {}, status: {}, oppDiscAt: 0 });
+  Object.assign(net, { queue: [], pending: {}, nextSeq: 0, awaitTurnStart: false, turnNo: 0, turn: null, desyncWarned: {}, status: {}, oppDiscAt: 0,
+    replaying: !!opts.rejoin, replayTarget: Object.keys(room.cmds || {}).length, unacked: {}, lastProgressAt: Date.now(), lastFetchAt: 0, fetching: false });
+  if (opts.rejoin) { replayFast = true; net.turn = room.turn || null; showPvpCover('대전 복구 중...', `0 / ${net.replayTarget}`, null); }
+  netSaveActive(net.roomCode); // 재연결용 기록(전투 중에만)
   netCommandSink = netSendCommand;
   netCanActFn = () => mySide === viewSide();
   netBusyFn = () => !gameSettled() || net.queue.length > 0 || net.awaitTurnStart;
@@ -9335,6 +9419,7 @@ function netStartBattle(room) {
       const p = net.roomRef.child('presence/' + me);
       p.onDisconnect().set(false); p.set(true);
       netSetStatus('self', '');
+      netVerifyUnacked(); // 다시 연결됨: 보낸 명령이 서버에 실제로 있는지 확인, 없으면 다시 보냄(2-4-2)
     } else netSetStatus('self', '서버 연결이 끊겼습니다 - 다시 연결하는 중...');
   });
   netListen('.info/serverTimeOffset', 'value', snap => { net.serverOffset = snap.val() || 0; });
@@ -9343,6 +9428,7 @@ function netStartBattle(room) {
   netListen('turn', 'value', snap => { net.turn = snap.val(); if (net.turn && net.turn.side !== viewSide()) netShowOppTimer(); });
   netListen('hashes', 'value', snap => netCheckHashes(snap.val() || {}));
   netListen('result', 'value', snap => netOnResult(snap.val()));
+  clearInterval(net.watchId); net.watchId = setInterval(netWatchdog, 1000); // 누락 복구 감시(2-4-2)
   document.querySelectorAll('.menuScreen').forEach(el => el.style.display = 'none');
   document.getElementById('squadFormationScreen').style.display = 'none';
   document.getElementById('gameContainer').style.display = 'flex';
@@ -9350,6 +9436,24 @@ function netStartBattle(room) {
   requestAnimationFrame(() => requestAnimationFrame(centerBoardScroll));
   addLog(`--- 온라인 대전: 나는 ${pvpSideName(me)} (${me === 'player' ? '1P' : '2P'}) ---`, 'logInfo');
   netOnTurnStart(room.start.firstSide); // 첫 턴(핫시트와 같이 startSideTurn 없이 시작)
+  if (opts.rejoin) netPump(); // 재생 시작(명령이 하나도 없으면 바로 복구 완료)
+}
+// 재생 완료: 빠른 모드 해제 + 지금 차례의 부수 효과(타이머·최초 투입 창)만 이어서 처리(이번 턴 시작 처리는 재생 중에 이미 됨)
+function netFinishReplay() {
+  net.replaying = false; replayFast = false;
+  hidePvpCover();
+  net.lastProgressAt = Date.now();
+  const side = mySide;
+  if (side === viewSide()) {
+    const t = net.turn;
+    let deadline;
+    if (t && t.n === net.turnNo && t.side === side) deadline = t.startedAt - net.serverOffset + PVP_TURN_MS; // 서버 기록 기준 남은 시간(지났으면 곧바로 자동 턴 종료)
+    else net.roomRef.child('turn').set({ side, n: net.turnNo, startedAt: firebase.database.ServerValue.TIMESTAMP }); // 기록 전에 끊겼던 경우
+    pvpTimerStart(deadline);
+    if (!sideDeployed[side]) promptInitialDeploy();
+  } else netShowOppTimer();
+  renderReserveList(); updatePanel(); draw();
+  addLog('--- 대전 복구 완료 ---', 'logInfo');
 }
 function netTeardownBattle() {
   for (const { ref, ev, cb } of net.battleRefs) ref.off(ev, cb);
@@ -9357,32 +9461,83 @@ function netTeardownBattle() {
   if (net.roomRef && net.phase === 'battle') net.roomRef.child('presence/' + viewSide()).onDisconnect().cancel();
   clearTimeout(net.pumpTimer); net.pumpTimer = null;
   clearTimeout(net.oppDiscTimer); net.oppDiscTimer = null;
+  clearInterval(net.watchId); net.watchId = null;
   netCommandSink = null; netCanActFn = null; netBusyFn = null;
-  net.queue = []; net.pending = {}; net.status = {};
+  net.queue = []; net.pending = {}; net.status = {}; net.unacked = {};
+  if (net.replaying) { net.replaying = false; hidePvpCover(); }
+  replayFast = false;
   const bar = document.getElementById('netStatusBar'); if (bar) bar.style.display = 'none';
 }
 
-// ---- 명령 전송: cmds/<순번 6자리> = { c: 명령, by: 진영 }. 실패하면 3회까지 재시도 ----
+// ---- 명령 전송: cmds/<순번 6자리> = { c: 명령, by: 진영 }. 전투 중에는 성공할 때까지 포기하지 않음(2-4-2) ----
+// (보낸 쪽 화면에서는 이미 실행됨 - 서버에 없으면 상대는 그 번호에서 영원히 기다리게 됨)
+const netSeqKey = seq => String(seq).padStart(6, '0');
 function netSendCommand(cmd) {
   if (!netInBattle()) return;
   const seq = commandLog.length - 1; // 방금 실행한 명령의 순번(양쪽 commandLog 길이가 같음)
   net.nextSeq = seq + 1;
+  net.lastProgressAt = Date.now();
   if (cmd.t === 'endTurn') net.awaitTurnStart = true;
-  const data = { c: JSON.parse(JSON.stringify(cmd)), by: viewSide() }; // undefined 필드 제거(Firebase는 undefined를 거부)
-  const ref = net.roomRef.child('cmds/' + String(seq).padStart(6, '0'));
-  let tries = 0;
-  const attempt = () => ref.set(data).then(() => netSetStatus('send', '')).catch(() => {
-    if (++tries < 3) setTimeout(attempt, 500 * tries);
-    else netSetStatus('send', '명령 전송에 실패했습니다 - 인터넷 연결을 확인하세요');
+  net.unacked[seq] = { c: JSON.parse(JSON.stringify(cmd)), by: viewSide() }; // undefined 필드 제거(Firebase는 undefined를 거부)
+  netWriteCommand(seq, 0);
+}
+function netWriteCommand(seq, tries) {
+  const data = net.unacked[seq];
+  if (!data || !netInBattle()) return;
+  const ref = net.roomRef.child('cmds/' + netSeqKey(seq));
+  const done = () => { delete net.unacked[seq]; if (!Object.keys(net.unacked).length) netSetStatus('send', ''); };
+  const retry = () => {
+    if (!netInBattle() || !net.unacked[seq]) return;
+    if (tries >= 2) netSetStatus('send', '명령을 보내지 못해 다시 보내는 중 - 인터넷 연결을 확인하세요');
+    setTimeout(() => netWriteCommand(seq, tries + 1), Math.min(5000, 500 * 2 ** tries)); // 0.5초부터 최대 5초 간격
+  };
+  ref.set(data).then(done).catch(() => {
+    // 거부돼도 이미 서버에 있으면 성공(앞선 전송이 닿았는데 응답만 못 받은 경우 - 덮어쓰기 금지 규칙에 걸림)
+    ref.once('value').then(s => { if (s.exists()) done(); else retry(); }).catch(retry);
   });
-  attempt();
+}
+// 다시 연결됐을 때: 확인 못 받은 명령이 서버에 있는지 보고 없으면 다시 보냄
+function netVerifyUnacked() {
+  if (!netInBattle()) return;
+  for (const k of Object.keys(net.unacked)) {
+    const seq = Number(k);
+    net.roomRef.child('cmds/' + netSeqKey(seq)).once('value').then(s => {
+      if (s.exists()) { delete net.unacked[seq]; if (!Object.keys(net.unacked).length) netSetStatus('send', ''); }
+      else netWriteCommand(seq, 0);
+    }).catch(() => {});
+  }
 }
 // ---- 명령 수신: 순번대로 대기열에 넣고, 연출이 끝난 뒤 하나씩 재생 ----
 function netOnCommand(seq, data) {
   if (!netInBattle() || !data || !(seq >= net.nextSeq)) return; // 내가 보낸 명령/이미 받은 명령
   net.pending[seq] = data.c;
+  const before = net.nextSeq;
   while (net.pending[net.nextSeq]) { net.queue.push(net.pending[net.nextSeq]); delete net.pending[net.nextSeq]; net.nextSeq++; }
+  if (net.nextSeq > before) { net.lastProgressAt = Date.now(); netSetStatus('wait', ''); }
   netPump();
+}
+// ---- 누락 복구 감시(1초마다, 2-4-2): 상대를 기다리는데 5초 넘게 진행이 없으면 서버 명령을 직접 읽어 빠진 번호부터 채움 ----
+function netWatchdog() {
+  if (!netInBattle() || battleEnded || net.replaying) return;
+  const waiting = mySide !== viewSide() || net.queue.length > 0 || Object.keys(net.pending).length > 0;
+  if (!waiting) { netSetStatus('wait', ''); return; }
+  const now = Date.now(), idle = now - net.lastProgressAt;
+  // 상대 차례 시간(3분)이 30초 넘게 지났는데도 진행이 없음 = 상대 화면이 멈췄을 가능성
+  const t = net.turn;
+  const overdue = mySide !== viewSide() && t && t.side === mySide && t.n === net.turnNo && (now + net.serverOffset) > t.startedAt + PVP_TURN_MS + 30000;
+  if (idle < 5000 || net.fetching || now - net.lastFetchAt < 5000) return;
+  net.fetching = true; net.lastFetchAt = now;
+  net.roomRef.child('cmds').orderByKey().startAt(netSeqKey(net.nextSeq)).once('value').then(snap => {
+    net.fetching = false;
+    const all = snap.val() || {};
+    const keys = Object.keys(all).sort();
+    for (const k of keys) netOnCommand(Number(k), all[k]);
+    const serverCount = keys.length ? Number(keys[keys.length - 1]) + 1 : net.nextSeq;
+    if (Date.now() - net.lastProgressAt >= 10000 && serverCount > net.nextSeq)
+      netSetStatus('wait', `상대 명령 대기 중 (받은 ${net.nextSeq} / 서버 ${serverCount}) - 계속되면 새로고침 후 다시 참가하세요`);
+    else if (overdue) netSetStatus('wait', `상대 응답 없음 (받은 ${net.nextSeq} / 서버 ${serverCount}) - 상대 화면이 멈췄다면 상대가 새로고침 후 다시 참가하면 됩니다`);
+    else netSetStatus('wait', '');
+  }).catch(() => { net.fetching = false; });
 }
 function netPump() {
   clearTimeout(net.pumpTimer); net.pumpTimer = null;
@@ -9391,7 +9546,13 @@ function netPump() {
     const cmd = net.queue.shift();
     if (cmd.t === 'endTurn') net.awaitTurnStart = true; // 진영 전환이 끝날 때까지 다음 명령 대기
     runCommand(cmd);
-    renderReserveList(); updatePanel(); draw();
+    if (!net.replaying) { renderReserveList(); updatePanel(); draw(); }
+  }
+  if (net.replaying) { // 재연결 복원: 진행률 표시, 다 따라잡고 연출이 끝나면 완료
+    document.getElementById('pvpCoverSub').textContent = `${commandLog.length} / ${Math.max(net.replayTarget, net.nextSeq)}`;
+    if (!net.queue.length && net.nextSeq >= net.replayTarget && !net.awaitTurnStart && gameSettled()) { netFinishReplay(); return; }
+    net.pumpTimer = setTimeout(netPump, net.queue.length ? 0 : 30);
+    return;
   }
   if (net.queue.length) net.pumpTimer = setTimeout(netPump, 50);
 }
@@ -9401,26 +9562,30 @@ function netOnTurnStart(side) {
   if (!netInBattle() || battleEnded) return;
   net.awaitTurnStart = false;
   net.turnNo++;
-  net.roomRef.child('hashes/' + net.turnNo + '/' + viewSide()).set(stateHash()); // 동기화 확인(2-3-3)
+  net.lastProgressAt = Date.now();
+  const live = !net.replaying; // 재연결 복원 중이면 지난 턴의 부수 효과(기록·창·타이머)는 하지 않음(2-4-1)
+  if (live) net.roomRef.child('hashes/' + net.turnNo + '/' + viewSide()).set(stateHash()); // 동기화 확인(2-3-3)
   const btn = document.getElementById('endTurnBtn');
   deselect();
   if (side === viewSide()) { // 내 차례
     btn.disabled = false; btn.textContent = '턴 종료';
-    pvpTimerStart(); // 3분은 차례인 쪽이 관리(넘으면 자동 턴 종료 명령)
-    net.roomRef.child('turn').set({ side, n: net.turnNo, startedAt: firebase.database.ServerValue.TIMESTAMP });
-    if (!sideDeployed[side]) promptInitialDeploy();
+    if (live) {
+      pvpTimerStart(); // 3분은 차례인 쪽이 관리(넘으면 자동 턴 종료 명령)
+      net.roomRef.child('turn').set({ side, n: net.turnNo, startedAt: firebase.database.ServerValue.TIMESTAMP });
+      if (!sideDeployed[side]) promptInitialDeploy();
+    }
   } else { // 상대 차례: 조작 잠금 + 남은 시간 표시
     btn.disabled = true; btn.textContent = '상대 차례';
     pvpTimerStop();
-    netShowOppTimer();
+    if (live) netShowOppTimer();
   }
-  renderReserveList(); updatePanel(); draw();
+  if (live) { renderReserveList(); updatePanel(); draw(); }
   netPump();
 }
 registerSystem('onPvpTurnStart', side => netOnTurnStart(side));
 // 상대 차례 남은 시간: 상대가 기록한 차례 시작 시각(서버 시각) 기준. 시간 초과 처리는 상대 쪽이 함
 function netShowOppTimer() {
-  if (!netInBattle() || battleEnded || mySide === viewSide()) return;
+  if (!netInBattle() || battleEnded || mySide === viewSide() || net.replaying) return;
   const t = net.turn;
   if (!t || t.n !== net.turnNo || t.side !== mySide) { // 아직 기록 전
     const el = document.getElementById('pvpTimer');

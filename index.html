@@ -451,7 +451,7 @@
 </div>
 
 <script>
-const GAME_BUILD = '1462ecfc4c'; // 빌드 식별값(자동 생성)
+const GAME_BUILD = '8e3492c2ce'; // 빌드 식별값(자동 생성)
 // ================= 기본 설정 =================
 // 판 크기는 스테이지마다 다를 수 있음 - loadStage가 setBoardSize로 바꿈(모든 사용처가 함수 안이라 바뀐 값이 바로 반영됨)
 let COLS = 20;
@@ -1551,6 +1551,17 @@ function visionProviders(side) {
 function isTileVisibleTo(side, x, y) {
   if (!fogEnabled) return true;
   return visionProviders(side).some(u => Math.max(Math.abs(u.x - x), Math.abs(u.y - y)) <= visionRadius(u));
+}
+// 진영 시야 안 칸 전체("x,y" Set). 안개가 꺼져 있으면 null(전부 보임). 그리기 1회에 한 번만 계산해서 씀
+function visibleTileSet(side) {
+  if (!fogEnabled) return null;
+  const ps = visionProviders(side), set = new Set();
+  for (const u of ps) {
+    const r = visionRadius(u);
+    for (let y = Math.max(0, u.y - r); y <= Math.min(ROWS - 1, u.y + r); y++)
+      for (let x = Math.max(0, u.x - r); x <= Math.min(COLS - 1, u.x + r); x++) set.add(x + ',' + y);
+  }
+  return set;
 }
 // 탐사 기록: 지금 아군 시야에 든 칸을 기록(한 번 본 칸의 지형은 계속 보임)
 // 대전은 양 진영 모두 갱신(상대 차례에 내 유닛 시야가 바뀌어도 기록) - MULTIPLAYER.md 2-3-1
@@ -5869,13 +5880,17 @@ function draw() {
   drawDropZoneOverlays();
   drawZoneControlAndSelection();
   drawAttackSkillRangeOverlay();
+  const fogClip = visibleTileSet(viewSide()); // 화면 진영 시야(안개 꺼짐 = null) - 연출은 이 칸들 위에서만 그림(FOG_VISION.md 4장)
+  beginFogClip(fogClip);
   runRenderLayers('underTokens'); // 캐릭터 파일이 등록한 바닥 효과 레이어(수정 구역 등)
   drawGoldenWaves();              // 황금 물결(빅토리아 변신)
+  endFogClip(fogClip);
   drawFogFloor();                 // 전장의 안개: 바닥 칸(유닛·엄폐물보다 먼저 - 위로 솟은 것은 각자 어둡게 그림)
   drawObjectiveTiles();           // 임무 목표 칸(파란 타일, 안개 위에도)
   updateObjectivePanel();         // 임무 목표 표시 상자
   drawDepthSortedTokens();        // 엄폐물 + 캐릭터를 y좌표 기준으로 함께 정렬해서 그림
   drawWisps();                    // 안개 속 적의 도깨비불
+  beginFogClip(fogClip);          // 여기부터 연출: 시야 밖 칸 위의 것은 잘라냄(아우라·상태 입자·피격·투사체·숫자 등 전부)
   drawExitingGhosts();            // 방금 퇴각/소멸한 캐릭터·소환물이 위로 떠오르며 사라지는 잔상
   drawDeathGhosts();              // 방금 사망한 캐릭터·소환물이 쓰러지듯 눌려 사라지는 잔상
   drawFireTrails();               // 순간이동 화염 길
@@ -5899,9 +5914,23 @@ function draw() {
   drawIconPops();                  // 방어막 획득(방패) / 지역장악 무장(교차된 검)
   drawBlizzard();                 // 눈보라(맨 위에 덮임)
   drawFloatTexts();
+  endFogClip(fogClip);
 
   updatePanel();
 }
+
+// 안개 연출 잘라내기: 시야 안 칸들의 사각형만 남기고 그 밖은 그리지 않음(정확히 칸 경계 - 경계에 선 내 유닛의 높이 솟는 연출도 잘림)
+// tiles = null(안개 꺼짐)이면 아무것도 하지 않음. begin/end는 반드시 짝으로
+let fogClipCount = 0; // (테스트 확인용) 잘라내기 적용 횟수
+function beginFogClip(tiles) {
+  if (!tiles) return;
+  ctx.save();
+  ctx.beginPath();
+  for (const key of tiles) { const [x, y] = key.split(',').map(Number); ctx.rect(x * TILE, y * TILE, TILE, TILE); }
+  ctx.clip();
+  fogClipCount++;
+}
+function endFogClip(tiles) { if (tiles) ctx.restore(); }
 
 // 바닥 타일(이동 가능 범위 색 포함)
 function drawBaseGrid() {
@@ -9020,15 +9049,36 @@ function netRandomCode() {
 }
 
 // ---- 방 만들기 / 참가 / 나가기 ----
+const NET_ROOM_TTL_MS = 24 * 60 * 60 * 1000; // 만든 지 이 시간이 지난 방은 누구나 정리 가능(MULTIPLAYER.md 2-5, 규칙과 같은 값)
+// 서버 기준 지금 시각(규칙이 createdAt을 서버 시각 ±10분으로 검사하므로 기기 시계 오차를 보정)
+async function netServerNow() {
+  try { const s = await net.db.ref('.info/serverTimeOffset').once('value'); return Date.now() + (s.val() || 0); }
+  catch (e) { return Date.now(); }
+}
+// 오래된 방 정리(가: 클라이언트): 색인에서 24시간 지난 방을 최대 20개 찾아 방과 색인을 지움. 실패는 무시(정리는 부가 기능)
+async function netCleanupOldRooms(now) {
+  try {
+    const snap = await net.db.ref('roomIndex').orderByValue().endAt(now - NET_ROOM_TTL_MS).limitToFirst(20).once('value');
+    const old = snap.val() || {};
+    for (const code of Object.keys(old)) {
+      net.db.ref('rooms/' + code).remove().catch(() => {});
+      net.db.ref('roomIndex/' + code).remove().catch(() => {});
+    }
+  } catch (e) { /* 정리 실패는 방 만들기에 영향 없음 */ }
+}
 async function netCreateRoom(name) {
   await netConnect();
+  const now = await netServerNow();
+  netCleanupOldRooms(now); // 기다리지 않음
   for (let tries = 0; tries < 8; tries++) {
     const code = netRandomCode();
     const ref = net.db.ref('rooms/' + code);
     const r = await ref.transaction(cur => cur ? undefined : { // 이미 있는 코드면 다시 뽑음
-      host: { uid: net.uid, name }, mode: 'normal', map: 'pvp-1', status: 'lobby', createdAt: Date.now(), ver: GAME_BUILD });
+      host: { uid: net.uid, name }, mode: 'normal', map: 'pvp-1', status: 'lobby', createdAt: now, ver: GAME_BUILD });
     if (r.committed) {
-      ref.onDisconnect().remove(); // 방장이 끊기면 방 삭제
+      const idx = net.db.ref('roomIndex/' + code);
+      await idx.set(now); // 정리용 색인(방이 생긴 뒤에 기록 - 규칙이 방장 확인)
+      ref.onDisconnect().remove(); idx.onDisconnect().remove(); // 방장이 끊기면 방·색인 삭제(대기실·편성 단계)
       netEnterRoom(code, true);
       return code;
     }
@@ -9046,15 +9096,15 @@ async function netJoinRoom(code, name) {
   if (cur0.ver !== GAME_BUILD) throw new Error('게임 버전이 다릅니다 (두 사람 모두 새로고침 후 다시 시도하세요)'); // 빌드가 다르면 동기화가 깨짐
   if (cur0.status !== 'lobby') throw new Error('이미 시작한 방입니다');
   if (cur0.guest && cur0.guest.uid !== net.uid) throw new Error('방이 가득 찼습니다');
-  let reason = null;
-  const r = await ref.transaction(cur => {
-    if (!cur) return cur; // (캐시가 비어 있으면 서버 값으로 다시 불림)
-    if (cur.ver !== GAME_BUILD) { reason = '게임 버전이 다릅니다 (두 사람 모두 새로고침 후 다시 시도하세요)'; return; }
-    if (cur.status !== 'lobby') { reason = '이미 시작한 방입니다'; return; }
-    if (cur.guest && cur.guest.uid !== net.uid) { reason = '방이 가득 찼습니다'; return; }
-    cur.guest = { uid: net.uid, name };
-    return cur;
-  });
+  // 참가는 guest 칸만 트랜잭션(방 전체를 쓰면 규칙상 참가자가 방 전체를 쓸 수 있어야 해서 안 됨 - MULTIPLAYER.md 2-5).
+  // '대기실일 때만'은 규칙이 원자적으로 확인(거부되면 아래 catch)
+  let reason = null, r;
+  try {
+    r = await ref.child('guest').transaction(cur => {
+      if (cur && cur.uid !== net.uid) { reason = '방이 가득 찼습니다'; return; }
+      return { uid: net.uid, name };
+    });
+  } catch (e) { throw new Error('참가하지 못했습니다 (이미 시작했거나 없어진 방일 수 있습니다)'); }
   if (!r.committed) throw new Error(reason || '참가하지 못했습니다');
   ref.child('guest').onDisconnect().remove(); // 참가자가 끊기면 자리 비움
   netEnterRoom(code, false);
@@ -9070,8 +9120,10 @@ function netLeaveRoom() {
   netTeardownBattle();
   if (!ref) return;
   ref.off();
-  if (net.isHost) { ref.onDisconnect().cancel(); ref.remove(); }
-  else { ref.child('guest').onDisconnect().cancel(); ref.child('guest').remove(); }
+  if (net.isHost) {
+    const idx = net.db.ref('roomIndex/' + net.roomCode);
+    ref.onDisconnect().cancel(); idx.onDisconnect().cancel(); ref.remove().catch(() => {}); idx.remove().catch(() => {}); // 방과 색인 삭제(거부·실패는 무시 - 정리로 처리됨)
+  } else { ref.child('guest').onDisconnect().cancel(); ref.child('guest').remove().catch(() => {}); } // 방이 이미 없으면 규칙상 거부될 수 있음 - 무시
   net.roomRef = null; net.roomCode = null; net.room = null; net.isHost = false; net.phase = 'lobby';
 }
 function netSetLobbyChoice(mode, map) { // 방장만
@@ -9136,7 +9188,8 @@ function netStartBattle(room) {
   net.phase = 'battle';
   net.roomRef.off(); // 방 전체 리스너 해제(명령이 쌓일 때마다 방 전체를 받지 않게)
   // 끊김 처리 전환: 방 삭제/자리 비움 예약 취소 -> 접속 표시(presence)
-  if (net.isHost) net.roomRef.onDisconnect().cancel(); else net.roomRef.child('guest').onDisconnect().cancel();
+  if (net.isHost) { net.roomRef.onDisconnect().cancel(); net.db.ref('roomIndex/' + net.roomCode).onDisconnect().cancel(); } // (색인은 남김 - 끊긴 방은 24시간 뒤 정리)
+  else net.roomRef.child('guest').onDisconnect().cancel();
   pvpFormationStep = 0;
   hidePvpCover();
   pvpSetup = { kind: 'online', mode: room.mode, map: room.map, names: { player: room.host.name, enemy: room.guest.name } };

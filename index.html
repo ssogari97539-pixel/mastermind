@@ -518,7 +518,7 @@
 </div>
 
 <script>
-const GAME_BUILD = '18848d41a4'; // 빌드 식별값(자동 생성)
+const GAME_BUILD = '045dce3e44'; // 빌드 식별값(자동 생성)
 // ================= 기본 설정 =================
 // 판 크기는 스테이지마다 다를 수 있음 - loadStage가 setBoardSize로 바꿈(모든 사용처가 함수 안이라 바뀐 값이 바로 반영됨)
 let COLS = 20;
@@ -3650,7 +3650,7 @@ defineHooks('jihyeok', {
 characters.push(
   {
     id:'susanoo', role:'전위', inReserve:false, justDroppedThisTurn:false, name:'쇼군 스사노오', side:'player', x:2, y:6, spd:2, ap:2,
-    hp:4500, maxHp:4500, atk:750, def:250, evasion:5, critChance:10, critMult:1.5,
+    hp:5300, maxHp:5300, atk:750, def:250, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:'melee', color:'#8e3b46', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
     susanooApBonus:0,
@@ -3687,6 +3687,8 @@ characters.push(
   });
 
 const susanooMuramasa = c => (c.tempStatMods || []).some(m => m.id === 'susanoo_s2');
+// 공격·잔상 색: 평소 하얀색, 귀도 무라마사 중 붉은색(오오라도 같은 색) - v11.80
+const susanooColor = c => (susanooMuramasa(c) ? '#ff4d6d' : '#ffffff');
 const SUSANOO_DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
 // 내려 베기 돌진 계획: 한 칸씩 최대 3칸. 판 밖·엄폐물·유닛(아군/적)이 있으면 그 앞에서 멈춤. 적이면 hit
@@ -3724,7 +3726,7 @@ function susanooDash(c, dir) {
   updateFacing(c, dx, dy);
   const strike = () => {
     if (c.dead || !hit || hit.dead || c.x + dx !== hit.x || c.y + dy !== hit.y) return;
-    const hitAt = playSlashAttack(c, hit, { color: '#ff4d6d' });
+    const hitAt = playSlashAttack(c, hit, { color: susanooColor(c) });
     dealSkillDamage(hit, effectiveAtk(c), 1.25, effectiveDmgIncrease(c), c, { hitDelay: hitAt });
     addLog(`${c.name}: 내려 베기 - ${hit.name}와 충돌, 공격력 125% 피해`, 'logSkill');
     checkBattleEndConditions();
@@ -3732,7 +3734,10 @@ function susanooDash(c, dir) {
   addLog(`${c.name}: 내려 베기 - ${path.length - 1}칸 돌진`, 'logSkill');
   if (path.length > 1) {
     c.hasMovedThisTurn = true;
-    animateAlongPath(c, path, { costsAp: false, finalize(traveled) { if (traveled === path.length - 1) strike(); draw(); } });
+    const color = susanooColor(c);
+    animateAlongPath(c, path, { costsAp: false,
+      onArrive(i) { spawnAfterimageAt(c, path[i - 1].x, path[i - 1].y, color); }, // 지나간 칸마다 잔상
+      finalize(traveled) { if (traveled === path.length - 1) strike(); draw(); } });
   } else strike();
 }
 
@@ -3780,7 +3785,8 @@ defineHooks('susanoo', {
   onTurnStart(c) { c.susanooApBonus = 0; },                        // 받은 기동력은 이번 턴 시작에 이미 더해짐(turnStartAp)
   onReset(c) { c.susanooApBonus = 0; },
   onRetreat(c) { c.susanooApBonus = 0; },
-  basicAttackVfx(c, target, info) { return playSlashAttack(c, target, { color: '#ff4d6d', delay: info && info.delay }); },
+  basicAttackVfx(c, target, info) { return playSlashAttack(c, target, { color: susanooColor(c), delay: info && info.delay }); }, // 평소 하얀색, 무라마사 중 붉은색
+  risingLineAura(c) { return susanooMuramasa(c) ? '#ff4d6d' : null; }, // 귀도 무라마사 중: 붉은 선 오오라
 });
 
 // ================= 아라미스 (후위, v11.78 신규 '헌터' -> v11.79 이름 변경, 내부 id는 'hunter' 유지) =================
@@ -3814,6 +3820,7 @@ characters.push(
         effect(caster) {
           caster.killZoneActive = true;
           caster.killZoneMiss = 0.1;
+          ensureVfxLoop(); // 검은 선 오오라 시작
           caster.ap = 0; caster.actedThisTurn = true; // 헌터 행동 종료(진영 턴은 계속)
           spawnFloatText(caster, '살상지대', '#c9e26b');
           addLog(`${caster.name}: 살상지대 - 상대 턴 동안 사거리 안에서 행동하는 적에게 반응 사격`, 'logSkill');
@@ -3827,18 +3834,20 @@ function hunterGrappleTileOk(x, y) {
   if (isObstacle(x, y) || charAt(x, y)) return false;
   return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => isObstacle(x + dx, y + dy));
 }
-// 갈고리: 순간 이동(지나가는 경로의 지역장악 없음, 도착 칸에서는 지역장악 판정). 이동이므로 환경 최적화 소멸
+// 갈고리: 줄 달린 갈고리가 목표 칸에 꽂힌 뒤 끌려감(v11.80 연출). 위치는 즉시 새 칸(지나가는 경로의 지역장악 없음).
+// 도착 칸의 지역장악 판정은 화면에서 도착하는 순간(효과 대기열 - 다음 명령은 끝난 뒤). 이동이므로 환경 최적화 소멸
 function hunterGrapple(c, t) {
   if (!hunterGrappleTileOk(t.x, t.y)) { addLog(`${c.name}: 갈고리 - 갈 수 없는 칸`, 'logInfo'); return; } // 방어적(명령 재생 시 상황이 바뀐 경우)
+  const from = { x: c.x, y: c.y };
   updateFacing(c, t.x - c.x, t.y - c.y);
   c.x = t.x; c.y = t.y;
   c.hasMovedThisTurn = true;
   hunterClearOpt(c);
-  startDropAnim(c); // 착지 연출
-  spawnFloatText(c, '갈고리', '#c9e26b');
+  const arrive = playGrapple(c, from, t);
   addLog(`${c.name}: 갈고리 - (${t.x + 1}, ${t.y + 1})로 이동`, 'logSkill');
   runSystems('onVisionChanged');
-  checkZoneControlTrigger(c); // 도착 칸이 상대 지역장악 범위면 발동
+  enqueueFx(() => {}, arrive);
+  enqueueFx(() => { if (!c.dead) { checkZoneControlTrigger(c); checkBattleEndConditions(); } }); // 도착 칸이 상대 지역장악 범위면 발동
 }
 function hunterClearOpt(c) {
   if (c.hunterOptStacks) addLog(`${c.name}: 이동 - 환경 최적화 소멸`, 'logInfo');
@@ -3884,6 +3893,7 @@ defineHooks('hunter', {
     return b;
   },
   basicAttackVfx(c, target, info) { return playBulletAttack(c, target, info && info.delay); },
+  risingLineAura(c) { return c.killZoneActive ? '#101014' : null; }, // 살상지대 발동 중: 검은 선 오오라(빗나감·다음 턴 시작으로 끝나면 사라짐)
 });
 // 이동하면 환경 최적화 소멸(일반 이동 - 갈고리는 hunterGrapple에서)
 registerSystem('onUnitActed', (unit, kind) => { if (kind === 'move' && baseIdOf(unit) === 'hunter') hunterClearOpt(unit); });
@@ -6118,7 +6128,8 @@ function moveSpeedProfile(tiles) {
 // 칸 도착 처리(실좌표 갱신 -> 지역장악 판정 -> 다음 칸 방향 전환)는 그 칸을 지나는 순간 순서대로 수행 - 한 프레임에 여러 칸을 지나도 빠짐없이.
 // costsAp: 이 이동이 기동력을 칸당 1 쓰는가(플레이어 이동). 지역장악 훅이 이동 도중 상태를 알 수 있게 mover._moveTilesDone/_moveCostsAp 기록.
 // 칸 도착 처리 중 mover.moveHalt = true가 되면(가디언 진입 차단 등) 그 칸에서 이동을 멈춤. finalize(실제로 이동한 칸 수)
-function animateAlongPath(mover, path, { finalize, costsAp } = {}) {
+// onArrive(i): i번째 칸(1부터)에 도착할 때마다(지역장악 판정 전) - 연출용(스사노오 돌진 잔상 등)
+function animateAlongPath(mover, path, { finalize, costsAp, onArrive } = {}) {
   if (!path || path.length <= 1) { if (finalize) finalize(0); return; }
   mover.moving = true;
   let n = path.length - 1;
@@ -6140,6 +6151,7 @@ function animateAlongPath(mover, path, { finalize, costsAp } = {}) {
       const to = path[arrived];
       mover.x = to.x; mover.y = to.y;
       mover._moveTilesDone = arrived; mover._moveCostsAp = !!costsAp;
+      if (onArrive) onArrive(arrived);
       checkZoneControlTrigger(mover); // 이동 중 매 칸마다 상대 진영의 무장된 지역장악에 걸리는지 확인
       if (mover.moveHalt) { delete mover.moveHalt; n = arrived; s = n; break; } // 이 칸에서 이동 멈춤
       if (arrived < n) updateFacing(mover, path[arrived + 1].x - to.x, path[arrived + 1].y - to.y);
@@ -6150,6 +6162,7 @@ function animateAlongPath(mover, path, { finalize, costsAp } = {}) {
       delete mover.renderX; delete mover.renderY; delete mover._moveTilesDone; delete mover._moveCostsAp;
       draw();
       if (finalize) finalize(n);
+      if (selected && selected.id === mover.id && !mover.dead) selectCharacter(mover); // 선택 중이면 새 위치 기준으로 이동 범위 다시 계산(스킬 돌진 등 - v11.80 버그 수정)
       return;
     }
     const i = Math.floor(s), f = s - i, a = path[i], b = path[i + 1];
@@ -8476,6 +8489,76 @@ function drawExitingGhosts() {
   for (const g of exitingGhosts) drawCharacterToken(g);
 }
 
+// ================= 잔상(v11.80): 그 순간의 캐릭터 모양을 단색 실루엣으로 남겼다가 옅어짐 (스사노오 돌진 등) =================
+let afterimages = [];
+function spawnAfterimageAt(c, tx, ty, color, { dur = 420, alpha = 0.75 } = {}) {
+  if (replayFast) return; // 재연결 복원 중엔 연출 생략
+  const key = sdKeyOf(c), info = CHARACTER_IMAGES[key];
+  afterimages.push({ key, info, img: info && info.sd ? getCharacterImage(key, 'sd') : null, cx: tx * TILE + TILE / 2, footY: ty * TILE + TILE,
+    facingRight: !!c.facingRight, color, start: performance.now(), dur, alpha, r: TILE * 0.32 });
+  ensureVfxLoop();
+}
+function drawAfterimages() {
+  const now = performance.now();
+  afterimages = afterimages.filter(a => now - a.start < a.dur);
+  for (const a of afterimages) {
+    const t = (now - a.start) / a.dur, al = a.alpha * (1 - t);
+    ctx.save();
+    ctx.globalAlpha = al;
+    if (a.img && a.img.loaded && !a.img.failed) {
+      const sil = spriteSilhouette(a.key, a.img, a.color);
+      if (sil) {
+        const h = TILE * 1.5 * (a.info.sdScale || 1), w = h * a.info.sdAspect;
+        if (a.facingRight) { ctx.translate(a.cx, 0); ctx.scale(-1, 1); ctx.translate(-a.cx, 0); }
+        ctx.drawImage(sil, a.cx - w / 2, a.footY - h, w, h);
+      }
+    } else { ctx.fillStyle = a.color; ctx.beginPath(); ctx.arc(a.cx, a.footY - TILE / 2, a.r, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
+}
+registerRenderLayer('underTokens', drawAfterimages); // 캐릭터보다 아래(안개 잘라내기 구간 안)
+VFX_ACTIVE_CHECKS.push(() => afterimages.length > 0);
+
+// ================= 갈고리(v11.80): 줄 달린 갈고리가 목표 칸으로 날아가 꽂히고, 캐릭터가 줄을 따라 끌려감 =================
+// 위치(판정)는 호출 전에 이미 새 칸. 화면만 갈고리가 도착할 때까지 원래 칸(renderX/Y)에 두었다가 끌려감. 그동안 moving=true(조작 끼어들기 방지).
+// 끝 처리는 setTimeout(그리기 여부와 무관). 반환: 캐릭터가 새 칸에 닿는 시각(ms 뒤)
+let grapples = [];
+function playGrapple(c, from, to) {
+  const dist = Math.hypot(to.x - from.x, to.y - from.y);
+  const fly = replayFast ? 0 : 140 + 45 * dist, pull = replayFast ? 0 : 110 + 30 * dist;
+  const g = { c, from: { x: from.x, y: from.y }, to: { x: to.x, y: to.y }, start: performance.now(), fly, pull };
+  if (fly + pull > 0) { grapples.push(g); c.renderX = from.x; c.renderY = from.y; c.moving = true; ensureVfxLoop(); }
+  setTimeout(() => {
+    grapples = grapples.filter(x => x !== g);
+    delete c.renderX; delete c.renderY; c.moving = false;
+    draw();
+  }, fly + pull);
+  return fly + pull;
+}
+function drawGrapples() {
+  const now = performance.now();
+  for (const g of grapples) {
+    const el = now - g.start, c = g.c;
+    const hookT = Math.min(1, el / g.fly), pullT = el <= g.fly ? 0 : Math.min(1, (el - g.fly) / g.pull);
+    const pe = pullT * pullT * (3 - 2 * pullT); // 부드럽게 끌려감
+    c.renderX = g.from.x + (g.to.x - g.from.x) * pe; c.renderY = g.from.y + (g.to.y - g.from.y) * pe;
+    const body = bodyCenterOf(c);
+    const hx = (g.from.x + (g.to.x - g.from.x) * hookT) * TILE + TILE / 2, hy = (g.from.y + (g.to.y - g.from.y) * hookT) * TILE + TILE / 2 - TILE * 0.25 * Math.sin(Math.PI * hookT) * (1 - pullT);
+    ctx.save();
+    ctx.strokeStyle = '#2a2a2e'; ctx.lineWidth = Math.max(1.5, TILE * 0.035); // 검은 줄
+    ctx.beginPath(); ctx.moveTo(body.x, body.y); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.translate(hx, hy); ctx.rotate(Math.atan2(g.to.y - g.from.y, g.to.x - g.from.x)); // 갈고리 머리(세 갈래)
+    ctx.strokeStyle = '#b8bcc4'; ctx.lineWidth = Math.max(1.5, TILE * 0.05); const k = TILE * 0.13;
+    ctx.beginPath(); ctx.moveTo(-k, 0); ctx.lineTo(k, 0);
+    ctx.moveTo(k, 0); ctx.quadraticCurveTo(k * 0.6, -k, -k * 0.2, -k * 0.9);
+    ctx.moveTo(k, 0); ctx.quadraticCurveTo(k * 0.6, k, -k * 0.2, k * 0.9); ctx.stroke();
+    ctx.restore();
+  }
+}
+registerRenderLayer('underTokens', drawGrapples);
+VFX_ACTIVE_CHECKS.push(() => grapples.length > 0);
+registerSystem('onStageLoad', () => { afterimages = []; grapples = []; });
+
 // ================= 캔버스 클릭 =================
 canvas.addEventListener('click', (e) => {
   const tile = getTileFromEvent(e);
@@ -9964,7 +10047,7 @@ let commandLog = [];         // 이번 전투의 명령 기록(동기화 확인/
 
 const cmdUnit = id => characters.find(c => c.id === id);
 const COMMANDS = {
-  move:        c => { const u = cmdUnit(c.id); if (u && c.path.length > 1) moveAlongPath(u, c.path); },
+  move:        c => { const u = cmdUnit(c.id); if (u && c.path.length > 1 && c.path[0].x === u.x && c.path[0].y === u.y) moveAlongPath(u, c.path); }, // 경로는 현재 칸에서 시작해야 함(아니면 무시 - 낡은 이동 범위로 인한 순간이동 방지, 양쪽 화면 같은 판단)
   attack:      c => { const u = cmdUnit(c.id), t = cmdUnit(c.target); if (u && t) executeAttack(u, t); },
   skill:       c => { const u = cmdUnit(c.id); if (u) runInstantSkill(u, c.idx); },
   skillTarget: c => {

@@ -109,6 +109,29 @@
   #pvpCoverSub { font-size: 14px; color: #aaa; }
   #pvpTimer { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 400; padding: 6px 14px; border-radius: 6px; background: #20263a; border: 1px solid #3c5ea8; color: #9fd3ff; font-size: 14px; font-weight: bold; }
   #pvpTimer.urgent { color: #ff6b6b; border-color: #a83c3c; }
+/* 스킬 자세히 보기(v11.85) */
+.skillRow { display: flex; gap: 4px; align-items: stretch; }
+.skillRow .skillBtn { flex: 1 1 auto; min-width: 0; }
+.skillInfoBtn { flex: 0 0 34px; margin: 4px 0; border-radius: 6px; border: 1px solid #555; background: #2a2a30; color: #ddd; font-size: 15px; cursor: pointer; padding: 0; }
+.skillInfoBtn:hover { border-color: #9fd3ff; background: #20304a; }
+.passiveInfoBtn { width: 100%; margin: 4px 0; padding: 7px; border-radius: 6px; border: 1px solid #555; background: #24242a; color: #ccc; font-size: 12px; cursor: pointer; }
+.passiveInfoBtn:hover { border-color: #9fd3ff; }
+#skillDetailOverlay { position: fixed; inset: 0; z-index: 2700; background: rgba(8,8,12,0.72); display: flex; align-items: center; justify-content: center; }
+.skillDetailBox { position: relative; background: #1c1c22; border: 1px solid #3c5ea8; border-radius: 10px; padding: 22px 24px 18px; width: min(560px, calc(100% - 32px)); max-height: calc(100% - 48px); overflow-y: auto; color: #e8e8ee; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+#skillDetailClose { position: absolute; top: 8px; right: 10px; width: 32px; height: 32px; border: none; background: transparent; color: #aaa; font-size: 24px; line-height: 1; cursor: pointer; border-radius: 6px; }
+#skillDetailClose:hover { background: #2a2a32; color: #fff; }
+.sdTitle { font-size: 22px; font-weight: bold; color: #fff; margin-right: 28px; }
+.sdOwner { font-size: 13px; color: #9fd3ff; margin-top: 2px; }
+.sdMeta { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 14px; }
+.sdChip { font-size: 12px; padding: 3px 9px; border-radius: 12px; background: #2a2a32; border: 1px solid #3a3a44; color: #ccc; }
+.sdChip.ready { border-color: #3f8f66; color: #7fe0a8; }
+.sdChip.wait { border-color: #8a6a2c; color: #e0c23c; }
+.sdText { font-size: 16px; line-height: 1.65; white-space: pre-wrap; color: #f0f0f4; }
+.sdNoteLabel { margin-top: 16px; font-size: 11px; color: #888; letter-spacing: 0.5px; }
+.sdNote { font-size: 13px; line-height: 1.55; color: #aab; border-top: 1px solid #2e2e38; padding-top: 6px; margin-top: 4px; }
+.sdPassive + .sdPassive { margin-top: 18px; padding-top: 14px; border-top: 1px solid #2e2e38; }
+.sdPassiveName { font-size: 17px; font-weight: bold; color: #fff; margin-bottom: 6px; }
+#gameVersionLabel { position: absolute; left: 12px; bottom: 10px; font-size: 11px; color: #6a6a74; letter-spacing: 0.3px; user-select: text; } /* 첫 화면 왼쪽 아래 버전(v번호 · 빌드 식별값) */
 #mpRejoinOverlay { position: fixed; inset: 0; z-index: 2600; background: rgba(10,10,14,0.82); display: flex; align-items: center; justify-content: center; }
 .mpRejoinBox { background: #1c1c22; border: 1px solid #3c5ea8; border-radius: 8px; padding: 24px 28px; text-align: center; max-width: 360px; width: calc(100% - 40px); }
 #mpRejoinText { font-size: 18px; font-weight: bold; color: #fff; margin-bottom: 8px; }
@@ -344,6 +367,7 @@
 <div id="screenTitle" class="menuScreen">
   <h1 style="font-size:36px; letter-spacing:4px;">MASTERMIND</h1>
   <button class="menuBtn" id="btnGameStart">게임 시작</button>
+  <div id="gameVersionLabel" aria-label="게임 버전"></div>
 </div>
 
 <!-- ===== 멀티플레이 (MULTIPLAYER.md 1장) ===== -->
@@ -370,6 +394,14 @@
   <input id="mpJoinCodeInput" maxlength="6" placeholder="방 코드 6자리" style="padding:10px 14px; font-size:18px; letter-spacing:4px; border-radius:6px; border:1px solid #555; background:#1c1c22; color:#eee; width:200px; text-align:center; text-transform:uppercase;">
   <button class="menuBtn" id="btnMpJoinOk" style="margin-top:14px;">참가</button>
   <div id="mpJoinNotice" style="display:none; color:#e0c23c; font-size:13px; margin-top:8px;"></div>
+</div>
+
+<!-- 스킬/패시브 자세히 보기 창(v11.85, body 바로 아래) -->
+<div id="skillDetailOverlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="skillDetailTitle">
+  <div class="skillDetailBox">
+    <button id="skillDetailClose" aria-label="닫기">×</button>
+    <div id="skillDetailBody"></div>
+  </div>
 </div>
 
 <!-- 재연결 확인 창: 메뉴 화면에서 뜨므로 gameContainer 밖(body 바로 아래) -->
@@ -494,8 +526,9 @@
   <h2>선택된 캐릭터</h2>
   <div id="charInfo"><div id="noSelect">선택된 캐릭터 없음</div></div>
   <button id="attackBtn" class="actionBtn" disabled>공격</button>
-  <button id="skill1Btn" class="actionBtn skillBtn" disabled>스킬1</button>
-  <button id="skill2Btn" class="actionBtn skillBtn" disabled>스킬2</button>
+  <div class="skillRow"><button id="skill1Btn" class="actionBtn skillBtn" disabled>스킬1</button><button id="skill1InfoBtn" class="skillInfoBtn" aria-label="스킬1 자세히 보기" title="자세히 보기">🔍</button></div>
+  <div class="skillRow"><button id="skill2Btn" class="actionBtn skillBtn" disabled>스킬2</button><button id="skill2InfoBtn" class="skillInfoBtn" aria-label="스킬2 자세히 보기" title="자세히 보기">🔍</button></div>
+  <button id="passiveInfoBtn" class="passiveInfoBtn" style="display:none;">🔍 패시브 보기</button>
   <button id="retreatBtn" class="actionBtn" style="border-color:#e0784c;background:#3a2820; display:none;">퇴각 (배치구역으로)</button>
   <button id="cancelBtn">취소</button>
 
@@ -518,7 +551,8 @@
 </div>
 
 <script>
-const GAME_BUILD = '045dce3e44'; // 빌드 식별값(자동 생성)
+const GAME_BUILD = '40ef33e88b'; // 빌드 식별값(자동 생성)
+const GAME_VERSION = '11.85'; // 버전 번호(VERSION 파일)
 // ================= 기본 설정 =================
 // 판 크기는 스테이지마다 다를 수 있음 - loadStage가 setBoardSize로 바꿈(모든 사용처가 함수 안이라 바뀐 값이 바로 반영됨)
 let COLS = 20;
@@ -694,6 +728,26 @@ const STAGE_CONFIGS = {
       '@  @  @  .  .  .  .  .  .  !  .  a1 .  !  !  .  .  .  !  .  a3 .  .  .  .',
       '@  @  @  .  .  .  .  .  .  !  !  .  .  !  !  .  .  !  !  .  .  a3 .  .  .',
       '.  .  .  .  .  .  .  .  .  !  !  .  .  !  !  .  .  !  !  .  .  .  .  .  .',
+    ],
+  },
+  // 1-2 (20x15, 적 16: 전사4/방패병2/늑대4/궁수2/마법사2/저격수2) - 임무: 섬멸(기본), 사용자 제공 맵
+  '1-2': {
+    map: [
+      '.  .  .  .  .  !  .  .  .  .  .  ?  .  .  .  .  .  !  !  !',
+      '.  .  .  .  .  .  .  .  .  a2  .  .  .  .  .  .  .  .  !  !',
+      'a5  .  .  .  .  a4  .  .  !  a6  .  .  .  .  !  .  .  .  .  !',
+      '?  .  .  .  a1  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !',
+      '!  .  .  .  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !',
+      '.  .  .  .  ?  !  !  .  .  .  !  !  !  !  !  !  !  !  !  !',
+      '.  .  .  .  .  !  .  .  .  .  .  !  .  .  .  .  .  .  .  .',
+      '.  a2  .  .  a1  .  .  a3  .  .  .  .  .  .  a3  .  a5  a4  .  .',
+      '.  a6  !  .  .  a1  .  .  !  .  .  a1  .  .  .  a3  ?  ?  .  .',
+      '!  !  !  !  .  .  !  !  !  !  .  .  .  .  .  .  !  !  .  .',
+      '!  !  !  !  !  !  !  !  !  !  !  !  !  !  .  .  .  .  .  .',
+      '!  !  !  !  !  .  .  .  .  .  !  !  !  !  .  .  .  .  .  .',
+      '@  @  @  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  !',
+      '@  @  @  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  !  !',
+      '@  @  @  .  .  .  .  .  !  !  !  .  .  .  .  .  a3  !  !  !',
     ],
   },
   // 1-8 (30x21, 적 40: 장교1/포병5/기수2 포함) - 총력전 기본 켜짐, 임무: 장교 암살 30턴
@@ -1463,9 +1517,9 @@ function getAttackResourceOverride(attacker) {
 
 // ================= 일반 공격 판정 =================
 function calcAttackPreview(attacker, target, opts) {
-  opts = opts || {}; // opts.asRanged: 원거리 기본공격 판정, opts.isSkill: 스킬 타격(자원형/다연격/빙결 모드 무시), opts.mult: 피해 배율 지정
+  opts = opts || {}; // opts.asRanged: 원거리 기본공격 판정, opts.isSkill: 스킬 타격(자원형/다연격/빙결 모드 무시), opts.mult: 피해 배율 지정, opts.forceFlank: 엄폐와 관계없이 항상 측면(아라미스 살상지대)
   const isMelee = opts.asRanged ? false : effectiveRange(attacker) === 'melee';
-  const cover = isMelee ? null : resolveCover(attacker, target);
+  const cover = (isMelee || opts.forceFlank) ? null : resolveCover(attacker, target);
   const flanked = cover === null;
 
   let critChance = attacker.critChance + bonusCritChance(attacker);
@@ -3669,7 +3723,7 @@ characters.push(
         effect(caster, target) { susanooDash(caster, target.dir); }
       },
       {
-        name:'귀도 무라마사', cooldownMax:10, costReq:80, cooldownCur:10, targetType:'instant',
+        name:'귀도 무라마사', cooldownMax:6, costReq:60, cooldownCur:6, targetType:'instant',
         desc:'4턴간 공격력 +30%, 기동력 +3, 공격이 적 방어력 75% 무시, 기본 공격 가능. 지속 중 턴 종료 시 내려 베기 쿨타임 -3',
         infoText:`4턴간 공격력 +30%, 기동력 +3, 스사노오의 공격이 적 방어력을 75% 무시, 패시브1의 기본 공격 제한이 해제됩니다. 턴 종료 시 스킬1의 쿨타임 -3턴`,
         effect(caster) {
@@ -3798,7 +3852,7 @@ characters.push(
     hp:1900, maxHp:1900, atk:900, def:80, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:7, color:'#6d7f3f', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
-    hunterOptStacks:0, killZoneActive:false, killZoneMiss:0,
+    hunterOptStacks:0, killZoneActive:false, killZoneMissPct:0, // 빗나갈 확률(퍼센트 단위 - 0.075 누적 소수 오차 방지)
     passives:[
       { name:'저관통 살상탄', desc:'치명타 피해량 +50%, 공격 대상의 엄폐물 피해감소율 +100%(반엄폐 50%, 완전엄폐 100%)',
         infoText:`치명타 피해량 +50%, 공격 대상의 엄폐물 피해감소율 +100%` },
@@ -3807,7 +3861,7 @@ characters.push(
     ],
     skills: [
       {
-        name:'갈고리', cooldownMax:3, costReq:10, cooldownCur:3, targetType:'tile_in_range', areaRadius:0,
+        name:'갈고리', cooldownMax:3, costReq:0, cooldownCur:3, targetType:'tile_in_range', areaRadius:0,
         desc:'사거리 안(시야 안)의 빈 칸 중 상하좌우로 엄폐물과 붙은 칸으로 이동(기동력 소모 없음)',
         infoText:`사거리 이내의 타일 중 엄폐물과 인접한 곳으로 이동합니다`,
         tileFilter(c, x, y) { return hunterGrappleTileOk(x, y); },
@@ -3815,11 +3869,11 @@ characters.push(
       },
       {
         name:'살상지대', cooldownMax:5, costReq:50, cooldownCur:5, targetType:'instant',
-        desc:'아라미스 행동 종료. 상대 턴 동안 아라미스 사거리 안(시야 안)에서 이동·공격·스킬을 마친 적에게 기본공격(측면 판정 적용). 빗나갈 확률 10%에서 시작해 사격마다 +10%, 빗나가면 종료',
-        infoText:`아라미스의 턴 종료, 이번 턴 동안 아라미스의 사거리 안에서 행동(이동, 공격, 스킬)하는 적은 아라미스에게 기본공격을 당합니다(측면 판정 적용) 단, 공격이 빗나갈 확률 10% 존재. 미적중 시 스킬 종료. 공격을 이어갈 때마다 빗나갈 확률 +10%`,
+        desc:'아라미스 행동 종료. 상대 턴 동안 아라미스 사거리 안(시야 안)에서 이동·공격·스킬을 마친 적에게 기본공격(엄폐와 관계없이 항상 측면 판정: 엄폐 감소 없음, 치명타 +50%). 빗나갈 확률 0%에서 시작해 사격마다 +7.5%, 빗나가면 종료',
+        infoText:`아라미스의 턴 종료, 이번 턴 동안 아라미스의 사거리 안에서 행동(이동, 공격, 스킬)하는 적은 아라미스에게 기본공격을 당합니다(측면 판정 적용) 단, 공격이 빗나갈 확률은 0%에서 시작. 미적중 시 스킬 종료. 공격을 이어갈 때마다 빗나갈 확률 +7.5%`,
         effect(caster) {
           caster.killZoneActive = true;
-          caster.killZoneMiss = 0.1;
+          caster.killZoneMissPct = 0; // 첫 사격은 빗나가지 않음
           ensureVfxLoop(); // 검은 선 오오라 시작
           caster.ap = 0; caster.actedThisTurn = true; // 헌터 행동 종료(진영 턴은 계속)
           spawnFloatText(caster, '살상지대', '#c9e26b');
@@ -3855,24 +3909,24 @@ function hunterClearOpt(c) {
 }
 
 // 살상지대 반응 사격: 상대 유닛이 이동·공격·스킬을 마친 직후, 헌터 사거리 안 + 헌터 진영 시야 안이면 기본공격.
-// 빗나감 판정(공용 난수 - 온라인 양쪽 같음): 빗나가면 스킬 종료, 쏠 때마다 빗나갈 확률 +10%. 일반 회피 판정은 별개(rollAttack)
+// 빗나감 판정(공용 난수 - 온라인 양쪽 같음): 빗나가면 스킬 종료, 쏠 때마다 빗나갈 확률 +7.5%(0%에서 시작). 일반 회피 판정은 별개(rollAttack)
 function hunterKillZoneReact(unit, kind) {
   if (!unit || unit.dead || unit.inReserve || unit.notInBattle || unit.isGhost) return;
   for (const h of characters) {
     if (unit.dead) break;
     if (baseIdOf(h) !== 'hunter' || !h.killZoneActive || h.dead || h.inReserve || h.notInBattle || h.side === unit.side) continue;
     if (!inRange(h, unit) || !isVisibleTo(h.side, unit)) continue;
-    if (gameRand() < h.killZoneMiss) {
+    if (gameRand() * 100 < h.killZoneMissPct) {
       h.killZoneActive = false;
       spawnFloatText(h, '빗나감', '#bbbbbb');
       addLog(`${h.name}: 살상지대 - ${unit.name}에게 빗나감, 살상지대 종료`, 'logInfo');
       continue;
     }
     updateFacing(h, unit.x - h.x, unit.y - h.y);
-    addLog(`${h.name}: 살상지대 - ${unit.name}에게 반응 사격 (빗나갈 확률 ${Math.round(h.killZoneMiss * 100)}%)`, 'logSkill');
-    const res = rollAttack(h, unit, {});
+    addLog(`${h.name}: 살상지대 - ${unit.name}에게 반응 사격 (빗나갈 확률 ${h.killZoneMissPct}%)`, 'logSkill');
+    const res = rollAttack(h, unit, { forceFlank: true }); // 엄폐와 관계없이 항상 측면 판정(v11.82)
     logAttackResult(h, unit, res);
-    h.killZoneMiss = Math.min(1, h.killZoneMiss + 0.1);
+    h.killZoneMissPct = Math.min(100, h.killZoneMissPct + 7.5);
     checkBattleEndConditions();
   }
 }
@@ -3884,12 +3938,12 @@ defineHooks('hunter', {
   coverReductionScale() { return 2; },                                         // 저관통: 엄폐 피해감소율 2배
   onAttackResolved(c) { c.hunterOptStacks = (c.hunterOptStacks || 0) + 1; },  // 환경 최적화: 공격마다 +10%
   onTurnStart(c) { c.killZoneActive = false; },                                // 살상지대는 헌터 다음 턴 시작에 종료
-  onReset(c) { c.hunterOptStacks = 0; c.killZoneActive = false; c.killZoneMiss = 0; },
+  onReset(c) { c.hunterOptStacks = 0; c.killZoneActive = false; c.killZoneMissPct = 0; },
   onRetreat(c) { c.hunterOptStacks = 0; c.killZoneActive = false; },
   statusBadges(c) {
     const b = [];
     if (c.hunterOptStacks) b.push({ label: '환경 최적화 +' + c.hunterOptStacks * 10 + '%', color: '#c9e26b', tooltip: `환경 최적화: 치명타 확률 +${c.hunterOptStacks * 10}% (이동 시 소멸)` });
-    if (c.killZoneActive) b.push({ label: '살상지대', color: '#c9e26b', tooltip: `살상지대: 사거리 안에서 행동하는 적에게 반응 사격 (빗나갈 확률 ${Math.round(c.killZoneMiss * 100)}%)` });
+    if (c.killZoneActive) b.push({ label: '살상지대', color: '#c9e26b', tooltip: `살상지대: 사거리 안에서 행동하는 적에게 반응 사격 (빗나갈 확률 ${c.killZoneMissPct}%)` });
     return b;
   },
   basicAttackVfx(c, target, info) { return playBulletAttack(c, target, info && info.delay); },
@@ -4566,6 +4620,7 @@ function updatePanel() {
   emergencyDropBtn.disabled = !canActNow || vDrops <= 0;
   emergencyDropBtn.textContent = `긴급강하 사용 (남은 ${vDrops}회)`;
 
+  syncSkillInfoButtons(); // 🔍 자세히 보기 버튼(보이는 유닛만) + 선택이 바뀌면 열린 창 닫기
   if (!selected) {
     panel.innerHTML = '<div id="noSelect">선택된 캐릭터 없음</div>';
     attackBtn.disabled = true;
@@ -4701,6 +4756,62 @@ function exitActionMode() {
   updatePanel();
   draw();
 }
+
+// ================= 스킬/패시브 자세히 보기(v11.85) =================
+// 🔍 버튼은 스킬 버튼과 따로(스킬 버튼이 잠겨 있어도 볼 수 있게). 대상: 내 유닛 + 보이는 상대 유닛(안개 속 상대는 정체를 숨김).
+// 창은 연 순간의 정보를 보여주고, 선택이 바뀌면 닫힘. 내용은 순수 함수(skillDetailHtml/passiveDetailHtml)로 만듦
+let skillDetailFor = null; // 열려 있는 창의 유닛 id
+const detailTarget = () => (selected && !selected.dead && (selected.side === viewSide() || isVisibleTo(viewSide(), selected))) ? selected : null;
+function skillStatusChip(s) {
+  if (s.disabled) return '<span class="sdChip wait">사용 불가</span>';
+  if (s.oncePerDeploy) return s.usedThisDeploy ? '<span class="sdChip wait">이번 배치에서 사용함</span>' : '<span class="sdChip ready">사용 가능</span>';
+  return s.cooldownCur > 0 ? `<span class="sdChip wait">남은 쿨타임 ${s.cooldownCur}턴</span>` : '<span class="sdChip ready">쿨타임 준비됨</span>';
+}
+function skillDetailHtml(c, idx) {
+  const s = (c.skills || [])[idx];
+  if (!s) return '';
+  const cd = s.oncePerDeploy ? '배치당 1회' : `쿨타임 ${s.cooldownMax}턴`;
+  return `<div class="sdTitle" id="skillDetailTitle">${s.name}</div>
+    <div class="sdOwner">${c.name} · 스킬 ${idx + 1}</div>
+    <div class="sdMeta"><span class="sdChip">${cd}</span><span class="sdChip">코스트 ${s.costReq}</span>${skillStatusChip(s)}</div>
+    <div class="sdText">${s.infoText || s.desc || ''}</div>
+    ${s.desc && s.infoText ? `<div class="sdNoteLabel">게임 내 정리</div><div class="sdNote">${s.desc}</div>` : ''}`;
+}
+function passiveDetailHtml(c) {
+  const ps = c.passives || [];
+  return `<div class="sdTitle" id="skillDetailTitle">패시브</div><div class="sdOwner">${c.name}</div><div style="height:12px"></div>` +
+    ps.map(p => `<div class="sdPassive"><div class="sdPassiveName">${p.name}</div><div class="sdText">${p.infoText || p.desc || ''}</div>
+      ${p.desc && p.infoText ? `<div class="sdNoteLabel">게임 내 정리</div><div class="sdNote">${p.desc}</div>` : ''}</div>`).join('');
+}
+function openDetail(c, html) {
+  skillDetailFor = c.id;
+  document.getElementById('skillDetailBody').innerHTML = html;
+  document.getElementById('skillDetailOverlay').style.display = 'flex';
+}
+function closeSkillDetail() {
+  skillDetailFor = null;
+  const ov = document.getElementById('skillDetailOverlay');
+  if (ov) ov.style.display = 'none';
+}
+function syncSkillInfoButtons() {
+  const c = detailTarget();
+  if (skillDetailFor && (!c || c.id !== skillDetailFor)) closeSkillDetail(); // 선택이 바뀌면 닫기
+  const skills = c ? (c.skills || []) : [];
+  [0, 1].forEach(i => {
+    const b = document.getElementById(`skill${i + 1}InfoBtn`);
+    if (!b) return;
+    b.style.visibility = skills[i] ? 'visible' : 'hidden';
+    b.onclick = () => { const t = detailTarget(); if (t && (t.skills || [])[i]) openDetail(t, skillDetailHtml(t, i)); };
+  });
+  const pb = document.getElementById('passiveInfoBtn');
+  if (pb) {
+    pb.style.display = c && (c.passives || []).length ? 'block' : 'none';
+    pb.onclick = () => { const t = detailTarget(); if (t) openDetail(t, passiveDetailHtml(t)); };
+  }
+}
+document.getElementById('skillDetailClose').addEventListener('click', closeSkillDetail);
+document.getElementById('skillDetailOverlay').addEventListener('click', e => { if (e.target && e.target.id === 'skillDetailOverlay') closeSkillDetail(); }); // 창 바깥 클릭
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && skillDetailFor) closeSkillDetail(); });
 
 // ================= 포진 (Brace) =================
 // 소환물은 포진을 할 수 없음. 남은 행동력을 전부 소모해 방어막 획득(소모 행동력 * 최대체력의 10%).
@@ -9009,6 +9120,8 @@ document.getElementById('battleResultBackBtn').addEventListener('click', () => {
   showMenuScreen('screenStageSelect');
 });
 
+// 첫 화면 왼쪽 아래 버전 표시: v번호 · 빌드 식별값(온라인 "게임 버전이 다릅니다" 때 두 화면 비교용)
+document.getElementById('gameVersionLabel').textContent = `v${GAME_VERSION} · ${GAME_BUILD}`;
 document.getElementById('btnGameStart').addEventListener('click', () => { showMenuScreen('screenModeSelect'); mpOfferRejoin(); }); // 진행 중인 온라인 대전이 있으면 재참가 확인(17_pvp)
 document.getElementById('btnSinglePlayer').addEventListener('click', () => showMenuScreen('screenSPMenu'));
 document.getElementById('btnSPMenuBack').addEventListener('click', () => showMenuScreen('screenModeSelect'));
@@ -9102,7 +9215,8 @@ const REGIONS = [
 const REGION_STAGES = {
   0: [ { id:'0-0', name:'테스트 스테이지' } ],
   1: [ { id:'1-1', name:'1-1 전투의 기본' },
-       ...['1-2', '1-3', '1-4', '1-5', '1-6', '1-7'].map(id => ({ id, name: id, locked: true })), // 준비 중(임시)
+       { id:'1-2', name:'1-2' },
+       ...['1-3', '1-4', '1-5', '1-6', '1-7'].map(id => ({ id, name: id, locked: true })), // 준비 중(임시)
        { id:'1-8', name:'1-8' },
        { id:'1-9', name:'1-9 복수의 왕녀 (보스)' } ],
 };

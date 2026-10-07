@@ -212,6 +212,17 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.5);
   }
   #endTurnBtn:hover { background: #396050; }
+  /* 2지역 페로몬 보관함 (REGION2.md 1-2, v11.93 왼쪽 세로) - top/--phSize는 layoutPheromoneBar가 맞춤 */
+  #pheromoneBar { position: fixed; top: 260px; left: 14px; z-index: 450; display: grid; grid-template-columns: var(--phSize); gap: 8px; --phSize: 64px; }
+  .pheromoneBtn { position: relative; width: var(--phSize); height: var(--phSize); padding: 4px 2px 3px; border-radius: 8px; border: 2px solid #777; color: #eee; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.5); box-sizing: border-box; }
+  .pheromoneBtn .phVial { width: 72%; height: 66%; display: block; }
+  .pheromoneBtn .phName { font-size: calc(var(--phSize) * 0.18); line-height: 1; font-weight: bold; white-space: nowrap; }
+  .pheromoneBtn .phCount { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; color: #111; font-size: 11px; font-weight: bold;
+    line-height: 18px; text-align: center; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+  .pheromoneBtn:hover:not(:disabled) { filter: brightness(1.25); }
+  .pheromoneBtn.active { box-shadow: 0 0 0 2px #fff, 0 2px 8px rgba(0,0,0,0.6); }
+  .pheromoneBtn:disabled { opacity: 0.4; cursor: default; }
   #invalidActionToast {
     position: fixed;
     top: 56px;
@@ -287,6 +298,7 @@
 <div id="pvpCoverOverlay" style="display:none;"><div id="pvpCoverText"></div><div id="pvpCoverSub"></div><button id="pvpCoverOk" class="menuBtn">확인</button></div>
 <div id="battleResultOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:2500; align-items:center; justify-content:center; flex-direction:column;">
   <div id="battleResultTitle" style="font-size:48px; font-weight:bold; letter-spacing:6px; margin-bottom:20px;">승리</div>
+  <div id="battleResultStats"></div>
   <button id="battleResultBackBtn" class="menuBtn" style="border-color:#3c5ea8; background:#20263a;">스테이지 선택으로</button>
 </div>
 
@@ -351,6 +363,19 @@
   .formationSlot.empty:hover { border-color:#3c5ea8; color:#9fd3ff; }
   .formationSlot.filled { border:2px solid #3f8f66; background:#1f2e26; color:#eee; }
   .formationSlotPlus { font-size:28px; color:#555; }
+  /* 전투 종료 피해량 순위 (v11.87) */
+  #battleResultStats { display:flex; gap:20px; flex-wrap:wrap; justify-content:center; width:100%; max-width:780px; max-height:62vh; overflow-y:auto; margin-bottom:20px; padding:0 8px; box-sizing:border-box; }
+  .rankCol { display:flex; flex-direction:column; gap:12px; min-width:280px; max-width:360px; flex:1 1 300px; }
+  .rankSide { font-size:16px; font-weight:bold; color:#e0c23c; text-align:center; }
+  .rankBlock { background:#1d1d24; border:1px solid #3a3a46; border-radius:8px; padding:10px 12px; }
+  .rankTitle { font-size:13px; font-weight:bold; color:#ccc; margin-bottom:6px; }
+  .rankRow { display:grid; grid-template-columns:18px 72px 1fr 58px; align-items:center; gap:8px; font-size:12px; color:#ddd; padding:2px 0; }
+  .rankNo { color:#888; text-align:right; }
+  .rankName { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rankBar { height:8px; background:#2c2c36; border-radius:4px; overflow:hidden; }
+  .rankBar i { display:block; height:100%; border-radius:4px; }
+  .rankVal { text-align:right; font-variant-numeric:tabular-nums; }
+  .rankEmpty { font-size:12px; color:#777; }
   .rosterPickCard { border-radius:8px; border:1px solid #444; background:#2a2a30; color:#eee; text-align:center; cursor:pointer; overflow:hidden; }
   .rosterPickCard:hover { border-color:#3c5ea8; background:#33333e; }
   .rosterPickCard.taken { opacity:0.35; cursor:not-allowed; }
@@ -498,6 +523,7 @@
 <div id="gameContainer" style="display:none; width:100%; height:100vh; overflow:hidden;">
 
 <button id="endTurnBtn">턴 종료</button>
+<div id="pheromoneBar" style="display:none;"></div>
 <div id="pvpTimer" style="display:none;"></div>
 <div id="netStatusBar" style="display:none;"></div>
 <div id="invalidActionToast">불가</div>
@@ -551,8 +577,8 @@
 </div>
 
 <script>
-const GAME_BUILD = '40ef33e88b'; // 빌드 식별값(자동 생성)
-const GAME_VERSION = '11.85'; // 버전 번호(VERSION 파일)
+const GAME_BUILD = '86bc812301'; // 빌드 식별값(자동 생성)
+const GAME_VERSION = '11.97'; // 버전 번호(VERSION 파일)
 // ================= 기본 설정 =================
 // 판 크기는 스테이지마다 다를 수 있음 - loadStage가 setBoardSize로 바꿈(모든 사용처가 함수 안이라 바뀐 값이 바로 반영됨)
 let COLS = 20;
@@ -594,7 +620,9 @@ function centerBoardScroll() {
 // ================= 엄폐물 =================
 const obstacles = new Map(); // 스테이지 진입시 loadStage()에서 채워짐
 function isObstacle(x, y) { return obstacles.has(x + ',' + y); }
-function obstacleTypeAt(x, y) { return obstacles.get(x + ',' + y) || null; }
+function obstacleTypeAt(x, y) { return obstacles.get(x + ',' + y) || null; } // 'full' | 'half' | 'pit' | null
+// 엄폐 종류: 완전엄폐/반엄폐만. 구덩이('pit')는 지나갈 수 없지만(isObstacle) 엄폐가 아님 - 엄폐 판정은 반드시 이걸로
+function coverTypeAt(x, y) { const t = obstacleTypeAt(x, y); return t === 'full' || t === 'half' ? t : null; }
 
 let summonIdCounter = 1;
 
@@ -714,7 +742,7 @@ const STAGE_CONFIGS = {
       {template:'test_soldier', x:15, y:6},
     ],
   },
-  // 맵 격자(map): 칸마다 기호를 공백으로 구분. . 평지 / ! 완전엄폐 / ? 반엄폐 / @ 시작 배치 구역 / 적은 템플릿의 mapCode(a1 등)
+  // 맵 격자(map): 칸마다 기호를 공백으로 구분. . 평지 / ! 완전엄폐 / ? 반엄폐 / ' 구덩이 / @ 시작 배치 구역 / 적은 템플릿의 mapCode(a1 등)
   // 판 크기는 격자 크기로 정해짐. 시작 배치 구역은 위→아래, 왼쪽→오른쪽 순서로 최초 투입 4명이 놓임
   '1-1': {
     map: [
@@ -750,32 +778,63 @@ const STAGE_CONFIGS = {
       '@  @  @  .  .  .  .  .  !  !  !  .  .  .  .  .  a3  !  !  !',
     ],
   },
-  // 1-8 (30x21, 적 40: 장교1/포병5/기수2 포함) - 총력전 기본 켜짐, 임무: 장교 암살 30턴
+  // 1-8 (30x21, 적 41: 장교1/포병5/기수2 포함, v11.86 난이도 낮춘 사용자 맵으로 교체) - 총력전 기본 켜짐, 임무: 장교 암살 30턴
+  // 2-1 거주지 습격 (v11.96 사용자 제공 35x9 → v11.97 잡졸 30% 무작위 제거·분노 상자 추가): 잡졸 42·경비병 7·혼란·분노 상자, 섬멸, 총력전 꺼짐·안개 켜짐
+  '2-1': {
+    pheromones: true,
+    map: [
+      ".  .  .  ?  !  ?  .  .  .  .  .  .  .  ?  !  !  !  !  !  !  !  !  ?  .  .  .  .  .  .  .  b1  b1  .  .  .",
+      ".  .  .  ?  .  .  .  .  ?  ?  .  .  b2  .  ?  !  !  !  !  !  !  ?  .  .  b1  b1  .  ?  ?  .  .  b1  .  .  .",
+      ".  @  @  @  .  .  .  .  .  ?  .  .  b1  .  b1  .  b1  ?  b2  .  b1  b1  .  .  b1  .  .  .  ?  ?  .  b1  b1  b2  .",
+      ".  @  @  @  .  .  .  .  .  .  .  .  .  .  .  .  .  b1  .  b1  .  .  .  .  .  .  .  .  .  .  b1  .  .  .  .",
+      ".  @  @  @  .  .  .  .  .  .  b1  .  .  .  .  .  .  .  .  .  .  b1  b1  b1  .  .  b1  .  b1  .  .  b2  .  b1  b1",
+      ".  .  b15  b16  .  .  .  .  .  b1  .  .  .  b1  b1  .  .  .  .  .  .  .  ?  b1  .  .  .  .  .  .  b1  .  .  .  b1",
+      ".  .  ?  .  .  .  b2  .  .  .  .  .  .  .  .  ?  b2  b1  .  .  .  .  ?  ?  .  b1  .  .  .  .  b1  ?  b2  .  .",
+      ".  .  ?  .  .  .  .  .  ?  !  !  !  !  !  !  !  ?  .  .  .  b1  .  .  b1  b1  .  .  .  .  b1  ?  ?  .  b1  .",
+      ".  .  ?  ?  .  .  .  ?  !  !  !  !  !  !  !  !  !  ?  .  .  b1  b1  .  .  .  b1  .  .  .  .  b1  .  .  .  .",
+    ],
+  },
+  // 2지역 시험(임시, v11.92): 지혁 일반·엘리트·페로몬 상자를 한 판에서 확인. 실제 2지역 맵을 받으면 뺌 (REGION2.md)
+  '2-0': {
+    pheromones: true, allIn: true,
+    map: [
+      ".  .  .  .  !  .  .  .  ?  .  .  .  .  .  !  .  .  .  .  .  .  .",
+      ".  .  .  .  .  .  b15  .  .  .  b1  .  .  .  .  .  b6  .  .  ?  b11  .",
+      ".  .  .  ?  .  .  .  .  !  .  b1  b2  .  '  '  .  .  .  .  .  .  .",
+      "@  @  @  .  .  .  .  .  !  .  b1  .  .  '  '  .  b3  .  !  .  b10  .",
+      "@  @  @  .  b17  .  .  .  .  .  .  .  b9  .  .  .  .  .  !  b8  .  b13",
+      "@  @  @  .  .  .  ?  .  .  b7  .  .  .  .  .  b4  b5  .  .  .  .  .",
+      ".  .  .  .  .  .  !  .  .  .  .  ?  .  .  .  b4  b4  .  b6  .  b12  .",
+      ".  .  .  ?  .  .  b16  .  .  '  '  .  .  .  !  .  .  .  .  ?  .  b14",
+      ".  .  .  .  .  .  .  .  .  '  '  .  b18  .  .  .  .  .  .  .  .  .",
+      ".  .  .  .  !  .  .  .  .  .  .  .  .  .  .  .  ?  .  .  .  .  .",
+    ],
+  },
   '1-8': {
     allIn: true,
     objective: { type: 'assassinate', target: 'wikat_officer', turns: 30 },
     map: [
-      '@  @  @  .  !  !  !  ?  .  ?  !  !  !  .  .  .  !  !  !  .  .  .  !  !  !  a8 a2 .  .  .',
-      '@  @  @  .  !  .  !  .  ?  .  !  .  !  a8 .  .  !  .  !  .  .  a6 !  .  !  a2 .  .  .  .',
-      '@  @  @  .  !  !  !  ?  .  ?  !  !  !  !  .  .  !  !  !  .  .  .  !  !  !  .  .  !  !  .',
-      '.  .  .  .  !  !  a8 a2 .  .  ?  .  ?  .  .  .  ?  .  ?  .  .  .  a3 a3 .  .  a3 !  !  .',
-      '.  .  .  .  .  .  a2 .  .  .  .  ?  .  .  .  .  .  ?  .  a9 .  .  .  .  .  .  .  .  a3 .',
-      '.  .  .  .  .  .  .  .  .  .  ?  .  ?  .  .  !  ?  .  ?  !  .  .  .  .  .  .  .  .  .  .',
-      '!  !  .  .  !  !  !  ?  .  ?  !  !  !  .  .  .  !  !  !  .  .  .  !  !  !  .  .  .  .  .',
-      '!  !  .  .  !  .  !  .  ?  .  !  .  !  .  .  .  !  .  !  .  .  a9 !  .  !  .  .  a3 .  .',
-      'a3 .  .  .  !  !  !  ?  .  ?  !  !  !  !  .  .  !  !  !  .  .  !  !  !  !  .  !  !  .  .',
-      'a3 .  .  .  .  .  !  a4 .  .  .  .  !  a4 .  .  ?  .  ?  .  .  .  ?  .  ?  .  !  !  a1 .',
-      '.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  ?  .  a3 .  .  .  ?  .  .  a5 .  .  .',
-      '.  .  .  !  .  .  .  .  .  !  a4 .  .  .  .  !  ?  .  ?  !  .  .  ?  .  ?  .  .  .  .  .',
-      '.  .  a2 a5 !  !  !  ?  .  ?  !  !  !  .  .  .  !  !  !  .  .  .  !  !  !  .  .  .  a3 .',
-      '!  .  .  .  !  .  !  .  ?  .  !  .  !  .  .  .  !  .  !  .  .  a3 !  .  !  .  .  !  !  .',
-      'a6 .  .  .  !  !  !  ?  .  ?  !  !  !  !  .  .  !  !  !  .  .  !  !  !  !  .  a1 !  !  .',
-      '.  .  .  !  ?  .  ?  .  .  !  a8 a2 .  .  .  .  .  a3 .  .  .  .  ?  .  ?  .  .  .  a8 .',
-      '.  .  .  a6 .  ?  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  ?  .  .  .  .  .  .',
-      '!  .  .  .  ?  .  ?  .  .  .  .  .  a3 .  .  !  .  .  .  !  .  .  ?  .  ?  !  .  .  .  !',
-      'a6 .  .  .  !  !  !  ?  .  ?  !  !  !  .  .  a6 !  !  !  .  .  .  !  !  !  !  .  a7 .  !',
-      '.  .  .  !  !  .  !  .  ?  .  !  .  !  .  .  .  !  .  !  .  .  .  !  .  !  !  .  .  .  !',
-      'a3 .  .  a3 !  !  !  ?  .  ?  !  !  !  !  .  .  !  !  !  .  .  !  !  !  !  !  !  !  !  !',
+      '@  @  @  .  !  !  !  ?  .  ?  !  !  !  .  .  .  !  !  !  .  .  .  !  !  !  a8  .  .  .  .',
+      '@  @  @  .  !  .  !  .  ?  .  !  .  !  a8  a2  .  !  .  !  .  .  a6  !  .  !  a2  .  .  .  .',
+      '@  @  @  .  !  !  !  ?  .  ?  !  !  !  !  .  .  !  !  !  .  .  !  !  !  !  .  .  !  !  .',
+      '.  .  .  .  !  !  a8  a1  .  .  ?  .  ?  .  .  .  ?  .  ?  .  .  .  !  a3  .  .  a3  !  !  .',
+      '.  .  .  .  .  .  .  .  .  .  .  ?  .  .  .  a3  .  ?  .  a9  .  .  .  .  .  .  .  .  a3  .',
+      '.  .  .  .  .  .  .  .  .  .  ?  .  ?  .  .  !  ?  .  ?  !  .  .  .  .  .  .  .  .  .  !',
+      '!  !  .  .  !  !  !  ?  .  ?  !  !  !  .  .  .  !  !  !  .  .  .  !  !  !  .  .  .  .  !',
+      '!  !  .  .  !  .  !  .  ?  .  !  .  !  .  .  .  !  .  !  .  .  a9  !  .  !  .  .  a1  .  .',
+      'a3  .  .  .  !  !  !  ?  .  ?  !  !  !  !  .  .  !  !  !  .  .  !  !  !  !  .  !  !  .  .',
+      'a3  .  .  .  .  .  !  a4  .  .  .  .  !  a4  .  .  ?  .  ?  .  .  .  ?  .  ?  .  !  !  .  .',
+      '.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  ?  .  a3  .  .  .  ?  .  .  a5  a2  .  .',
+      '.  .  .  !  a3  .  .  .  .  !  a4  .  .  .  .  !  ?  .  ?  !  .  .  ?  .  ?  .  .  .  .  .',
+      '.  .  a2  a5  !  !  !  ?  .  ?  !  !  !  .  .  a3  !  !  !  .  .  .  !  !  !  .  .  .  a3  .',
+      '!  .  .  .  !  .  !  .  ?  .  !  .  !  .  .  .  !  .  !  .  .  a3  !  .  !  .  .  !  !  .',
+      'a4  .  .  .  !  !  !  ?  .  ?  !  !  !  !  .  .  !  !  !  .  .  !  !  !  !  .  a1  !  !  .',
+      '.  .  .  !  ?  .  ?  .  .  !  a8  a2  .  .  .  .  .  !  .  .  .  .  ?  .  ?  .  .  .  a8  .',
+      '.  .  .  a6  .  ?  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  ?  .  .  .  .  .  .',
+      '!  .  .  .  ?  .  ?  .  .  .  .  .  !  .  .  !  .  .  .  !  .  .  ?  .  ?  !  .  .  .  !',
+      'a6  .  .  a3  !  !  !  ?  .  ?  !  !  !  .  .  a6  !  !  !  .  .  .  !  !  !  !  !  a7  !  !',
+      '.  .  .  !  !  .  !  .  ?  .  !  .  !  .  .  .  !  .  !  .  .  .  !  .  !  !  .  !  .  !',
+      'a3  a3  .  a3  !  !  !  ?  .  ?  !  !  !  !  .  .  !  !  !  .  .  !  !  !  !  !  !  !  !  !',
     ],
   },
   // 대전(일반전) 1번 맵 (25x9, 좌우 대칭, 1P @ 왼쪽 / 2P # 오른쪽) - 메뉴의 스테이지 목록에는 없음
@@ -838,7 +897,7 @@ const STAGE_CONFIGS = {
 };
 
 // 맵 격자 해석 -> { cols, rows, obstacles, enemies, deployZone }. 알 수 없는 기호는 오류
-const MAP_TERRAIN = { '.': null, '!': 'full', '?': 'half', '@': 'deploy', '#': 'deploy2', 'E': 'escape', 'D': 'defend' }; // # 대전 2P 시작 구역, E 탈출, D 수비 (T 파괴 목표물은 적으로)
+const MAP_TERRAIN = { '.': null, '!': 'full', '?': 'half', "'": 'pit', '@': 'deploy', '#': 'deploy2', 'E': 'escape', 'D': 'defend' }; // ' 구덩이(지나갈 수 없음, 엄폐 없음 - v11.88), # 대전 2P 시작 구역, E 탈출, D 수비 (T 파괴 목표물은 적으로)
 function parseStageMap(map) {
   const codeToTemplate = {};
   for (const k in ENEMY_TEMPLATES) if (ENEMY_TEMPLATES[k].mapCode) codeToTemplate[ENEMY_TEMPLATES[k].mapCode] = k;
@@ -902,6 +961,7 @@ function resetPlayerCharacterState(c) {
 function loadStage(stageId) {
   let config = STAGE_CONFIGS[stageId];
   if (config.map) config = Object.assign({}, config, parseStageMap(config.map)); // 격자 맵이면 해석
+  currentStageConfig = config;
   setBoardSize(config.cols || 20, config.rows || 8);
   INITIAL_DEPLOY_ZONE = (config.deployZone && config.deployZone.length) ? config.deployZone : DEFAULT_DEPLOY_ZONE;
   fogEnabled = config.fog !== false; // 안개 기본 켜짐
@@ -959,9 +1019,11 @@ function spawnEnemy(templateKey, x, y) {
     // 다연격 기본공격(장교 등): 아군 다연격 구조를 영구 적용
     ...(tpl.multiHit ? { multiHitTurnsLeft: Infinity, multiHitHits: tpl.multiHit.hits, multiHitMult: tpl.multiHit.mult } : {}),
     ...(tpl.vision != null ? { vision: tpl.vision } : {}),
+    ...(tpl.flags ? Object.assign({}, tpl.flags) : {}), // 유닛 공용 표시(passThrough 길을 막지 않음 / noZoneControl 지역장악 없음 / zh 2지역 지혁 등 - REGION2.md)
     // 적 상태(FOG_VISION.md 3장): 안개가 켜져 있으면 경계로 시작, 보스·안개 꺼짐은 전투로 시작. 경계 배회의 중심 = 처음 배치된 칸
     aiState: (tpl.grade === 'boss' || !fogEnabled) ? 'combat' : 'alert', homeX: x, homeY: y,
   };
+  if (e.isStructure) e.aiState = 'combat'; // 구조물(flags.isStructure): 행동 안 함, 경계/발견 없음
   if (templateKey === 'objective_target') { // 파괴 목표물: 행동 안 함, 안개 속에서도 보임, 체력/방어력은 임무 설정
     const o = (typeof objectiveState !== 'undefined' && objectiveState) || {};
     e.isObjectiveTarget = true; e.alwaysVisible = true; e.aiState = 'combat';
@@ -977,7 +1039,7 @@ function applyBattleOptions(opts) {
   if (opts.fog !== undefined) {
     fogEnabled = !!opts.fog;
     exploredTiles = new Set();
-    for (const e of characters) if (e.side === 'enemy' && !e.dead) e.aiState = (e.grade === 'boss' || !fogEnabled) ? 'combat' : 'alert';
+    for (const e of characters) if (e.side === 'enemy' && !e.dead && !e.isStructure) e.aiState = (e.grade === 'boss' || !fogEnabled) ? 'combat' : 'alert';
   }
   if (opts.allIn !== undefined) maxFieldUnits = opts.allIn ? 6 : 4;
 }
@@ -1058,6 +1120,18 @@ function switchMySide(side) {
 let fixedViewSide = null;
 let netCommandSink = null;   // 온라인: 명령 전송 함수(18_net이 전투 시작 때 설정)
 let netCanActFn = null;      // 온라인: 지금 내 차례인지(차례 잠금)
+// ---- 편 판정 (2지역 조종 - REGION2.md 2장): 조종 중인 지혁(zhControlled)은 진영은 적 그대로지만 플레이어 편으로 조작·판정.
+// 조종이 없으면 teamOf = side 라서 기존과 같음(대전 포함)
+function teamOf(c) { return c && c.zhControlled ? 'player' : (c ? c.side : null); }
+function isMyUnit(c) { return !!c && teamOf(c) === mySide; } // 지금 조작하는 편의 유닛
+// a가 t를 공격 대상으로 삼을 수 있는가: 다른 편이면 가능, 조종 중인 지혁은 아군도 칠 수 있음(아군 공격·광역 대상)
+function canAttackTarget(a, t) {
+  if (!a || !t || a === t || (a.id === t.id && a.side === t.side)) return false;
+  if (t.zhControlled && !a.zhControlled) return true;
+  return teamOf(a) !== teamOf(t);
+}
+let currentStageConfig = null; // 지금 스테이지 설정(loadStage가 기록 - 2지역 페로몬 사용 여부 등)
+let reactionLocks = 0;      // 아군 턴 중 적의 반응 행동(크리살리드 기습 이동·공격 - REGION2.md 6장)이 진행 중이면 명령을 받지 않음
 let netBusyFn = null;        // 온라인: 연출/재생/진영 전환이 끝나지 않았는지(끝나야 다음 명령 - 양쪽 실행 순서를 같게)
 function viewSide() { return fixedViewSide || mySide; }
 // 지금 화면의 사람이 조작할 수 있는가(내 차례 + 온라인 잠금 아님). 싱글·핫시트는 항상 참
@@ -1191,7 +1265,10 @@ const SYSTEMS = {};
 function registerSystem(name, fn) { (SYSTEMS[name] = SYSTEMS[name] || []).push(fn); }
 function runSystems(name, ...args) { for (const fn of (SYSTEMS[name] || [])) fn(...args); }
 
-const STAT_MODS = { atk: [], def: [], dmgIncrease: [], critChance: [], critMult: [], turnStartAp: [], dmgTaken: [], braceMult: [], healTaken: [] }; // healTaken: 받는 회복량 배율(곱, healUnit)
+const STAT_MODS = { atk: [], def: [], dmgIncrease: [], critChance: [], critMult: [], turnStartAp: [], dmgTaken: [], braceMult: [], healTaken: [], visionMult: [], extraMiss: [] }; // healTaken: 받는 회복량 배율(곱, healUnit) / visionMult: 시야 반경 배율(곱, 반올림) / extraMiss: 공격자의 추가 빗나감 확률(합, 0~1 - 회피와 별개)
+// 적 AI 추가 공격 대상: fn(enemy) -> [{ unit, bonus }] - 아군 말고도 칠 수 있는 대상(2지역 혼란: 지혁끼리). bonus는 대상 점수에 더해짐(우선순위)
+const AI_TARGET_PROVIDERS = [];
+function registerAiTargets(fn) { AI_TARGET_PROVIDERS.push(fn); }
 function registerModifier(kind, fn) { STAT_MODS[kind].push(fn); }
 function sumMods(kind, ...args) { let s = 0; for (const fn of STAT_MODS[kind]) s += fn(...args) || 0; return s; }
 function productMods(kind, ...args) { let p = 1; for (const fn of STAT_MODS[kind]) p *= fn(...args); return p; }
@@ -1337,7 +1414,7 @@ function dealSkillDamage(target, srcAtk, mult, srcDmgInc, attacker, opts) {
   const defIgnore = attacker ? Math.max(0, Math.min(1, charHook(attacker, 'skillDefIgnore', target) || 0)) : 0; // 스킬 피해 방어 무시(스사노오 귀도 무라마사)
   const dmg = applyDefenseWithFloor(srcAtk * mult * srcDmgInc * effectiveDmgTakenRate(target), target, defIgnore);
   const wasDeadBefore = target.dead, hpBefore = target.hp;
-  dealDamage(target, dmg);
+  dealDamage(target, dmg, undefined, attacker || opts.source); // 피해 집계 출처: 공격자(없으면 opts.source - 이타 결정 구역 등)
   const lethal = !wasDeadBefore && target.dead;
   presentHit(target, { delay: opts.hitDelay || 0, hpBefore, lethal, text: dmg, textColor: DMG_TEXT_COLOR, flash: dmg > 0 }); // 적 대상 스킬 피해 전용 함수라 자해와 안 겹침
   if (lethal && attacker) onKillBy(attacker, target);
@@ -1363,9 +1440,41 @@ function triggerOnAllyDeath(deadChar) {
   }
 }
 
+// ================= 전투 피해 집계 (전투 종료 순위 표시용, v11.87) =================
+// 키 = 진영:id (대전에서 양쪽이 같은 캐릭터를 골라도 섞이지 않게). 표시 전용이라 동기화 확인값(stateHash)에는 넣지 않음
+// - 집계량: 실제로 깎인 양(방어막 흡수 포함, 남은 체력을 넘는 초과 피해 제외)
+// - 받은 피해: 자해 포함, 소환물이 받은 피해는 제외 / 가한 피해: 상대 진영에게 준 피해만, 소환물 피해는 주인에게 합산
+let battleDmgStats = {};
+registerSystem('onStageLoad', () => { battleDmgStats = {}; });
+function dmgStatOf(c) {
+  const k = c.side + ':' + c.id;
+  return battleDmgStats[k] || (battleDmgStats[k] = { side: c.side, id: c.id, name: c.name, dealt: 0, taken: 0, deployed: false });
+}
+function dmgCreditUnit(u) { // 가한 피해를 받을 캐릭터: 소환물이면 주인
+  if (!u) return null;
+  if (u.isSummon) return characters.find(c => c.id === u.ownerId && c.side === u.side && !c.isSummon) || null;
+  return u;
+}
+function noteDeployedForStats(c) { if (c && !c.isSummon) dmgStatOf(c).deployed = true; } // 한 번이라도 전장에 투입됨(순위 표시 대상)
+// source: 유닛 1명, 또는 [{ unit, w }] 배열(화상처럼 여러 명이 나눠 가진 피해 - w 비율로 나눔), 없으면 받은 피해만 집계
+function recordDamageStat(target, amount, source) {
+  if (!(amount > 0)) return;
+  if (!target.isSummon) dmgStatOf(target).taken += amount;
+  const shares = Array.isArray(source) ? source : (source ? [{ unit: source, w: 1 }] : []);
+  const totalW = shares.reduce((s, x) => s + x.w, 0);
+  if (!(totalW > 0)) return;
+  for (const sh of shares) {
+    const u = dmgCreditUnit(sh.unit);
+    if (!u || u.side === target.side) continue; // 자해/같은 진영 피해는 가한 피해가 아님
+    dmgStatOf(u).dealt += amount * sh.w / totalW;
+  }
+}
+
 // ================= 공용 피해 적용 (방어막 우선 소모 + 사망 트리거) =================
-function dealDamage(target, dmg, gainStackOverride) {
+// source(선택): 피해 집계 출처(위 recordDamageStat 참고). 게임 판정에는 쓰지 않음
+function dealDamage(target, dmg, gainStackOverride, source) {
   const wasDead = target.dead;
+  if (!wasDead && dmg > 0) recordDamageStat(target, Math.min(dmg, (target.shield || 0) + Math.max(0, target.hp)), source);
   if (dmg > 0) runSystems('onDamaged', target, dmg); // 피해 발생 알림(적 AI: 경계 중인 적 발견 등 - 10_ai_state.js)
   let remaining = dmg;
   if (target.shield > 0) {
@@ -1388,7 +1497,7 @@ function dealDamage(target, dmg, gainStackOverride) {
     if (shouldGainStack) target.stacks = (target.stacks || 0) + 1; // 업화 등: 피해를 받을 때마다 중첩 획득
     runSystems('onDamageTaken', target, dmg); // 방어력 무시 여부와 무관하게 '체력이 감소'하는 모든 경우(자해/화상/일반피해)에 반응하는 전역 규칙
   }
-  if (!wasDead && target.dead) { triggerOnAllyDeath(target); dismissSummonsOf(target); } // 주인이 죽으면 소환물은 소멸(사망 아님)
+  if (!wasDead && target.dead) { triggerOnAllyDeath(target); dismissSummonsOf(target); runSystems('onUnitDied', target); } // 주인이 죽으면 소환물은 소멸(사망 아님). onUnitDied: 진영 무관 사망 알림(2지역 사망 효과)
   return dmg;
 }
 // 주인(소환물이 아닌 캐릭터)이 퇴각하거나 죽으면 그 소환물은 모두 소멸 - 사망이 아니므로 사망 이벤트 없음
@@ -1408,12 +1517,16 @@ function killCharacter(c) {
   c.hp = 0; c.dead = true;
   triggerOnAllyDeath(c);
   dismissSummonsOf(c);
+  runSystems('onUnitDied', c);
 }
 
 // ================= 이동 범위 계산 =================
+// 길을 막지 않는 유닛(템플릿 passThrough - 2지역 잡졸이지혁, REGION2.md 5장): 누구나 그 칸을 지나갈 수 있지만 멈출 수는 없음.
+// 잠복 중인 유닛(lurking - 크리살리드, 6장)은 전장 밖(inReserve) 취급이라 charAt에 안 잡힘 = 아군은 지나가거나 멈출 수 있음(적 AI 경로만 막음)
+function lurkerAt(x, y) { return characters.find(c => c.lurking && !c.dead && c.x === x && c.y === y) || null; }
 function computeReachable(character) {
   const map = new Map();
-  if (character.side !== mySide || character.ap <= 0 || character.actedThisTurn) return map; // 내 진영(대전: 지금 차례 진영)만 이동
+  if (!isMyUnit(character) || character.ap <= 0 || character.actedThisTurn) return map; // 내 진영(대전: 지금 차례 진영)만 이동 - 조종 지혁 포함
 
   const queue = [{x:character.x, y:character.y, dist:0, path:[{x:character.x, y:character.y}]}];
   map.set(character.x + ',' + character.y, { dist: 0, path: queue[0].path });
@@ -1427,15 +1540,17 @@ function computeReachable(character) {
       if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
       if (isObstacle(nx, ny)) continue;
       const occupant = charAt(nx, ny);
-      if (occupant && occupant.id !== character.id) continue;
+      if (occupant && occupant.id !== character.id && !occupant.passThrough) continue;
       const key = nx + ',' + ny;
       const nDist = cur.dist + 1;
       if (map.has(key) && map.get(key).dist <= nDist) continue;
       const nPath = cur.path.concat([{x:nx, y:ny}]);
-      map.set(key, { dist: nDist, path: nPath });
+      const passOnly = !!(occupant && occupant.id !== character.id); // 길을 막지 않는 유닛 칸: 지나가기만(도착 칸 아님)
+      map.set(key, { dist: nDist, path: nPath, passOnly });
       queue.push({x:nx, y:ny, dist:nDist, path:nPath});
     }
   }
+  for (const [k, v] of map) if (v.passOnly) map.delete(k);
   return map;
 }
 
@@ -1476,7 +1591,7 @@ function coverAgainst(attacker, target) {
     { dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 },
   ];
   for (const side of sides) {
-    const obType = obstacleTypeAt(target.x + side.dx, target.y + side.dy);
+    const obType = coverTypeAt(target.x + side.dx, target.y + side.dy); // 구덩이는 엄폐 아님
     if (!obType) continue;
     let crossed;
     if (side.dy === -1) crossed = attacker.y >= target.y;
@@ -1488,8 +1603,9 @@ function coverAgainst(attacker, target) {
   return null;
 }
 function resolveCover(attacker, target) {
+  if (target && target.isStructure) return null; // 구조물(2지역 페로몬 상자)은 엄폐를 받지 않음(v11.95)
   const dirs = [{dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0}];
-  const occupiedDirs = dirs.filter(d => isObstacle(attacker.x + d.dx, attacker.y + d.dy));
+  const occupiedDirs = dirs.filter(d => coverTypeAt(attacker.x + d.dx, attacker.y + d.dy)); // 옆에 엄폐물이 있을 때만 몸을 내밀어 쏘기(구덩이는 해당 없음)
   const cover = coverAgainst(attacker, target);
   if (occupiedDirs.length === 0) return cover;
   const freeDirs = dirs.filter(d => !occupiedDirs.some(o => o.dx === d.dx && o.dy === d.dy));
@@ -1563,8 +1679,10 @@ function onFreezeApplied(target, wasFrozen, vfxDelay = 0) { fieldHook('onFreezeA
 // 대상의 턴이 끝날 때마다 누적 수치만큼 방어력 무시 피해(dealDamage 그대로 호출 - 방어막은 정상 흡수, 방어력만 건너뜀)를 받고,
 // 3턴 동안 새로 부여받지 않으면 소멸.
 function isBurning(c) { return (c.burnStacks || 0) > 0 && (c.burnTurnsLeft || 0) > 0; }
-function applyBurn(target, amount, vfxDelay = 0) {
+function applyBurn(target, amount, vfxDelay = 0, source = null) {
   if (target.dead || amount <= 0) return;
+  if (!(target.burnStacks > 0)) target.burnSources = []; // 새 화상: 이전(해제된 화상 포함) 출처 기록 비움
+  if (source) (target.burnSources = target.burnSources || []).push({ unit: source, w: amount }); // 피해 집계용: 건 사람별 누적량
   target.burnStacks = (target.burnStacks || 0) + amount;
   target.burnTurnsLeft = 3;
   spawnTextPop(target, '화상 +' + amount, '#ff8a3d', vfxDelay);
@@ -1576,11 +1694,11 @@ function applyBurn(target, amount, vfxDelay = 0) {
 function tickBurn(c) {
   if (!isBurning(c)) return;
   const dmg = c.burnStacks;
-  dealDamage(c, dmg);
+  dealDamage(c, dmg, undefined, c.burnSources || null); // 가한 피해: 화상을 건 사람들에게 건 양 비율로
   spawnFloatText(c, dmg, DMG_TEXT_COLOR);
   addLog(`${c.name}: 화상 피해 ${dmg} (방어력 무시)${c.dead ? ' - 사망' : ''}`, 'logSkill');
   c.burnTurnsLeft -= 1;
-  if (c.burnTurnsLeft <= 0) { c.burnStacks = 0; c.burnTurnsLeft = 0; addLog(`${c.name}: 화상 소멸`, 'logInfo'); }
+  if (c.burnTurnsLeft <= 0) { c.burnStacks = 0; c.burnTurnsLeft = 0; c.burnSources = []; addLog(`${c.name}: 화상 소멸`, 'logInfo'); }
 }
 function rollAttack(attacker, target, opts) {
   opts = opts || {};
@@ -1589,7 +1707,9 @@ function rollAttack(attacker, target, opts) {
   const forceCrit = override && override.forceCrit;
   const isCrit = forceCrit || (gameRand() * 100 < preview.critChance);
 
-  const isEvaded = !forceCrit && (gameRand() * 100 < target.evasion);
+  let isEvaded = !forceCrit && (gameRand() * 100 < target.evasion);
+  const extraMiss = forceCrit ? 0 : sumMods('extraMiss', attacker, target); // 명중 감소(2지역 실명): 회피와 별개의 추가 빗나감. 없으면 난수를 더 쓰지 않음
+  if (!isEvaded && extraMiss > 0 && gameRand() < extraMiss) isEvaded = true;
   let hitDelay = opts.hitDelay || 0; // 공격 이펙트 도착까지의 연출 지연(ms). 판정/피해는 즉시, 보이는 것만 늦춤
   if (!opts.isSkill && !opts.hitDelay) { // 기본공격(지역장악 반격 포함): 캐릭터별 공격 연출(검격 등)을 띄우고 그 타격 시점에 피격 연출을 맞춤
     // hitIndex: 다연격의 몇 번째 타격인지, visualOffset: 판정이 한 번에 처리되는 경우(지역장악 다연격) 이 타격의 연출을 늦출 시간
@@ -1604,7 +1724,7 @@ function rollAttack(attacker, target, opts) {
 
   const dmg = isCrit ? preview.critDmg : preview.normalDmg; // 복수(400%) 등 방어 전 배율은 calcAttackPreview에서 이미 반영됨
   const wasDeadBefore = target.dead, hpBefore = target.hp;
-  dealDamage(target, dmg);
+  dealDamage(target, dmg, undefined, attacker);
   const lethal = !wasDeadBefore && target.dead;
   presentHit(target, { delay: hitDelay, hpBefore, lethal, flash: dmg > 0 }); // 공용 피격/사망 연출(일반공격/지역장악 반격 포함, 자해 아님). 피해 숫자는 logAttackResult가 같은 delay로 띄움
   if (lethal) onKillBy(attacker, target);
@@ -1677,7 +1797,7 @@ function executeAttack(attacker, target) {
 
 // ================= 자해 피해 =================
 function applySelfDamage(caster, amount, gainStackOverride) {
-  dealDamage(caster, amount, gainStackOverride);
+  dealDamage(caster, amount, gainStackOverride, caster); // 자해: 받은 피해에만 집계
   spawnFloatText(caster, '-' + amount, DMG_TEXT_COLOR);
 }
 
@@ -1691,7 +1811,7 @@ function applyAoeDamage(sourceAtk, sourceDmgIncrease, multiplier, sourcePos, rad
     if (t.x === sourcePos.x && t.y === sourcePos.y) continue;
     const dmg = applyDefenseWithFloor(sourceAtk * multiplier * sourceDmgIncrease * effectiveDmgTakenRate(t), t);
     const wasDeadBefore = t.dead, hpBefore = t.hp;
-    dealDamage(t, dmg);
+    dealDamage(t, dmg, undefined, opts.source || null); // 피해 집계 출처(시쿠 소환물 폭발 등)
     presentHit(t, { delay: opts.hitDelay || 0, hpBefore, lethal: !wasDeadBefore && t.dead, text: dmg, textColor: DMG_TEXT_COLOR, flash: dmg > 0 });
     hits.push({ target: t, dmg });
   }
@@ -1706,15 +1826,20 @@ function applyAoeDamage(sourceAtk, sourceDmgIncrease, multiplier, sourcePos, rad
 const VISION_BASE = 3; // 시야 반경 = 반올림((사거리 + 기동력) / 2) + VISION_BASE  (근접은 사거리 1)
 
 function visionRadius(c) {
-  if (c.vision != null) return c.vision; // 템플릿/캐릭터 지정값 우선
-  const r = effectiveRange(c);
-  const range = (r === 'melee' || !(r > 0)) ? 1 : r;
-  const spd = c.spd > 0 ? c.spd : 0;
-  return Math.round((range + spd) / 2) + VISION_BASE;
+  let base;
+  if (c.vision != null) base = c.vision; // 템플릿/캐릭터 지정값 우선
+  else {
+    const r = effectiveRange(c);
+    const range = (r === 'melee' || !(r > 0)) ? 1 : r;
+    const spd = c.spd > 0 ? c.spd : 0;
+    base = Math.round((range + spd) / 2) + VISION_BASE;
+  }
+  const m = productMods('visionMult', c); // 시야 배율(2지역 실명 0.5 - 반올림)
+  return m === 1 ? base : Math.round(base * m);
 }
 // 시야를 제공하는 유닛: 전장에 있는 살아있는 같은 진영 유닛(소환물 포함)
 function visionProviders(side) {
-  return characters.filter(c => c.side === side && !c.dead && !c.inReserve && !c.notInBattle);
+  return characters.filter(c => teamOf(c) === side && !c.dead && !c.inReserve && !c.notInBattle); // 조종 지혁은 아군 시야
 }
 // side 진영 공동 시야에 칸 (x,y)가 들어오는가
 function isTileVisibleTo(side, x, y) {
@@ -1751,7 +1876,7 @@ function updateExploredTiles() {
 function isTerrainKnown(x, y) { return !fogEnabled || exploredSetOf(viewSide()).has(x + ',' + y); }
 // side 진영이 유닛 c를 볼 수 있는가(같은 진영은 항상, 은신한 상대는 안 보임)
 function isVisibleTo(side, c) {
-  if (c.side === side) return true;
+  if (teamOf(c) === side) return true; // 같은 편(조종 지혁은 아군 편)
   if (c.inReserve || c.notInBattle) return false; // 전장 밖(대기 인원, 도약 중 등)은 보이지 않음 -> 대상 지정 불가
   if (c.alwaysVisible) return true; // 파괴 목표물 등
   if (c.stealthed) return false;
@@ -1872,10 +1997,10 @@ function bellaSkill2(caster) {
 
     const dmg = applyDefenseWithFloor(effectiveAtk(caster) * 1.10 * effectiveDmgIncrease(caster) * effectiveDmgTakenRate(target), target, defIgnore);
     const wasDeadBefore = target.dead, hpBefore = target.hp;
-    dealDamage(target, dmg);
+    dealDamage(target, dmg, undefined, caster);
     presentHit(target, { delay: hitDelay, hpBefore, lethal: !wasDeadBefore && target.dead, text: dmg, textColor: DMG_TEXT_COLOR, flash: dmg > 0 }); // 공용 피격/사망 연출
     addLog(`${caster.name}: 작별의 화염 -> ${target.name}에게 순간이동 공격, ${dmg} 피해${target.dead ? ' - 사망' : ''}`, 'logSkill');
-    if (!target.dead) applyBurn(target, 100);
+    if (!target.dead) applyBurn(target, 100, 0, caster);
     draw();
     checkBattleEndConditions();
     stacksLeft--;
@@ -1996,7 +2121,7 @@ function sikuSkill2(caster) {
     enqueueFx(() => {
       for (const s of col) {
         if (!alive(s)) continue; // 그 사이 퇴각 등으로 사라진 소환물은 건너뜀
-        const hits = applyAoeDamage(atkSnapshot, dmgInc, 2.0, { x: s.x, y: s.y }, 1, otherSide(s.side), { hitDelay: SHATTER_FLIGHT_MS }); // 소환물 주변 8칸의 적에게만 피해(아군 피해 없음)
+        const hits = applyAoeDamage(atkSnapshot, dmgInc, 2.0, { x: s.x, y: s.y }, 1, otherSide(s.side), { hitDelay: SHATTER_FLIGHT_MS, source: s }); // 소환물 주변 8칸의 적에게만 피해(아군 피해 없음)
         totalHits += hits.length; exploded++;
         shatterAndScatter(s);
         s._deathVfxClaimed = true; // 일반 사망 연출 대신 산산조각 연출
@@ -2511,7 +2636,7 @@ function gloriaSkill2(caster) {
         addLog(`${caster.name}: 피할 수 없던 운명 -> ${target.name} [복수 발동 400%] ${dmg} 피해`, 'logCrit');
       }
       const wasDeadBefore = target.dead, hpBefore = target.hp;
-      dealDamage(target, dmg);
+      dealDamage(target, dmg, undefined, caster);
       const lethal = !wasDeadBefore && target.dead;
       presentHit(target, { delay: hitDelay, hpBefore, lethal, text: dmg, textColor: DMG_TEXT_COLOR, flash: dmg > 0 }); // 얼음이 닿는 순간 피격/사망 연출
       if (!target.dead) applyFreeze(target, caster, hitDelay); // 맞고 살아남은 적에게 3턴 빙결 (얼음이 닿는 순간 연출)
@@ -2994,7 +3119,7 @@ function crystalZoneRounds(z, victims, mult, times) {
     round++;
     for (const v of victims) {
       if (v.dead) continue;
-      dealSkillDamage(v, z.atk, mult, z.dmgInc, null);
+      dealSkillDamage(v, z.atk, mult, z.dmgInc, null, { source: characters.find(c => c.id === z.ownerId && c.side === z.side) }); // 피해 집계: 구역을 만든 이타(빠져 있어도 집계)
       if (!v.dead) applyFreeze(v, null);
     }
     draw();
@@ -3006,7 +3131,7 @@ function crystalZoneRounds(z, victims, mult, times) {
 
 function itaSkill2(caster, target) { // target: 고른 타일 {x, y}(없으면 자기 위치 - 방어적)
   const cx = target ? target.x : caster.x, cy = target ? target.y : caster.y;
-  const zone = { side: caster.side, cx, cy, turnsLeft: 4, atk: effectiveAtk(caster), dmgInc: effectiveDmgIncrease(caster) }; // 이타가 빠져도 유지, 시전 시점 공격력 고정
+  const zone = { side: caster.side, ownerId: caster.id, cx, cy, turnsLeft: 4, atk: effectiveAtk(caster), dmgInc: effectiveDmgIncrease(caster) }; // 이타가 빠져도 유지, 시전 시점 공격력 고정
   crystalZones.push(zone);
   const tiles = crystalZoneTiles(zone);
   // 연출(효과 없음): 시전 타일에 큰 수정체, 나머지 구역 타일엔 작은 수정체가 가운데부터 바깥으로 차례로 솟아오름. 타일도 가운데부터 펼쳐짐
@@ -3525,7 +3650,7 @@ function martinaJudgementNow(caster) {
   updateFacing(caster, target.x - caster.x, target.y - caster.y);
   const hitDelay = playWhipAttack(caster, target); // 기본공격과 같은 채찍, 거리만 다름
   dealSkillDamage(target, effectiveAtk(caster), 1.25, effectiveDmgIncrease(caster), caster, { hitDelay });
-  if (!target.dead) applyBurn(target, 50, hitDelay);
+  if (!target.dead) applyBurn(target, 50, hitDelay, caster);
   addLog(`${caster.name}: 천벌 -> ${target.name}${target.dead ? ' - 사망' : ''}`, 'logSkill');
   draw();
   checkBattleEndConditions();
@@ -3544,7 +3669,7 @@ function martinaSkill2(caster, target) {
 // 방어력 무시 + '체력 감소'로 취급되어 onDamageTaken(단련 획득 등)이 자연스럽게 함께 발동한다.
 function applyTrialDamage(target, reason) {
   if (target.dead || !(target.trialTurnsLeft > 0)) return;
-  dealDamage(target, 80);
+  dealDamage(target, 80, undefined, target); // 자해(받은 피해에만 집계)
   flameBurstOn(target); // 불의 시험 자해: 화염이 확 번짐
   spawnFloatText(target, 80, DMG_TEXT_COLOR);
   addLog(`${target.name}: 불의 시험(${reason}) - 자해 80${target.dead ? ' - 사망' : ''}`, 'logSkill');
@@ -3554,7 +3679,7 @@ function applyTrialDamage(target, reason) {
 
 defineHooks('martina', {
   onAllyTurnEnd(c) { // 신의 채찍: 턴 종료 시 자해 20 (체력 감소이므로 forgedStacks/자동 천벌도 함께 발동)
-    dealDamage(c, 20);
+    dealDamage(c, 20, undefined, c); // 자해
     spawnFloatText(c, 20, DMG_TEXT_COLOR);
     addLog(`${c.name} 패시브(신의 채찍): 턴 종료 - 자해 20${c.dead ? ' - 사망' : ''}`, 'logSkill');
     checkBattleEndConditions();
@@ -3883,10 +4008,10 @@ characters.push(
     ]
   });
 
-// 갈고리 목적지: 비어 있고(엄폐물·유닛 없음) 상하좌우 중 한 칸이 엄폐물
+// 갈고리 목적지: 비어 있고(엄폐물·구덩이·유닛 없음) 상하좌우 중 한 칸이 엄폐물(구덩이는 걸 곳이 아님)
 function hunterGrappleTileOk(x, y) {
   if (isObstacle(x, y) || charAt(x, y)) return false;
-  return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => isObstacle(x + dx, y + dy));
+  return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => coverTypeAt(x + dx, y + dy));
 }
 // 갈고리: 줄 달린 갈고리가 목표 칸에 꽂힌 뒤 끌려감(v11.80 연출). 위치는 즉시 새 칸(지나가는 경로의 지역장악 없음).
 // 도착 칸의 지역장악 판정은 화면에서 도착하는 순간(효과 대기열 - 다음 명령은 끝난 뒤). 이동이므로 환경 최적화 소멸
@@ -3914,7 +4039,7 @@ function hunterKillZoneReact(unit, kind) {
   if (!unit || unit.dead || unit.inReserve || unit.notInBattle || unit.isGhost) return;
   for (const h of characters) {
     if (unit.dead) break;
-    if (baseIdOf(h) !== 'hunter' || !h.killZoneActive || h.dead || h.inReserve || h.notInBattle || h.side === unit.side) continue;
+    if (baseIdOf(h) !== 'hunter' || !h.killZoneActive || h.dead || h.inReserve || h.notInBattle || teamOf(h) === teamOf(unit)) continue;
     if (!inRange(h, unit) || !isVisibleTo(h.side, unit)) continue;
     if (gameRand() * 100 < h.killZoneMissPct) {
       h.killZoneActive = false;
@@ -4424,6 +4549,709 @@ Object.assign(ENEMY_TEMPLATES, {
       ] } },
 });
 
+// ================= 2지역 공용 규칙 (REGION2.md) =================
+// 상태: 방어력 감소(방깎) · 크리살리드 맹독 / 잠복·기습 / 소환 자리
+// 엔진 쪽 연결: 길을 막지 않는 유닛(passThrough)·lurkerAt(05_engine_combat, 10_ai), 잠복 중 행동 생략(runEnemyAITurn), 기습 중 명령 잠금(reactionLocks)
+
+// ---------- 방어력 감소 (REGION2.md 0장) ----------
+// 영구·중첩·방어력 최저 0(effectiveDef가 0에서 자름). 배치구역으로 퇴각하면 초기화
+function applyDefShred(target, amount, delay) {
+  if (!target || target.dead || !(amount > 0)) return;
+  target.defShred = (target.defShred || 0) + amount;
+  spawnTextPop(target, `방어력 -${amount}`, '#9ad04a', delay || 0);
+  addLog(`${target.name}: 방어력 -${amount} (누적 -${target.defShred})`, 'logSkill');
+}
+registerModifier('def', c => (c.defShred ? { flat: -c.defShred } : null));
+
+// ---------- 크리살리드 맹독 (REGION2.md 4장) ----------
+// 대상 진영의 턴이 끝날 때마다 500 피해(방어 무시 - 고정 피해), 영구(퇴각하면 해제), 중첩 없음
+const ZH_POISON_DMG = 500;
+function applyZhPoison(target, source, delay) {
+  if (!target || target.dead || target.zhPoison) return; // 중첩 없음
+  target.zhPoison = { sourceId: source ? source.id : null, sourceSide: source ? source.side : null };
+  spawnTextPop(target, '크리살리드 맹독', '#7fd34a', delay || 0);
+  addLog(`${target.name}: 크리살리드 맹독 (턴 종료마다 ${ZH_POISON_DMG} 피해, 퇴각해야 해제)`, 'logSkill');
+}
+function tickZhPoison(side) {
+  let hit = false;
+  for (const c of characters) {
+    if (c.side !== side || c.dead || c.inReserve || c.notInBattle || !c.zhPoison) continue;
+    const src = characters.find(u => u.id === c.zhPoison.sourceId && u.side === c.zhPoison.sourceSide) || null;
+    dealDamage(c, ZH_POISON_DMG, undefined, src); // 피해 집계: 맹독을 건 크리살리드
+    spawnFloatText(c, ZH_POISON_DMG, '#7fd34a');
+    addLog(`${c.name}: 크리살리드 맹독 ${ZH_POISON_DMG}${c.dead ? ' - 사망' : ''}`, 'logSkill');
+    hit = true;
+  }
+  if (hit) checkBattleEndConditions();
+}
+registerSystem('onAllyTurnEnd', (side = 'player') => tickZhPoison(side));
+registerSystem('onRetreat', c => { c.defShred = 0; c.zhPoison = null; delete c._zhPos; });
+
+// ---------- 페로몬 보관함 (REGION2.md 1장) ----------
+// 드랍되는 즉시 팀 공용 보관함으로(바닥에 떨어지지 않음). 개수 제한 없음, 전투가 끝나면(스테이지 로드) 비움. 화면(위쪽 5칸)은 5단계
+const ZH_PHEROMONES = ['control', 'confuse', 'rage', 'sonic', 'blind'];
+const ZH_PHEROMONE_NAMES = { control: '조종', confuse: '혼란', rage: '분노', sonic: '음파', blind: '실명' };
+let zhPheromones = { control: 0, confuse: 0, rage: 0, sonic: 0, blind: 0 };
+function zhGainPheromone(type, at) {
+  if (!(type in zhPheromones)) return;
+  zhPheromones[type]++;
+  if (at) spawnTextPop(at, `페로몬(${ZH_PHEROMONE_NAMES[type]}) 획득`, '#e0a0ff', 0);
+  addLog(`페로몬 획득: ${ZH_PHEROMONE_NAMES[type]} (보유 ${zhPheromones[type]})`, 'logSkill');
+  runSystems('onPheromonesChanged');
+}
+function zhRandomPheromone() { return ZH_PHEROMONES[Math.floor(gameRand() * ZH_PHEROMONES.length)]; } // 공용 난수
+
+// ---------- 소환 자리 (2지역 공용) ----------
+// 기준 유닛과 가까운 빈칸(체비셰프 → 맨해튼 → 좌표 순). 엄폐물·구덩이·유닛·잠복 칸 제외. n개까지
+function zhFreeTilesNear(origin, n) {
+  const free = [];
+  for (let x = 0; x < COLS; x++) for (let y = 0; y < ROWS; y++) {
+    if (isObstacle(x, y) || charAt(x, y) || lurkerAt(x, y)) continue;
+    if (x === origin.x && y === origin.y) continue;
+    free.push({ x, y, d: chebyshev(origin, { x, y }), m: manhattan(origin, { x, y }) });
+  }
+  free.sort((a, b) => (a.d - b.d) || (a.m - b.m) || (a.x - b.x) || (a.y - b.y));
+  return free.slice(0, n);
+}
+
+// ---------- 잠복 · 기습 (REGION2.md 6장) ----------
+// 템플릿 lurk: true인 적은 전투 시작 시 잠복: 전장 밖(inReserve) 취급 - 안 보이고(도깨비불 없음) 대상·범위 판정에서 빠지며,
+// 아군은 그 칸을 지나가거나 멈출 수 있음(적 AI 경로는 막음). 적 턴에는 행동하지 않음.
+// 기습: 아군 유닛이 이동을 마쳤을 때(걷기·강하·순간이동·갈고리·돌진 등 위치가 바뀐 모든 경우) 크리살리드가 걸어서 7칸 안에 닿으면
+//   잠복 해제 → 그 턴만 기동력 +4로 그 아군에게 이동 → 기본 공격 (아군 턴 중 즉시, 진행 중엔 명령 잠금)
+const ZH_AMBUSH_RANGE = 7, ZH_AMBUSH_SPD_BONUS = 4;
+function zhStartLurk(c) {
+  c.lurking = true; c.inReserve = true; c.stealthed = true;
+}
+registerSystem('onStageLoad', () => {
+  reactionLocks = 0; zhAmbushQueue = []; zhAmbushRunning = false;
+  zhPheromones = { control: 0, confuse: 0, rage: 0, sonic: 0, blind: 0 };
+  for (const c of characters) {
+    delete c._zhPos; c.defShred = 0; c.zhPoison = null;
+    if (c.side === 'enemy' && !c.dead && ENEMY_TEMPLATES[c.templateKey] && ENEMY_TEMPLATES[c.templateKey].lurk) zhStartLurk(c);
+  }
+});
+
+// 잠복 해제: 칸이 차 있으면(아군이 그 칸에 멈춤) 가까운 빈칸으로 튀어나옴. 이후 전투 상태의 평범한 적
+function zhRevealLurker(c, reason) {
+  if (!c || !c.lurking || c.dead) return false;
+  c.lurking = false; c.stealthed = false;
+  if (charAt(c.x, c.y)) { // inReserve인 동안엔 charAt에 자기 자신은 안 잡힘 → 잡히면 다른 유닛
+    const spot = zhFreeTilesNear(c, 1)[0];
+    if (spot) { c.x = spot.x; c.y = spot.y; }
+  }
+  c.inReserve = false;
+  c.aiState = 'combat'; c.canAlarm = true;
+  startDropAnim(c);
+  spawnTextPop(c, '잠복 해제!', '#ff6a3d', 0);
+  addLog(`${c.name}: 잠복 해제${reason ? ' (' + reason + ')' : ''}`, 'logSkill');
+  runSystems('onVisionChanged');
+  draw();
+  return true;
+}
+
+// 크리살리드가 걸어서 target 칸까지 가는 걸음 수(적 이동 규칙: 엄폐물·유닛 막힘, 길을 막지 않는 유닛은 통과, 대상 칸은 도착 가능). limit 넘으면 Infinity
+function zhWalkDist(from, target, limit) {
+  const goal = target.x + ',' + target.y;
+  if (from.x === target.x && from.y === target.y) return 0;
+  const seen = new Set([from.x + ',' + from.y]);
+  let frontier = [{ x: from.x, y: from.y }];
+  for (let d = 1; d <= limit && frontier.length; d++) {
+    const next = [];
+    for (const cur of frontier) for (const [dx, dy] of AI_DIRS) {
+      const nx = cur.x + dx, ny = cur.y + dy, k = nx + ',' + ny;
+      if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS || seen.has(k) || isObstacle(nx, ny)) continue;
+      if (k === goal) return d;
+      const occ = charAt(nx, ny);
+      if (occ && !occ.passThrough) continue;
+      if (lurkerAt(nx, ny)) continue;
+      seen.add(k); next.push({ x: nx, y: ny });
+    }
+    frontier = next;
+  }
+  return Infinity;
+}
+
+// 위치가 바뀐 아군 확인 → 기습 대기열. 유닛마다 마지막으로 확인한 칸(_zhPos)과 비교(처음 보거나 퇴각 후 재투입이면 '이동'으로 봄)
+let zhAmbushQueue = [], zhAmbushRunning = false;
+function zhCheckAmbush() {
+  const movers = [];
+  for (const u of characters) {
+    if (teamOf(u) !== 'player' || u.dead || u.inReserve || u.notInBattle || u.isGhost) continue; // 아군 편(조종 지혁 포함)
+    const k = u.x + ',' + u.y;
+    if (u._zhPos !== k) { u._zhPos = k; movers.push(u); }
+  }
+  if (!movers.length || battleEnded) return;
+  for (const L of characters) {
+    if (!L.lurking || L.dead || zhAmbushQueue.some(q => q.L === L)) continue;
+    let best = null, bestD = Infinity;
+    for (const m of movers) { const d = zhWalkDist(L, m, ZH_AMBUSH_RANGE); if (d < bestD) { best = m; bestD = d; } }
+    if (best) zhAmbushQueue.push({ L, target: best });
+  }
+  zhRunAmbushQueue();
+}
+function zhRunAmbushQueue() {
+  if (zhAmbushRunning || !zhAmbushQueue.length) return;
+  const { L, target } = zhAmbushQueue.shift();
+  if (L.dead || !L.lurking || battleEnded) { zhRunAmbushQueue(); return; }
+  zhAmbushRunning = true; reactionLocks++;
+  const done = () => { reactionLocks = Math.max(0, reactionLocks - 1); zhAmbushRunning = false; draw(); zhRunAmbushQueue(); };
+  zhRevealLurker(L, '기습');
+  if (target.dead || target.inReserve) { done(); return; }
+  // 그 턴만 기동력 +4: 이번 기습 이동에만 적용(지속 버프 아님)
+  const steps = aiEnemySpd(L) + ZH_AMBUSH_SPD_BONUS;
+  const ctx = aiBuildContext(L);
+  const cands = [...aiEnemyReach(L, ctx, steps).values()].filter(e => chebyshev(e, target) <= 1 && !(charAt(e.x, e.y) && charAt(e.x, e.y) !== L));
+  cands.sort((a, b) => (a.dist - b.dist) || (a.z - b.z) || (a.x - b.x) || (a.y - b.y));
+  const pick = cands[0];
+  addLog(`${L.name}: 기습 -> ${target.name}`, 'logSkill');
+  const strike = () => {
+    if (!L.dead && !target.dead && !battleEnded && chebyshev(L, target) <= 1) {
+      aiPerformAttack(L, target);
+      if (!L.dead) runSystems('onUnitActed', L, 'attack');
+    }
+    done();
+  };
+  if (!pick) { // 닿을 수 없으면(길이 막힘) 가장 가까이 다가가기만
+    const all = [...aiEnemyReach(L, ctx, steps).values()].sort((a, b) => (chebyshev(a, target) - chebyshev(b, target)) || (a.dist - b.dist) || (a.x - b.x) || (a.y - b.y));
+    const near = all[0];
+    if (near && near.path.length > 1) moveEnemyAlongAnimated(L, near.path, () => done()); else done();
+    return;
+  }
+  if (pick.path.length > 1) moveEnemyAlongAnimated(L, pick.path, strike); else strike();
+}
+// 이동·스킬 등 행동이 끝날 때(순간이동 연출은 효과 대기열 뒤에 위치가 바뀌므로 대기열이 빈 뒤 확인), 배치 시(시야 갱신)
+registerSystem('onUnitActed', (unit) => { if (unit && teamOf(unit) === 'player' && characters.some(c => c.lurking && !c.dead)) whenFxIdle(zhCheckAmbush); });
+registerSystem('onVisionChanged', () => { if (!zhAmbushRunning && characters.some(c => c.lurking && !c.dead)) zhCheckAmbush(); });
+
+// ================= 2지역 적 (일반) - 지혁 (REGION2.md 4장) =================
+// 공용 규칙(방깎·맹독·잠복·보관함·소환 자리)은 03_region2_common.js. 성향 형식은 ENEMY_AI.md.
+// 연타는 한 타 = 공격력 100%. 치명 5%·회피 0%(1지역 기준).
+
+const ZH_EGG_PASSIVES = [ // 알이지혁·부식 알이지혁 공통 표시(플레이어는 둘을 구분할 수 없음)
+  { name: '부화', desc: '전투 상태에서 1턴이 지나면 주변에 지혁들을 낳고 사망' },
+  { name: '알', desc: '공격하지 않음' },
+];
+const ZH_BASE = { evasion: 0, critChance: 5, critMult: 1.5, dmgIncrease: 1.0, dmgTakenRate: 1.0 };
+
+Object.assign(ENEMY_TEMPLATES, {
+  // b1 잡졸: 떼로 몰려와 칠 수 있는 대상을 그냥 침. 뭉쳐도 감점 없음, 지역장악 반격 위험 무시. 길을 막지 않음
+  zh_grunt: Object.assign({ name: '잡졸이지혁', mapCode: 'b1', grade: 'normal', role: '전위',
+    hp: 300, atk: 200, def: 0, spd: 5, range: 'melee', color: '#8a7a5a',
+    multiHit: { hits: 5, mult: 1.0 }, flags: { zh: true, passThrough: true, noZoneControl: true },
+    passives: [{ name: '5연타', desc: '기본 공격 시 5연타' }, { name: '오합지졸', desc: '지역장악 없음' },
+               { name: '틈새', desc: '길을 가로막지 않음 - 누구나 이 칸을 지나갈 수 있음(멈출 수는 없음)' }],
+    ai: { move: { attack: 4, approach: 2 }, target: { near: 1, damage: 1 }, whim: 0.2 } }, ZH_BASE),
+
+  // b2 경비병: 잡졸과 함께 몰려오며(호위) 체력이 가장 많은 대상을 우선
+  zh_guard: Object.assign({ name: '경비병이지혁', mapCode: 'b2', grade: 'normal', role: '전위',
+    hp: 1500, atk: 500, def: 300, spd: 3, range: 'melee', color: '#7a6a4a',
+    multiHit: { hits: 3, mult: 1.0 }, flags: { zh: true },
+    passives: [{ name: '3연타', desc: '기본 공격 시 3연타' }],
+    ai: { move: { attack: 4, approach: 1.5, escort: 1, zoc: -1 }, escort: 'zh_grunt',
+          target: { hpHigh: 3, damage: 1 } } }, ZH_BASE),
+
+  // b3 경보를 울리지혁: 공격하지 않음. 전투 상태로 적 턴이 끝나면 경계 상태의 무작위 일반 적 1명을 발견으로
+  zh_alarm: Object.assign({ name: '경보를 울리지혁', mapCode: 'b3', grade: 'normal', role: '후위',
+    hp: 3000, atk: 0, def: 200, spd: 0, range: 9, color: '#a05a5a', flags: { zh: true },
+    passives: [{ name: '경보', desc: '공격하지 않음. 전투 상태에서 턴을 마치면 경계 상태의 무작위 일반 적 1명을 발견 상태로 전환' }],
+    ai: { move: { stay: 1 }, target: {}, noAttack: true } }, ZH_BASE),
+
+  // b4 알이지혁: 전투 상태에서 1턴이 지나면 잡졸이지혁 3명을 낳고 사망
+  zh_egg: Object.assign({ name: '알이지혁', mapCode: 'b4', grade: 'normal', role: '후위',
+    hp: 900, atk: 0, def: 0, spd: 0, range: 8, color: '#b0a070', flags: { zh: true, zhEgg: { key: 'zh_grunt', count: 3 } },
+    passives: ZH_EGG_PASSIVES, ai: { move: { stay: 1 }, target: {}, noAttack: true } }, ZH_BASE),
+
+  // b5 부식 알이지혁: 플레이어에게는 알이지혁과 같게 보임(이름·정보·등장 적 목록 disguiseAs). 사망 시 주변 8칸 아군에게 900 + 방깎 100,
+  //   전투 상태에서 1턴이 지나면 부식시키지혁 2명을 낳고 사망(부화로 인한 사망은 폭발 없음)
+  zh_egg_corrosive: Object.assign({ name: '알이지혁', mapCode: 'b5', grade: 'normal', role: '후위', disguiseAs: 'zh_egg',
+    hp: 900, atk: 0, def: 0, spd: 0, range: 8, color: '#b0a070', flags: { zh: true, zhEgg: { key: 'zh_corroder', count: 2 }, zhCorrosive: true },
+    passives: ZH_EGG_PASSIVES, ai: { move: { stay: 1 }, target: {}, noAttack: true } }, ZH_BASE),
+
+  // b6 부식시키지혁: 물량으로 밀어붙이는 후위 - 엄폐보다 사거리 안 공격 우선. 4연타, 타격마다 방깎 10
+  zh_corroder: Object.assign({ name: '부식시키지혁', mapCode: 'b6', grade: 'normal', role: '후위',
+    hp: 200, atk: 100, def: 0, spd: 4, range: 8, color: '#6a8a4a',
+    multiHit: { hits: 4, mult: 1.0 }, flags: { zh: true },
+    passives: [{ name: '4연타', desc: '기본 공격 시 4연타' }, { name: '부식', desc: '기본 공격이 적중할 때마다 대상 방어력 -10 (퇴각하면 초기화)' }],
+    hooks: { onAttackResolved(c, target, res) { if (res && res.hit && target && !target.dead && target.side !== c.side) applyDefShred(target, 10, res.presentDelay); } },
+    ai: { move: { attack: 5, cover: 1, keepRange: 0.3, approach: 1, zoc: -1 }, target: { damage: 2, near: 0.5 } } }, ZH_BASE),
+
+  // b7 통신병이지혁: 적을 발견하면 반대편으로 도망(교전 회피). 궁지에 몰려 옆에 있으면 공격은 함. 사망 시 무작위 페로몬 1개
+  zh_comms: Object.assign({ name: '통신병이지혁', mapCode: 'b7', grade: 'normal', role: '전위',
+    hp: 300, atk: 50, def: 0, spd: 2, range: 'melee', color: '#5a7aa0', flags: { zh: true, noZoneControl: true },
+    passives: [{ name: '전령', desc: '사망 시 무작위 페로몬 1개를 떨어뜨림(바로 보관함으로)' }, { name: '겁쟁이', desc: '지역장악 없음' }],
+    ai: { move: { approach: -2, threat: -2, cover: 0.5, zoc: -2 }, target: { near: 1 } } }, ZH_BASE),
+});
+
+// ---------- 적 턴 종료 효과: 경보 → 부화 ----------
+// 부화 대상: 그 적 턴이 시작될 때 이미 전투 상태였던 알(= 전투 상태로 자기 턴을 1번 보냄)
+registerSystem('onEnemyTurnStart', (side = 'enemy') => {
+  if (side !== 'enemy') return;
+  for (const c of characters) if (c.side === 'enemy' && c.zhEgg) c._zhCombatAtStart = !c.dead && !c.lurking && (c.aiState || 'combat') === 'combat';
+});
+registerSystem('onEnemyTurnEnd', (side = 'enemy') => {
+  if (side !== 'enemy' || battleEnded) return;
+  for (const a of characters) { // 경보: 전투 상태로 턴을 마친 경보를 울리지혁마다 1명
+    if (a.templateKey !== 'zh_alarm' || a.dead || a.inReserve || (a.aiState || 'combat') !== 'combat') continue;
+    const cands = characters.filter(e => e.side === 'enemy' && !e.dead && !e.inReserve && e.grade === 'normal' && e.aiState === 'alert');
+    if (!cands.length) continue;
+    const t = cands[Math.floor(gameRand() * cands.length)];
+    t.aiState = 'spotted';
+    spawnTextPop(t, '!', '#ff5a5a', 0);
+    addLog(`${a.name}: 경보 - ${t.name} 발견 상태로 전환`, 'logSkill');
+  }
+  const eggs = characters.filter(c => c.zhEgg && c._zhCombatAtStart && !c.dead);
+  for (const egg of eggs) zhHatch(egg);
+  if (eggs.length) checkBattleEndConditions();
+});
+
+// 부화: 주변 빈칸에 지혁을 낳고(전투 상태, 다음 적 턴부터 행동) 사망. 자리가 모자라면 그만큼 적게
+function zhHatch(egg) {
+  const { key, count } = egg.zhEgg;
+  const spots = zhFreeTilesNear(egg, count);
+  let n = 0;
+  for (const s of spots) {
+    const e = spawnEnemy(key, s.x, s.y);
+    if (!e) continue;
+    e.aiState = 'combat'; e._aiActed = true; e.canAlarm = true;
+    startDropAnim(e);
+    n++;
+  }
+  addLog(`${egg.name}: 부화 - ${ENEMY_TEMPLATES[key].name} ${n}명`, 'logSkill');
+  egg._zhHatching = true; // 부화로 인한 사망(부식 알 폭발 없음)
+  killCharacter(egg);
+}
+
+// ---------- 사망 효과: 부식 알 폭발 / 통신병 페로몬 ----------
+const ZH_CORROSIVE_DMG = 900, ZH_CORROSIVE_SHRED = 100;
+registerSystem('onUnitDied', (c) => {
+  if (c.zhCorrosive && !c._zhHatching) {
+    addLog(`${c.name}이 터지며 부식액이 퍼졌다 (부식 알이지혁)`, 'logCrit');
+    spawnTextPop(c, '부식 폭발!', '#9ad04a', 0);
+    for (const u of characters) {
+      if (teamOf(u) === teamOf(c) || u.dead || u.inReserve || u.notInBattle || chebyshev(u, c) > 1) continue;
+      const hpBefore = u.hp;
+      dealDamage(u, ZH_CORROSIVE_DMG, undefined, c); // 고정 피해(방어 무시)
+      presentHit(u, { hpBefore, lethal: u.dead, text: ZH_CORROSIVE_DMG, textColor: DMG_TEXT_COLOR, flash: true });
+      if (!u.dead) applyDefShred(u, ZH_CORROSIVE_SHRED);
+      addLog(`부식 폭발 -> ${u.name} ${ZH_CORROSIVE_DMG}${u.dead ? ' - 사망' : ''}`, 'logSkill');
+    }
+    checkBattleEndConditions();
+  }
+  if (c.templateKey === 'zh_comms') zhGainPheromone(zhRandomPheromone(), c);
+});
+
+// ================= 2지역 적 (엘리트) - 지혁 (REGION2.md 4장) =================
+// 스킬 형식·쿨타임 규칙: ENEMY_AI.md 7장(처음 전투 상태로 행동하는 턴에 쿨타임 최대로 시작, 조건부 0은 바로).
+// 조종됐을 때 플레이어가 쓰는 스킬은 6단계(페로몬)에서 따로 만든다.
+
+function zhVisibleAlliesOnField() { return characters.filter(u => teamOf(u) === 'player' && !u.dead && !u.inReserve && !u.notInBattle && isVisibleTo('enemy', u)); }
+
+// ---------- b8 전투병이지혁 ----------
+// 스킬1 맹독성 폭탄(1회): 사거리 6(맨해튼) 칸 중심 3×3에 아군 2명 이상이면 - 방깎 100(영구) + 공격력 150% 스킬 피해. 사용 후 이동 계속
+// 스킬2 원거리 견제(쿨 1): 턴 시작에 자기 칸이 (사거리 안 보이는 아군에게서) 엄폐돼 있고, 이번 이동으로 처치할 대상이 없고,
+//   사거리 6 안에 보이는 아군이 있으면 - 그중 기대 피해가 가장 큰 대상에게 150% 원거리 공격(기본 공격 판정), 사용 후 턴 종료
+const ZH_WARRIOR_SKILL_RANGE = 6;
+function zhBombBestTile(c) {
+  const allies = zhVisibleAlliesOnField();
+  let best = null;
+  for (let x = 0; x < COLS; x++) for (let y = 0; y < ROWS; y++) {
+    if (manhattan(c, { x, y }) > ZH_WARRIOR_SKILL_RANGE) continue;
+    const n = allies.filter(u => chebyshev(u, { x, y }) <= 1).length;
+    if (n >= 2 && (!best || n > best.n)) best = { x, y, n };
+  }
+  return best;
+}
+function zhWarriorBomb(c, done) {
+  const t = zhBombBestTile(c);
+  if (t) zhBombAt(c, t); else c.zhBombUsed = true;
+  done();
+}
+// 폭탄 처리(적 AI·조종 공용): 3×3 안의 상대 편에게 방깎 100 + 150% 스킬 피해. 범위는 시야와 무관하게 휩쓸림
+function zhBombAt(c, t) {
+  c.zhBombUsed = true;
+  updateFacing(c, t.x - c.x, t.y - c.y);
+  addLog(`${c.name}: 맹독성 폭탄 (${t.x + 1},${t.y + 1})`, 'logSkill');
+  const hits = characters.filter(u => teamOf(u) !== teamOf(c) && !u.dead && !u.inReserve && !u.notInBattle && !u.isStructure && chebyshev(u, t) <= 1);
+  for (const u of hits) {
+    if (!u.dead) applyDefShred(u, 100);
+    dealSkillDamage(u, effectiveAtk(c), 1.5, effectiveDmgIncrease(c), c);
+  }
+  checkBattleEndConditions();
+}
+function zhWarriorSnipeTargets(c) {
+  return zhVisibleAlliesOnField().filter(u => manhattan(c, u) <= ZH_WARRIOR_SKILL_RANGE);
+}
+function zhWarriorKillReachable(c) {
+  const ctx = aiBuildContext(c);
+  for (const e of aiEnemyReach(c, ctx, aiEnemySpd(c)).values())
+    for (const cand of aiTargetCandidates(c, ctx, e, e)) if (cand.sensors.kill > 0) return true;
+  return false;
+}
+function zhWarriorSnipeCond(c) {
+  const ts = zhWarriorSnipeTargets(c);
+  if (!ts.length) return false;
+  if (!ts.some(u => resolveCover(u, c) !== null)) return false; // 자기 칸이 엄폐돼 있음(사거리 안 보이는 아군 중 하나에게서라도)
+  return !zhWarriorKillReachable(c);
+}
+function zhWarriorSnipe(c, done) {
+  const ts = zhWarriorSnipeTargets(c);
+  let best = null, bestV = -1;
+  for (const u of ts) {
+    const pv = calcAttackPreview(c, u, { asRanged: true, mult: 1.5 });
+    const H = Math.max(1, u.hp + (u.shield || 0));
+    const v = Math.min(1, pv.normalDmg / H);
+    if (v > bestV) { best = u; bestV = v; }
+  }
+  if (!best) { done(); return; }
+  updateFacing(c, best.x - c.x, best.y - c.y);
+  const r = rollAttack(c, best, { asRanged: true, mult: 1.5 });
+  logAttackResult(c, best, r);
+  checkBattleEndConditions();
+  done();
+}
+
+// ---------- b10 여왕이지혁 ----------
+// 패시브: 그 상태(경계/전투)로 적 턴을 2번 보낼 때마다(2번째 턴 끝) - 경계: 알이지혁 1개(경계) / 전투: 부식 알이지혁 2개(전투). 상태가 바뀌면 새로 셈(발견 상태는 세지 않음)
+// 스킬1(쿨 2): 주위에 전투 상태 알이지혁 3개, 사용 후 이동 계속. 개수 상한 없음
+function zhQueenLay(q, key, count, state) {
+  const spots = zhFreeTilesNear(q, count);
+  let n = 0;
+  for (const s of spots) {
+    const e = spawnEnemy(key, s.x, s.y);
+    if (!e) continue;
+    e.aiState = state; e._aiActed = true; e.canAlarm = state === 'combat';
+    startDropAnim(e);
+    n++;
+  }
+  addLog(`${q.name}: 알 ${n}개`, 'logSkill');
+  return n;
+}
+registerSystem('onEnemyTurnEnd', (side = 'enemy') => {
+  if (side !== 'enemy' || battleEnded) return;
+  for (const q of characters.filter(c => c.templateKey === 'zh_queen' && !c.dead && !c.inReserve && !c.zhControlled)) { // 조종 중엔 패시브 산란 멈춤
+    const st = q.aiState || 'combat';
+    if (st !== 'alert' && st !== 'combat') { q._zhQueenState = null; q._zhQueenTurns = 0; continue; }
+    if (q._zhQueenState !== st) { q._zhQueenState = st; q._zhQueenTurns = 0; }
+    q._zhQueenTurns++;
+    if (q._zhQueenTurns < 2) continue;
+    q._zhQueenTurns = 0;
+    if (st === 'alert') zhQueenLay(q, 'zh_egg', 1, 'alert');
+    else zhQueenLay(q, 'zh_egg_corrosive', 2, 'combat');
+  }
+});
+
+// ---------- b11 수지상지혁: 사망 시 페로몬 5종 전부 ----------
+registerSystem('onUnitDied', (c) => {
+  if (c.templateKey !== 'zh_dendritic') return;
+  for (const p of ZH_PHEROMONES) zhGainPheromone(p, c);
+});
+
+// ---------- b12 세포독성 T 지혁 ----------
+// 스킬1 자살 스위치(쿨 5): 사거리 8(맨해튼) 안의 일반 지혁 1명을 터뜨림(그 지혁 사망 - 사망 효과 발동) → 그 주변 8칸의 모든 유닛(아군·지혁 구별 없음)에게
+//   공격력 300% 스킬 피해. AI: 주변 8칸에 아군이 2명 이상인 지혁 중 가장 많이 맞는 것. 자기(T)가 휘말리는 지혁은 고르지 않음. 사용 후 이동 계속
+const ZH_TCELL_RANGE = 8;
+function zhTCellPick(c) {
+  const allies = zhVisibleAlliesOnField();
+  let best = null;
+  for (const z of characters) {
+    if (z === c || z.dead || z.inReserve || !z.zh || z.side !== c.side || z.zhControlled || z.grade !== 'normal') continue;
+    if (manhattan(c, z) > ZH_TCELL_RANGE || chebyshev(c, z) <= 1) continue;
+    const n = allies.filter(u => chebyshev(u, z) <= 1).length;
+    if (n >= 2 && (!best || n > best.n || (n === best.n && manhattan(c, z) < manhattan(c, best.z)))) best = { z, n };
+  }
+  return best;
+}
+function zhTCellDetonate(c, z) {
+  addLog(`${c.name}: 자살 스위치 -> ${z.name}`, 'logSkill');
+  spawnTextPop(z, '자폭!', '#ff5a3d', 0);
+  const at = { x: z.x, y: z.y };
+  killCharacter(z); // 사망 효과(부식 알 폭발, 통신병 페로몬 등) 발동
+  const hits = characters.filter(u => !u.dead && !u.inReserve && !u.notInBattle && u !== z && chebyshev(u, at) <= 1);
+  for (const u of hits) dealSkillDamage(u, effectiveAtk(c), 3.0, effectiveDmgIncrease(c), c);
+  addLog(`자폭 피해: ${hits.length}명`, 'logSkill');
+  checkBattleEndConditions();
+}
+
+Object.assign(ENEMY_TEMPLATES, {
+  // b8 전투병: 평소엔 엄폐(처치 기회가 보이면 돌격), 엄폐 중엔 원거리 견제
+  zh_warrior: Object.assign({ name: '전투병이지혁', mapCode: 'b8', grade: 'elite', role: '전위',
+    hp: 5000, atk: 900, def: 400, spd: 5, range: 'melee', color: '#9a5a3a',
+    multiHit: { hits: 3, mult: 1.0 }, flags: { zh: true },
+    passives: [{ name: '3연타', desc: '기본 공격 시 3연타' }],
+    ai: { move: { cover: 2, attack: 2, approach: 0.8, zoc: -2, spread: -0.5 }, target: { kill: 3, weak: 1, damage: 1 },
+          skills: [
+            { name: '맹독성 폭탄', cooldown: 0, desc: '1회: 사거리 6, 3×3 범위에 방어력 -100 + 공격력 150% 피해 (3×3 안에 아군 2명 이상일 때)',
+              cond: c => !c.zhBombUsed && !!zhBombBestTile(c), run: zhWarriorBomb, after: 'move' },
+            { name: '원거리 견제', cooldown: 1, desc: '사거리 6, 적 1명에게 공격력 150% 원거리 공격 후 턴 종료 (엄폐 중이고 처치 기회가 없을 때)',
+              cond: zhWarriorSnipeCond, run: zhWarriorSnipe, after: 'end' },
+          ] } }, ZH_BASE),
+
+  // b9 크리살리드: 잠복(REGION2.md 6장) → 기습. 해제 후엔 저돌형. 기본 공격 적중 시 크리살리드 맹독
+  zh_chrysalid: Object.assign({ name: '크리살리드지혁', mapCode: 'b9', grade: 'elite', role: '전위', lurk: true,
+    hp: 2000, atk: 1500, def: 0, spd: 4, range: 'melee', color: '#4a7a5a', flags: { zh: true },
+    passives: [{ name: '잠복', desc: '전투 시작 시 잠복(보이지 않음, 그 칸을 지나갈 수 있음). 걸어서 7칸 안에서 움직이는 아군이 있으면 튀어나와 그 턴만 기동력 +4로 기습' },
+               { name: '크리살리드 맹독', desc: '기본 공격 적중 시 맹독: 턴 종료마다 500 피해 (퇴각해야 해제, 중첩 없음)' }],
+    hooks: { onAttackResolved(c, target, res) { if (res && res.hit && target && !target.dead && target.side !== c.side) applyZhPoison(target, c, res.presentDelay); } },
+    ai: { move: { approach: 2, attack: 4 }, target: { near: 1, damage: 1 } } }, ZH_BASE),
+
+  // b10 여왕: 교전 회피형 알 공장 - 엄폐와 자리 지키기
+  zh_queen: Object.assign({ name: '여왕이지혁', mapCode: 'b10', grade: 'elite', role: '후위',
+    hp: 6000, atk: 900, def: 300, spd: 3, range: 7, color: '#a05a9a', flags: { zh: true },
+    passives: [{ name: '산란', desc: '경계 상태에서 2턴마다 주위에 알이지혁 1개 / 전투 상태에서 2턴마다 부식 알이지혁 2개' }],
+    ai: { move: { cover: 3, stay: 1, threat: -2, attack: 1, zoc: -3, approach: -0.5 }, target: { damage: 1 },
+          skills: [{ name: '대량 산란', cooldown: 2, desc: '주위에 전투 상태의 알이지혁 3개 소환', cond: c => zhFreeTilesNear(c, 1).length > 0,
+                     run: (c, done) => { zhQueenLay(c, 'zh_egg', 3, 'combat'); done(); }, after: 'move' }] } }, ZH_BASE),
+
+  // b11 수지상: 엄폐 후 사격. 사망 시 페로몬 5종
+  zh_dendritic: Object.assign({ name: '수지상지혁', mapCode: 'b11', grade: 'elite', role: '후위',
+    hp: 5000, atk: 1000, def: 200, spd: 2, range: 6, color: '#7a5aa0', flags: { zh: true },
+    passives: [{ name: '페로몬 저장소', desc: '사망 시 모든 종류의 페로몬을 떨어뜨림(바로 보관함으로)' }],
+    ai: { move: { cover: 3, attack: 2, keepRange: 0.5, threat: -1, zoc: -3 }, target: { damage: 2, kill: 1 } } }, ZH_BASE),
+
+  // b12 세포독성 T: 엄폐 후 사격. 자살 스위치에 아군 2명 이상 맞으면 즉시
+  zh_tcell: Object.assign({ name: '세포독성 T 지혁', mapCode: 'b12', grade: 'elite', role: '후위',
+    hp: 2000, atk: 900, def: 100, spd: 2, range: 8, color: '#a0a05a', flags: { zh: true },
+    ai: { move: { cover: 3, attack: 2, keepRange: 0.5, threat: -1, zoc: -3 }, target: { damage: 2, kill: 1 },
+          skills: [{ name: '자살 스위치', cooldown: 5, desc: '사거리 8 안의 일반 지혁을 터뜨려 주변 8칸 모든 유닛에게 공격력 300% 피해 (아군 2명 이상 맞을 때, 가장 많이 맞는 대상)',
+                     cond: c => !!zhTCellPick(c), run: (c, done) => { const p = zhTCellPick(c); if (p) zhTCellDetonate(c, p.z); done(); }, after: 'move' }] } }, ZH_BASE),
+});
+
+// ================= 2지역 페로몬 - 구조물 · 효과 (REGION2.md 1장·3장·4장) =================
+// 보관함 데이터(zhPheromones, zhGainPheromone)는 03_region2_common.js, 보관함 화면은 15_pheromone_ui.js, 명령은 'pheromone'(19_commands)
+// 조종은 6단계(02장) - 여기서는 혼란·분노·음파·실명
+
+// ---------- 페로몬 상자 구조물 (b13~b18) ----------
+// 행동 안 함, 경계/발견 없음, 안개 속에서는 안 보임(도깨비불 없음), 테두리 흰색, 섬멸 판정 제외(flags.isStructure), 시야 0(동료를 깨우지 않음)
+function zhBoxTemplate(name, code, hp, color, drops, desc) {
+  return { name, mapCode: code, grade: 'object', role: '후위', hp, atk: 0, def: 0, spd: 0, range: 'melee', vision: 0, color,
+    evasion: 0, critChance: 0, critMult: 1.0, dmgIncrease: 1.0, dmgTakenRate: 1.0,
+    flags: { isStructure: true, zhDrops: drops }, passives: [{ name: '페로몬 상자', desc }] }; // alwaysVisible 없음: 안개 속에서는 안 보임(v11.94)
+}
+Object.assign(ENEMY_TEMPLATES, {
+  zh_box_big:     zhBoxTemplate('대형 페로몬 상자', 'b13', 1000, '#8a6aa8', 'random2', '파괴 시 무작위 페로몬 2개(중복 가능)'),
+  zh_box_control: zhBoxTemplate('조종 페로몬 상자', 'b14', 300, '#a86a8a', 'control', '파괴 시 조종 페로몬'),
+  zh_box_confuse: zhBoxTemplate('혼란 페로몬 상자', 'b15', 300, '#c0a040', 'confuse', '파괴 시 혼란 페로몬'),
+  zh_box_rage:    zhBoxTemplate('분노 페로몬 상자', 'b16', 300, '#c05040', 'rage', '파괴 시 분노 페로몬'),
+  zh_box_sonic:   zhBoxTemplate('음파 페로몬 상자', 'b17', 300, '#4090c0', 'sonic', '파괴 시 음파 페로몬'),
+  zh_box_blind:   zhBoxTemplate('실명 페로몬 상자', 'b18', 300, '#707070', 'blind', '파괴 시 실명 페로몬'),
+});
+registerSystem('onUnitDied', (c) => {
+  if (!c.zhDrops) return;
+  if (c.zhDrops === 'random2') { zhGainPheromone(zhRandomPheromone(), c); zhGainPheromone(zhRandomPheromone(), c); }
+  else zhGainPheromone(c.zhDrops, c);
+});
+
+// ---------- 공용 ----------
+const ZH_PHEROMONE_RADIUS = { control: 0, confuse: 1, rage: 2, sonic: 3, blind: null }; // 3×3 / 5×5 / 7×7, 실명은 범위 없음
+function zhIsNormalZh(e) { return e && e.side === 'enemy' && e.zh && e.grade === 'normal' && !e.dead && !e.inReserve && !e.notInBattle; }
+function zhInSquare(u, x, y, r) { return Math.max(Math.abs(u.x - x), Math.abs(u.y - y)) <= r; }
+// 지정 가능한 칸: 판 안 + 내 진영 시야 안(타일 지정 스킬과 같은 규칙)
+function zhPheromoneTileOk(kind, x, y) {
+  if (ZH_PHEROMONE_RADIUS[kind] == null) return true;
+  if (!(x >= 0 && x < COLS && y >= 0 && y < ROWS && isTileVisibleTo(mySide, x, y))) return false;
+  if (kind === 'control') return !!zhControlTargetAt(x, y); // 조종: 그 칸에 조종할 수 있는 엘리트 지혁이 있어야 함
+  return true;
+}
+// 사용 가능 여부(보관함 버튼·명령 공통): 2지역 스테이지, 내 턴, 보유 1개 이상, 반응 행동 중 아님. 조종은 6단계
+function zhPheromoneUsable(kind) {
+  return !!(currentStageConfig && currentStageConfig.pheromones) && !battleEnded && mySide === 'player' && (zhPheromones[kind] || 0) > 0 && reactionLocks === 0;
+}
+// 명령 실행(19_commands 'pheromone'): 다시 한 번 확인 후 1개 소모 → 효과
+function zhUsePheromone(kind, x, y) {
+  if (!zhPheromoneUsable(kind) || !zhPheromoneTileOk(kind, x, y)) { showInvalidAction('페로몬을 쓸 수 없습니다'); return false; }
+  zhPheromones[kind]--;
+  addLog(`페로몬 사용: ${ZH_PHEROMONE_NAMES[kind]}${ZH_PHEROMONE_RADIUS[kind] != null ? ` (${x + 1},${y + 1})` : ''}`, 'logSkill');
+  if (kind === 'confuse') zhApplyConfuse(x, y);
+  else if (kind === 'rage') zhApplyRage(x, y);
+  else if (kind === 'sonic') zhApplySonic(x, y);
+  else if (kind === 'blind') zhApplyBlind();
+  else if (kind === 'control') zhApplyControl(zhControlTargetAt(x, y));
+  runSystems('onPheromonesChanged');
+  runSystems('onVisionChanged');
+  checkBattleEndConditions();
+  updatePanel(); draw();
+  return true;
+}
+
+// ---------- 혼란 (3장): 3×3 안 일반 지혁, 4턴(그 지혁의 적 턴 기준) ----------
+// 혼란 지혁의 대상 우선순위: 혼란 아닌 지혁 → 혼란 지혁 → 아군 / 혼란 아닌 지혁(엘리트 포함): 칠 수 있으면 혼란 지혁 우선
+// 구현: 적 AI 추가 대상(registerAiTargets)에 점수 가산(+2 / +1) - 아군 대상은 가산 0. 지역장악 반격은 아군에게만(기존 그대로)
+const ZH_CONFUSE_TURNS = 4;
+function zhApplyConfuse(x, y) {
+  const r = ZH_PHEROMONE_RADIUS.confuse;
+  for (const e of characters) {
+    if (!zhIsNormalZh(e) || !zhInSquare(e, x, y, r)) continue;
+    e.zhConfused = ZH_CONFUSE_TURNS;
+    if (e.aiState !== 'combat') e.aiState = 'combat';
+    spawnTextPop(e, '혼란', '#e0c040', 0);
+    addLog(`${e.name}: 혼란 (${ZH_CONFUSE_TURNS}턴)`, 'logSkill');
+  }
+}
+registerAiTargets(enemy => {
+  if (enemy.side !== 'enemy' || !enemy.zh) return [];
+  const zhs = characters.filter(z => z !== enemy && z.side === 'enemy' && z.zh && !z.zhControlled && !z.dead && !z.inReserve && !z.notInBattle && !z.isStructure); // 조종 지혁은 '아군'(기본 대상)
+  if (enemy.zhConfused > 0) return zhs.map(z => ({ unit: z, bonus: z.zhConfused > 0 ? 1 : 2 }));
+  return zhs.filter(z => z.zhConfused > 0).map(z => ({ unit: z, bonus: 1 }));
+});
+
+// ---------- 분노 (1-3): 5×5 안 일반 지혁 - 공격력 +50%, 즉시 전투, 적 턴 종료마다 최대 체력 50% 감소(영구) ----------
+function zhApplyRage(x, y) {
+  const r = ZH_PHEROMONE_RADIUS.rage;
+  for (const e of characters) {
+    if (!zhIsNormalZh(e) || !zhInSquare(e, x, y, r) || e.zhRage) continue;
+    e.zhRage = true;
+    e.aiState = 'combat'; e.canAlarm = true;
+    spawnTextPop(e, '분노', '#ff5a3d', 0);
+    addLog(`${e.name}: 분노 (공격력 +50%, 턴 종료마다 최대 체력 50% 감소)`, 'logSkill');
+  }
+}
+registerModifier('atk', c => (c.zhRage ? { pct: 0.5 } : null));
+
+// ---------- 음파 (1-3): 7×7 안 알·부식 알 파괴(사망 처리 - 부식 알 폭발), 잠복 크리살리드 잠복 해제(기습 없이 적 턴에 행동) ----------
+function zhApplySonic(x, y) {
+  const r = ZH_PHEROMONE_RADIUS.sonic;
+  for (const e of characters.filter(c => c.zhEgg && !c.dead && !c.inReserve && zhInSquare(c, x, y, r))) {
+    spawnTextPop(e, '음파', '#60b0ff', 0);
+    addLog(`${e.name}: 음파로 파괴`, 'logSkill');
+    killCharacter(e); // 사망 효과(부식 알 폭발) 발동
+  }
+  for (const L of characters.filter(c => c.lurking && !c.dead && zhInSquare(c, x, y, r))) zhRevealLurker(L, '음파');
+}
+
+// ---------- 실명 (1-3): 4턴간(적 턴 기준) 보스 제외 모든 지혁 - 시야 절반(반올림), 공격 시 50% 추가 빗나감. 걸린 동안 보이는 '경계' 상태 지혁의 시야를 주황 타일로 ----------
+const ZH_BLIND_TURNS = 4;
+let zhBlindTurns = 0;
+function zhBlindActive() { return zhBlindTurns > 0; }
+function zhIsBlinded(c) { return zhBlindActive() && c && c.zh && c.grade !== 'boss'; }
+function zhApplyBlind() {
+  zhBlindTurns = ZH_BLIND_TURNS;
+  addLog(`실명: ${ZH_BLIND_TURNS}턴간 모든 지혁의 시야 절반, 명중률 50% 감소`, 'logSkill');
+}
+registerModifier('visionMult', c => (zhIsBlinded(c) ? 0.5 : 1));
+registerModifier('extraMiss', a => (zhIsBlinded(a) ? 0.5 : 0));
+registerRenderLayer('underTokens', () => { // 실명 중: 아군에게 보이는 '경계' 상태 지혁들의 시야 범위(주황)
+  if (!zhBlindActive()) return;
+  const tiles = new Set();
+  for (const e of characters) {
+    if (!e.zh || e.dead || e.inReserve || e.isStructure || e.aiState !== 'alert' || !isVisibleTo(viewSide(), e)) continue; // 경계 상태만 표시(효과는 모든 지혁)
+    const r = visionRadius(e);
+    for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
+      const x = e.x + dx, y = e.y + dy;
+      if (x >= 0 && x < COLS && y >= 0 && y < ROWS) tiles.add(x + ',' + y);
+    }
+  }
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,150,40,0.16)'; ctx.strokeStyle = 'rgba(255,150,40,0.55)'; ctx.lineWidth = 1;
+  for (const k of tiles) { const [x, y] = k.split(',').map(Number); ctx.fillRect(x * TILE, y * TILE, TILE, TILE); ctx.strokeRect(x * TILE + 0.5, y * TILE + 0.5, TILE - 1, TILE - 1); }
+  ctx.restore();
+});
+
+// ---------- 적 턴 종료: 분노 피해 → 혼란·실명 지속 감소 ----------
+registerSystem('onEnemyTurnEnd', (side = 'enemy') => {
+  if (side !== 'enemy') return;
+  let hit = false;
+  for (const e of characters) {
+    if (e.side !== 'enemy' || e.dead || !e.zhRage) continue;
+    const dmg = Math.round(e.maxHp * 0.5), hpBefore = e.hp;
+    dealDamage(e, dmg); // 고정 피해(방어 무시). 사망 효과 발동
+    presentHit(e, { hpBefore, lethal: e.dead, text: dmg, textColor: DMG_TEXT_COLOR, flash: true });
+    addLog(`${e.name}: 분노의 대가 ${dmg}${e.dead ? ' - 사망' : ''}`, 'logSkill');
+    hit = true;
+  }
+  for (const e of characters) if (e.zhConfused > 0) { e.zhConfused--; if (!e.zhConfused && !e.dead) addLog(`${e.name}: 혼란 해제`, 'logInfo'); }
+  if (zhBlindTurns > 0) { zhBlindTurns--; if (!zhBlindTurns) addLog('실명 효과 종료', 'logInfo'); }
+  if (hit) checkBattleEndConditions();
+});
+registerSystem('onStageLoad', () => { zhBlindTurns = 0; for (const c of characters) { c.zhConfused = 0; c.zhRage = false; } });
+
+registerBadges(c => {
+  const b = [];
+  if (c.zhConfused > 0) b.push({ label: `혼란 ${c.zhConfused}`, color: '#e0c040', tooltip: `혼란: 혼란이 없는 지혁을 우선 공격 (${c.zhConfused}턴 남음)` });
+  if (c.zhRage) b.push({ label: '분노', color: '#ff5a3d', tooltip: '분노: 공격력 +50%, 턴 종료마다 최대 체력 50% 감소' });
+  if (zhIsBlinded(c) && !c.dead) b.push({ label: `실명 ${zhBlindTurns}`, color: '#ff9628', tooltip: `실명: 시야 절반, 공격 시 50% 추가 빗나감 (${zhBlindTurns}턴 남음)` });
+  if (c.defShred) b.push({ label: `방어력 -${c.defShred}`, color: '#9ad04a', tooltip: '방어력 감소(퇴각하면 초기화)' });
+  if (c.zhPoison) b.push({ label: '크리살리드 맹독', color: '#7fd34a', tooltip: '턴 종료마다 500 피해 (퇴각해야 해제)' });
+  return b;
+});
+
+// ================= 2지역 조종 페로몬 (REGION2.md 2장, v11.93) =================
+// 엘리트 지혁 1명을 5턴(아군 턴 기준) 동안 조종. 진영은 적 그대로 두고 zhControlled 표시 → 편 판정 teamOf/isMyUnit/canAttackTarget(03_state)이
+// 플레이어 편으로 다룸: 플레이어가 이동·기본 공격·스킬(플레이어용 버전, 코스트 없음, 쿨타임은 적일 때 값)을 쓰고, 아군 시야에 합쳐지고,
+// 적 AI는 아군과 같게 판단(접근·위협·공격 대상, '아군에게' 효과 전부), 아군도 공격·광역으로 칠 수 있음. 전장 인원 제한·퇴각·강하 대상 아님.
+// 조종 지혁만 남으면 섬멸 승리, 아군 패배 판정엔 포함 안 됨. 5번째 아군 턴이 끝나면 남은 체력 그대로 전투 상태의 적으로 복귀.
+// 조종 중 여왕은 패시브 산란 멈춤(스킬로 낳는 알은 적).
+const ZH_CONTROL_TURNS = 5;
+function zhControlTargetAt(x, y) {
+  return characters.find(c => c.side === 'enemy' && c.zh && c.grade === 'elite' && !c.dead && !c.inReserve && !c.lurking && !c.zhControlled && c.x === x && c.y === y) || null;
+}
+// 플레이어용 스킬(엘리트 스킬과 같은 순서 - 쿨타임을 서로 옮겨 줌)
+function zhControlSkills(c) {
+  const ai = (c.ai && c.ai.skills) || [];
+  const cd = c.aiSkillCd || ai.map(s => (s.initialCooldown != null ? s.initialCooldown : (s.cooldown || 0)));
+  const base = (i, o) => Object.assign({ costReq: 0, cooldownCur: cd[i] || 0, infoText: o.desc }, o);
+  switch (c.templateKey) {
+    case 'zh_warrior': return [
+      base(0, { name: '맹독성 폭탄', targetType: 'tile_in_range', customRange: 6, areaRadius: 1, cooldownMax: 0, usableIf: u => !u.zhBombUsed,
+        desc: '1회: 사거리 6, 3×3 범위의 상대에게 방어력 -100 + 공격력 150% 피해', effect(u, t) { zhBombAt(u, t); } }),
+      base(1, { name: '원거리 견제', targetType: 'enemy_in_range', customRange: 6, cooldownMax: 1,
+        desc: '사거리 6, 적 1명에게 공격력 150% 원거리 공격(기본 공격 판정). 사용 후 이 유닛의 행동 종료',
+        effect(u, t) { const r = rollAttack(u, t, { asRanged: true, mult: 1.5 }); logAttackResult(u, t, r); u.ap = 0; u.actedThisTurn = true; checkBattleEndConditions(); } }),
+    ];
+    case 'zh_queen': return [
+      base(0, { name: '대량 산란', targetType: 'instant', cooldownMax: 2, desc: '주위에 전투 상태의 알이지혁 3개 소환 (알은 적)', effect(u) { zhQueenLay(u, 'zh_egg', 3, 'combat'); } }),
+    ];
+    case 'zh_tcell': return [
+      base(0, { name: '자살 스위치', targetType: 'enemy_in_range', customRange: 8, cooldownMax: 5, targetFilter: (u, t) => zhIsNormalZh(t) && !t.zhControlled,
+        desc: '사거리 8 안의 일반 지혁을 터뜨려 주변 8칸 모든 유닛(아군 포함)에게 공격력 300% 피해', effect(u, t) { zhTCellDetonate(u, t); } }),
+    ];
+    default: return [];
+  }
+}
+function zhApplyControl(t) {
+  if (!t) return false;
+  t.zhControlled = { turnsLeft: ZH_CONTROL_TURNS };
+  t.aiState = 'combat'; t.zoneControlArmed = false; delete t.aiOrder;
+  t.skills = zhControlSkills(t);
+  t.ap = Math.max(0, effectiveSpd(t)); // 조종한 턴부터 바로 행동
+  t.actedThisTurn = false; t.attackedThisTurn = false; t.usedSkillThisTurn = false; t.hasMovedThisTurn = false;
+  t._zhPos = t.x + ',' + t.y; // 조종 자체는 '이동'이 아님(크리살리드 기습 판정)
+  spawnTextPop(t, '조종!', '#a75ad8', 0);
+  addLog(`${t.name}: 조종 (${ZH_CONTROL_TURNS}턴)`, 'logSkill');
+  return true;
+}
+function zhReleaseControl(t) {
+  if (!t || !t.zhControlled) return;
+  const ai = (t.ai && t.ai.skills) || [];
+  if (t.skills) t.aiSkillCd = ai.map((s, i) => (t.skills[i] ? (t.skills[i].cooldownCur || 0) : 0)); // 쿨타임을 적 스킬로 이어 줌
+  delete t.skills;
+  t.zhControlled = null;
+  t.aiState = 'combat'; t.canAlarm = true; t.zoneControlArmed = false; t.ap = 0;
+  if (selected && selected === t) deselect();
+  if (!t.dead) { spawnTextPop(t, '조종 해제', '#a75ad8', 0); addLog(`${t.name}: 조종 해제 - 다시 적으로`, 'logSkill'); }
+}
+// 아군 턴 종료(포진 뒤, 지역장악 무장 전)에 남은 턴 감소 → 0이면 복귀(그 적 턴부터 적으로 행동)
+registerSystem('onAllyTurnEnd', (side = 'player') => {
+  if (side !== 'player') return;
+  for (const t of characters.filter(c => c.zhControlled)) {
+    if (t.dead) { t.zhControlled = null; continue; }
+    t.zhControlled.turnsLeft--;
+    if (t.zhControlled.turnsLeft <= 0) zhReleaseControl(t);
+  }
+});
+registerSystem('onStageLoad', () => { for (const c of characters) { if (c.zhControlled) { delete c.skills; c.zhControlled = null; } } });
+registerBadges(c => (c.zhControlled && !c.dead ? [{ label: `조종 ${c.zhControlled.turnsLeft}`, color: '#a75ad8', tooltip: `조종 중: 플레이어가 조작 (${c.zhControlled.turnsLeft}턴 남음)` }] : []));
+registerRenderLayer('underTokens', () => { // 조종 중인 지혁 발밑에 보라색 고리
+  for (const c of characters) {
+    if (!c.zhControlled || c.dead || c.inReserve) continue;
+    const cx = (c.renderX !== undefined ? c.renderX : c.x) * TILE + TILE / 2, cy = (c.renderY !== undefined ? c.renderY : c.y) * TILE + TILE / 2;
+    ctx.save();
+    ctx.strokeStyle = '#a75ad8'; ctx.lineWidth = 3; ctx.globalAlpha = 0.9;
+    ctx.beginPath(); ctx.arc(cx, cy, TILE * 0.44, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+});
+
 // ================= 스킬 공용 함수 (착지 타일, 선택 모달, 소환물 등록) =================
 
 function getValidLandingTiles(enemy) {
@@ -4525,7 +5353,7 @@ function registerSummon(s) {
 // ================= 사이드 패널/스킬 버튼 =================
 function skillUsable(caster, skill) {
   if (!skill || skill.disabled) return false;
-  if (caster.dead || caster.side !== mySide) return false;
+  if (caster.dead || !isMyUnit(caster)) return false;
   if (caster.ap <= 0) return false;
   if (skill.cooldownCur > 0) return false;
   if (skill.oncePerDeploy && skill.usedThisDeploy) return false; // 배치당 1회 스킬: 이번 배치에서 이미 사용
@@ -4601,6 +5429,7 @@ function renderStatusBadges(c) {
 }
 
 function updatePanel() {
+  runSystems('onPanelUpdate'); // 패널과 함께 갱신할 화면(2지역 페로몬 보관함 등)
   updateTeamCostDisplay();
 
   const panel = document.getElementById('charInfo');
@@ -4647,7 +5476,7 @@ function updatePanel() {
   const portraitImg = CHARACTER_IMAGES[baseIdOf(selected)] && CHARACTER_IMAGES[baseIdOf(selected)].card;
   panel.innerHTML = `
     ${portraitImg ? `<div style="width:50%; margin:0 auto 10px; aspect-ratio:2/3; border-radius:6px; overflow:hidden; background:#1a1a1e;"><img src="${portraitImg}" alt="${selected.name}" style="width:100%; height:100%; object-fit:cover; display:block;"></div>` : ''}
-    <div class="statRow"><span>이름</span><span>${selected.name} ${selected.side !== viewSide() ? '(적)' : ''}</span></div>
+    <div class="statRow"><span>이름</span><span>${selected.name} ${selected.zhControlled ? '(조종)' : selected.side !== viewSide() ? '(적)' : ''}</span></div>
     ${selected.role ? `<div class="statRow"><span>역할</span><span>${selected.role}</span></div>` : ''}
     <div class="statRow"><span>위치</span><span>(${selected.x}, ${selected.y})</span></div>
     <div class="statRow"><span>체력</span><span>${selected.hp} / ${selected.maxHp}</span></div>
@@ -4663,7 +5492,7 @@ function updatePanel() {
   `;
 
   const canBasicAttack = charHook(selected, 'canBasicAttack');
-  const canAct = canActNow && selected.side === mySide && !selected.moving && !selected.actedThisTurn && selected.ap > 0 && canBasicAttack !== false;
+  const canAct = canActNow && isMyUnit(selected) && !selected.moving && !selected.actedThisTurn && selected.ap > 0 && canBasicAttack !== false;
   attackBtn.disabled = !canAct;
 
   const skills = selected.skills || [];
@@ -4739,11 +5568,11 @@ function bindSkillTooltip(btn) {
 }
 
 function enterAttackMode() {
-  if (!screenCanAct() || !selected || selected.side !== mySide || selected.actedThisTurn || selected.ap <= 0) return;
+  if (!screenCanAct() || !selected || !isMyUnit(selected) || selected.actedThisTurn || selected.ap <= 0) return;
   if (charHook(selected, 'canBasicAttack') === false) return; // 지혁이: 이번 턴 기본공격을 이미 사용했으면 공격 모드 자체를 막음
   uiMode = { type: 'attack' };
   attackRangeTiles = computeAttackRangeTiles(selected);
-  validTargets = characters.filter(c => !c.dead && !c.inReserve && c.side !== selected.side && inRange(selected, c) && isVisibleTo(selected.side, c)); // 시야 안 상대만
+  validTargets = characters.filter(c => !c.dead && !c.inReserve && canAttackTarget(selected, c) && inRange(selected, c) && isVisibleTo(teamOf(selected), c)); // 시야 안 상대만(조종 지혁: 다른 적 / 아군은 조종 지혁도 칠 수 있음)
   flankedTargetIds = new Set();
   if (effectiveRange(selected) !== 'melee') {
     for (const t of validTargets) if (resolveCover(selected, t) === null) flankedTargetIds.add(t.id);
@@ -4894,6 +5723,7 @@ function deployCharacter(c, x, y, cooldownBonus) {
   if (c.redeployLockTurns > 0) { addLog(`${c.name}: 퇴각 후 재배치 대기 중 (${c.redeployLockTurns}턴 남음)`, 'logInfo'); showInvalidAction('재배치 대기 중'); return; }
   c.x = x; c.y = y;
   c.inReserve = false;
+  noteDeployedForStats(c); // 전투 종료 순위 표시 대상(한 번이라도 투입)
   sideDeployed[c.side] = true;
   c.justDroppedThisTurn = true;
   startDropAnim(c); // 강하/배치 낙하 이펙트
@@ -5046,7 +5876,7 @@ function promptReplacement(vacated) {
 // 소환물은 지역장악을 할 수 없음.
 function checkZoneControlTrigger(mover) {
   const armedDefenders = characters.filter(c =>
-    !c.dead && c.side !== mover.side && !c.isSummon && c.zoneControlArmed &&
+    !c.dead && teamOf(c) !== teamOf(mover) && !c.isSummon && c.zoneControlArmed && // 편 기준(조종 지혁)
     chebyshev(c, mover) <= 1 && charHook(c, 'canZoneControlTarget', mover) !== false // 캐릭터 훅: 대상 제외(스사노오 탄검)
   );
   for (const c of armedDefenders) {
@@ -5085,6 +5915,9 @@ function moveEnemyAlongAnimated(enemy, path, onDone) {
 const AI_DEFAULT_PROFILE = { move: { stay: 1 }, target: { near: 1 } };
 function runEnemyAITurn(enemy, onDone) {
   if (enemy.isObjectiveTarget) { onDone(); return; } // 파괴 목표물: 행동 안 함
+  if (enemy.lurking) { onDone(); return; }           // 잠복 중(크리살리드, REGION2.md 6장): 행동 안 함
+  if (enemy.isStructure) { onDone(); return; }       // 구조물(2지역 페로몬 상자): 행동 안 함
+  if (enemy.zhControlled) { onDone(); return; }      // 조종 중(2지역): 아군 턴에 플레이어가 조작
   if (!enemy.ai) enemy.ai = AI_DEFAULT_PROFILE;
   runSensorEnemyTurn(enemy, onDone);
 }
@@ -5101,7 +5934,7 @@ const AI_ESCORT_RANGE = 5, AI_NEAR_NORM = 20, AI_SPREAD_NORM = 3;
 function aiClamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 function aiKey(x, y) { return x + ',' + y; }
 // 전장의 아군(소환물 포함): 공격 대상이자 위협 주체
-function aiFieldAllies() { return characters.filter(c => c.side === 'player' && !c.dead && !c.inReserve && !c.notInBattle && isVisibleTo('enemy', c)); } // 적 진영 시야 안(은신 제외)
+function aiFieldAllies() { return characters.filter(c => teamOf(c) === 'player' && !c.dead && !c.inReserve && !c.notInBattle && isVisibleTo('enemy', c)); } // 적 진영 시야 안(은신 제외)
 function aiInRangeFrom(range, from, to) { return range === 'melee' ? chebyshev(from, to) <= 1 : manhattan(from, to) <= range; }
 // 위치만 바꾼 가상 개체(원본은 그대로) - 판정 함수에 "이 칸에 있다면"을 물어볼 때 사용
 function aiAt(c, x, y) { const p = Object.create(c); p.x = x; p.y = y; return p; }
@@ -5133,8 +5966,9 @@ function aiAllyReach(p) {
       const nx = cur.x + dx, ny = cur.y + dy, k = aiKey(nx, ny);
       if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS || seen.has(k) || isObstacle(nx, ny)) continue;
       const occ = charAt(nx, ny);
-      if (occ && occ !== p) continue;
-      seen.add(k); const t = { x: nx, y: ny }; out.push(t); next.push(t);
+      if (occ && occ !== p && !occ.passThrough) continue;
+      seen.add(k); const t = { x: nx, y: ny }; next.push(t);
+      if (!occ || occ === p) out.push(t); // 길을 막지 않는 유닛 칸은 지나가기만(멈출 칸 아님)
     }
     frontier = next;
   }
@@ -5162,7 +5996,7 @@ function aiDistanceField(allies) {
 function aiBuildContext(enemy) {
   // 보스는 아군 위치를 항상 앎(시야 제한 없음, 은신한 아군만 제외) - FOG_VISION.md 3장
   const allies = enemy.grade === 'boss'
-    ? characters.filter(c => c.side === 'player' && !c.dead && !c.inReserve && !c.notInBattle && !c.stealthed)
+    ? characters.filter(c => teamOf(c) === 'player' && !c.dead && !c.inReserve && !c.notInBattle && !c.stealthed)
     : aiFieldAllies();
   // 접근 목표: 보이는 아군 + 마지막 목격 위치. 둘 다 없으면(단서 없음) 전투/발견 상태 적은 아군 시작 배치 구역으로 수색
   let approachSources = allies.concat(aiIntelTargets(allies));
@@ -5171,7 +6005,7 @@ function aiBuildContext(enemy) {
     enemy, allies,
     reach: new Map(allies.map(p => [p, aiAllyReach(p)])),
     armed: allies.filter(p => p.zoneControlArmed && !p.isSummon),
-    others: characters.filter(c => c.side === 'enemy' && !c.dead && c !== enemy),
+    others: characters.filter(c => c.side === 'enemy' && !c.zhControlled && !c.dead && c !== enemy),
     dist: aiDistanceField(approachSources),
     coverCache: new Map(), threatCache: new Map(),
   };
@@ -5202,7 +6036,8 @@ function aiSimpleReach(c, steps, ignore) {
       const nx = cur.x + dx, ny = cur.y + dy, k = aiKey(nx, ny);
       if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS || seen.has(k) || isObstacle(nx, ny)) continue;
       const occ = charAt(nx, ny);
-      if (occ && occ !== c && !ignore.includes(occ)) continue;
+      if (occ && occ !== c && !ignore.includes(occ) && !occ.passThrough) continue;
+      if (lurkerAt(nx, ny)) continue; // 잠복 칸: 적은 지나가지 않음
       seen.add(k); next.push({ x: nx, y: ny });
     }
     frontier = next;
@@ -5250,7 +6085,7 @@ function aiExpectedHit(attacker, target) {
   const pv = calcAttackPreview(attacker, target);
   const hits = pv.isMultiHit ? pv.multiHitCount : 1;
   const crit = aiClamp((pv.critChance || 0) / 100, 0, 1);
-  const hitChance = 1 - aiClamp((target.evasion || 0) / 100, 0, 1);
+  const hitChance = (1 - aiClamp((target.evasion || 0) / 100, 0, 1)) * (1 - aiClamp(sumMods('extraMiss', attacker, target), 0, 1));
   return { pv, hits, hitChance, expected: hitChance * ((1 - crit) * pv.normalDmg + crit * pv.critDmg) * hits };
 }
 
@@ -5270,7 +6105,13 @@ function aiTargetSensors(enemy, pos, x, entry) {
     marked: x.aiMarked ? 1 : 0,
     huntMark: x.huntMarked ? 1 : 0, // 보스 표식(BOSSES.md)
     near: aiClamp(1 - manhattan(pos, x) / AI_NEAR_NORM, 0, 1),
+    hpHigh: aiHpHigh(x), // 체력 많음: 대상 유효 체력 ÷ 보이는 아군 중 최대(2지역 경비병)
   };
+}
+function aiHpHigh(x) {
+  let max = x.hp + (x.shield || 0);
+  for (const a of aiFieldAllies()) max = Math.max(max, a.hp + (a.shield || 0));
+  return max > 0 ? aiClamp((x.hp + (x.shield || 0)) / max, 0, 1) : 0;
 }
 function aiWeighted(weights, sensors) {
   let s = 0;
@@ -5285,23 +6126,30 @@ function aiTargetScore(weights, sensors) {
 }
 // pos에서 공격 가능한 대상들과 점수
 function aiTargetCandidates(enemy, ctx, pos, entry) {
+  if ((aiProfile(enemy) || {}).noAttack) return []; // 공격하지 않는 적(성향 noAttack - 2지역 경보·알)
   if (charHook(enemy, 'areaPattern')) return aiAreaCandidates(enemy, ctx, pos, entry);
   const r = effectiveRange(enemy);
   const w = aiProfile(enemy).target;
-  return ctx.allies.filter(x => aiInRangeFrom(r, pos, x)).map(x => {
+  const out = ctx.allies.filter(x => aiInRangeFrom(r, pos, x)).map(x => {
     const sensors = aiTargetSensors(enemy, pos, x, entry);
     return { target: x, sensors, score: aiTargetScore(w, sensors), key: aiKey(x.x, x.y) };
   });
+  for (const fn of AI_TARGET_PROVIDERS) for (const { unit, bonus } of (fn(enemy) || [])) { // 추가 대상(혼란 등) - 우선순위는 점수 가산
+    if (!unit || unit === enemy || unit.id === enemy.id || unit.dead || !aiInRangeFrom(r, pos, unit)) continue;
+    const sensors = aiTargetSensors(enemy, pos, unit, entry);
+    out.push({ target: unit, sensors, score: aiTargetScore(w, sensors) + (bonus || 0), key: aiKey(unit.x, unit.y) });
+  }
+  return out;
 }
 // 범위 공격 조준(ENEMY_AI.md 5-2): 사거리 안의 모든 칸(빈 칸 포함, 적 유닛/엄폐물 칸 제외)이 후보, 아군을 1명 이상 맞혀야 함
 // 중심 유닛은 일반 기본공격 판정(centerMult), 주변(ring)은 스킬 피해 처리(엄폐 무시, 치명/회피 없음)
 function aiAreaTargets(pattern, tile) {
   const hits = [];
   const c = charAt(tile.x, tile.y);
-  if (c && c.side === 'player') hits.push({ unit: c, center: true });
+  if (c && teamOf(c) === 'player') hits.push({ unit: c, center: true });
   for (const [dx, dy] of pattern.ring) {
     const u = charAt(tile.x + dx, tile.y + dy);
-    if (u && u.side === 'player') hits.push({ unit: u, center: false });
+    if (u && teamOf(u) === 'player') hits.push({ unit: u, center: false });
   }
   return hits;
 }
@@ -5358,15 +6206,17 @@ function aiEnemyReach(enemy, ctx, maxSteps) {
       const nx = cur.x + dx, ny = cur.y + dy, k = aiKey(nx, ny);
       if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS || map.has(k) || isObstacle(nx, ny)) continue;
       const occ = charAt(nx, ny);
-      if (occ && occ !== enemy) continue;
+      if (occ && occ !== enemy && occ.id !== enemy.id && !occ.passThrough) continue;
+      if (lurkerAt(nx, ny)) continue; // 잠복 칸: 적은 지나가지도 멈추지도 않음(REGION2.md 6장)
       const z = cur.z + (inZone(nx, ny) ? 1 : 0);
       const old = next.get(k);
       if (old && old.z <= z) continue;
-      next.set(k, { x: nx, y: ny, dist: d + 1, z, path: cur.path.concat([{ x: nx, y: ny }]) });
+      next.set(k, { x: nx, y: ny, dist: d + 1, z, path: cur.path.concat([{ x: nx, y: ny }]), passOnly: !!(occ && occ !== enemy && occ.id !== enemy.id) });
     }
     for (const [k, e] of next) map.set(k, e);
     frontier = [...next.values()];
   }
+  for (const [k, e] of map) if (e.passOnly) map.delete(k); // 길을 막지 않는 유닛 칸은 지나가기만(도착 칸 아님)
   return map;
 }
 // 지역장악 위험: 경로가 밟는 무장 아군 전위들의 반격 기대 피해 합 ÷ 자기 현재 체력
@@ -5518,7 +6368,7 @@ function aiSpot(e) {
 //  - 전파(1단계만): 시야 절반 안에 '깨울 수 있는' 전투 상태 동료 -> 발견(이렇게 깨어난 적은 다른 적을 깨우지 못함)
 function aiUpdateAwareness() {
   if (!fogEnabled) return;
-  const players = characters.filter(c => c.side === 'player' && !c.dead && !c.inReserve && !c.notInBattle);
+  const players = characters.filter(c => teamOf(c) === 'player' && !c.dead && !c.inReserve && !c.notInBattle); // 조종 지혁 포함
   for (const p of players) if (isVisibleTo('enemy', p)) enemyIntel[p.id] = { x: p.x, y: p.y };
   for (const id in enemyIntel) { // 기억한 자리가 지금 보이는데 그 아군이 없으면(떠남/퇴각/사망) 잊음
     const m = enemyIntel[id], p = players.find(c => c.id === id);
@@ -5586,6 +6436,152 @@ function runAlertBatch(list, onDone) {
   for (const m of moves) moveEnemyAlongAnimated(m.e, m.path, done);
 }
 
+// ================= 계획형 적 턴 (v11.97, ENEMY_AI.md 5-3) - 보스 제외 =================
+// ① 보스: 지금처럼 한 명씩(고유 흐름)
+// ② 계획: 보스가 아닌 적 전부를 행동 순서대로 미리 판단. 앞의 적은 계획한 칸에 이미 가 있다고 보고(가상 위치) 다음 적이 판단 → 같은 칸 겹침 없음
+//    전투 상태 적은 '공격·스킬을 하는 적'과 '이동만 하는 적'으로 나눔
+// ③ 공격·스킬을 하는 적: 한 명씩 실행(실행할 때 다시 판단 - 계획한 대상이 죽었거나 길이 막혀도 그 자리에서 새로 정함)
+// ④ 이동만 하는 전투 상태 적 → ⑤ 발견 상태 적 → ⑥ 경계 상태 적: 단계마다 한꺼번에 이동.
+//    계획한 길이 그새 막혔으면 그 적만 다시 판단. 도중에 새로 깨어난(발견) 적은 ⑤에서 같이 움직임
+function aiSkipsTurn(e) { return e.isObjectiveTarget || e.lurking || e.isStructure || e.zhControlled; }
+// 계획용 쿨타임 미리보기(실제 감소는 실행 때 aiSkillCooldowns가 함)
+function aiPreviewCooldowns(e) {
+  const skills = (e.ai && e.ai.skills) || [];
+  return e.aiSkillCd ? e.aiSkillCd.map(cd => Math.max(0, cd - 1)) : skills.map(s => (s.initialCooldown != null ? s.initialCooldown : (s.cooldown || 0)));
+}
+// 전투 상태 적 하나의 계획: { acts(공격·스킬 여부), dest(이동할 칸 entry 또는 null) }
+function aiPlanCombat(e) {
+  if (e.hooks && e.hooks.aiTurnStart) return { acts: true, dest: null }; // 턴 시작 고유 처리가 있는 적은 한 명씩
+  const skills = (e.ai && e.ai.skills) || [], cds = aiPreviewCooldowns(e);
+  for (let i = 0; i < skills.length; i++) if ((skills[i].phase || 'start') === 'start' && cds[i] <= 0 && skills[i].cond(e)) return { acts: true, dest: null };
+  const prof = aiProfile(e) || {};
+  const { choice } = aiDecideMove(e, { maxSteps: aiEnemySpd(e), weights: prof.move });
+  const dest = choice && choice.entry.path.length > 1 ? choice.entry : null;
+  const at = dest || { x: e.x, y: e.y };
+  const ox = e.x, oy = e.y; e.x = at.x; e.y = at.y; // 도착 칸 기준으로 공격 대상·이동 후 스킬 확인
+  let acts = aiTargetCandidates(e, aiBuildContext(e), { x: at.x, y: at.y }, dest || undefined).length > 0;
+  if (!acts) for (let i = 0; i < skills.length; i++) if (skills[i].phase === 'afterMove' && cds[i] <= 0 && skills[i].cond(e)) { acts = true; break; }
+  e.x = ox; e.y = oy;
+  return { acts, dest };
+}
+function aiPlanEnemyTurn(list) {
+  const plan = [], orig = [];
+  for (const e of list) {
+    if (e.dead || aiSkipsTurn(e)) continue;
+    if (!e.ai) e.ai = AI_DEFAULT_PROFILE; // 성향 없는 적은 기본 성향(runEnemyAITurn과 같게)
+    const st = e.aiState || 'combat';
+    if (st === 'alert') { plan.push({ e, kind: 'alert' }); continue; } // 경계는 ⑥에서 한꺼번에(runAlertBatch가 예약하며 정함)
+    let p;
+    if (st === 'spotted') {
+      const { choice } = aiDecideMove(e, { maxSteps: aiEnemySpd(e), weights: (aiProfile(e) || {}).move, noAttack: true });
+      p = { e, kind: 'spotted', dest: choice && choice.entry.path.length > 1 ? choice.entry : null };
+    } else {
+      const c = aiPlanCombat(e);
+      p = { e, kind: c.acts ? 'attack' : 'move', dest: c.dest };
+    }
+    plan.push(p);
+    if (p.dest) { orig.push([e, e.x, e.y]); e.x = p.dest.x; e.y = p.dest.y; } // 가상 위치: 뒤의 적이 이걸 보고 판단
+  }
+  for (const [e, x, y] of orig) { e.x = x; e.y = y; }
+  return plan;
+}
+// 계획한 길이 지금도 갈 수 있는가(다른 유닛·잠복 칸·이번 무리의 예약 칸)
+function aiPathStillOk(e, path, reserved) {
+  for (let i = 1; i < path.length; i++) {
+    const t = path[i], occ = charAt(t.x, t.y);
+    if (occ && occ !== e && !(occ.passThrough && i < path.length - 1)) return false;
+    if (lurkerAt(t.x, t.y)) return false;
+  }
+  const last = path[path.length - 1];
+  return !reserved.has(aiKey(last.x, last.y));
+}
+// 한꺼번에 이동: 길을 모두 정한 뒤(막혔으면 그 적만 다시 판단, 앞 적은 정해진 칸에 있다고 봄) 동시에 이동.
+// 끝나면 각자 턴 마무리(발견 → 전투 전환, 전투 상태 전위는 지역장악 무장 - 1명씩 행동할 때와 같은 규칙)
+function aiRunMoveBatch(entries, toCombat, onDone) {
+  const reserved = new Set(), moves = [], virt = [];
+  for (const p of entries) {
+    const e = p.e;
+    if (e.dead) continue;
+    e._aiActed = true;
+    e._aiLog = [{ phase: 'move', batch: true }];
+    // p.dest: 계획한 칸(entry) / null = 계획상 제자리 / undefined = 계획 없음(그 사이 새로 깨어난 적) → 지금 판단
+    let path = p.dest ? p.dest.path : null;
+    const replan = p.dest === undefined || (path && !aiPathStillOk(e, path, reserved));
+    if (replan) { // 다시 판단(이동만)
+      const { choice } = aiDecideMove(e, { maxSteps: aiEnemySpd(e), weights: (aiProfile(e) || {}).move, noAttack: true });
+      const c = choice && choice.entry;
+      path = c && c.path.length > 1 && !reserved.has(aiKey(c.x, c.y)) ? c.path : null;
+    }
+    const dest = path ? path[path.length - 1] : { x: e.x, y: e.y };
+    reserved.add(aiKey(dest.x, dest.y));
+    if (path) { moves.push({ e, path }); virt.push([e, e.x, e.y]); e.x = dest.x; e.y = dest.y; }
+  }
+  for (const [e, x, y] of virt) { e.x = x; e.y = y; } // 실제 이동은 아래에서 동시에
+  const finishOne = (e, dist) => {
+    if (e.dead) return;
+    if (dist > 0) { charHook(e, 'afterAiMove', dist); runSystems('onEnemyMoved', e); }
+    if (toCombat) e.aiState = 'combat';
+    if (e.role === '전위' && !e.isSummon && !e.noZoneControl) e.zoneControlArmed = (e.aiState || 'combat') === 'combat';
+    if (e.zoneControlArmed) spawnIconPop(e, 'swords');
+  };
+  const stay = entries.filter(p => !p.e.dead && !moves.some(m => m.e === p.e));
+  for (const p of stay) finishOne(p.e, 0);
+  if (!moves.length) { draw(); setTimeout(onDone, stay.length ? 150 : 0); return; }
+  let left = moves.length;
+  for (const m of moves) moveEnemyAlongAnimated(m.e, m.path, (traveled) => {
+    finishOne(m.e, traveled);
+    if (--left > 0) return;
+    aiUpdateAwareness();
+    draw();
+    setTimeout(onDone, 150);
+  });
+}
+function runPlannedEnemyPhase(order, onDone) {
+  const bosses = order.filter(e => e.grade === 'boss');
+  let bi = 0;
+  const nextBoss = () => {
+    if (battleEnded) return;
+    runSystems('onVisionChanged');
+    while (bi < bosses.length && bosses[bi].dead) bi++;
+    if (bi < bosses.length) { runEnemyAITurn(bosses[bi++], nextBoss); return; }
+    planned();
+  };
+  const planned = () => {
+    const plan = aiPlanEnemyTurn(order.filter(e => e.grade !== 'boss'));
+    const attackers = plan.filter(p => p.kind === 'attack');
+    let ai = 0;
+    const nextAttacker = () => {
+      if (battleEnded) return;
+      runSystems('onVisionChanged');
+      while (ai < attackers.length && attackers[ai].e.dead) ai++;
+      if (ai < attackers.length) { runEnemyAITurn(attackers[ai++].e, nextAttacker); return; }
+      moverPhase();
+    };
+    const moverPhase = () => {
+      if (battleEnded) return;
+      runSystems('onVisionChanged');
+      aiRunMoveBatch(plan.filter(p => p.kind === 'move' && !p.e.dead && !p.e._aiActed), false, spottedPhase);
+    };
+    const spottedPhase = () => { // 계획 때 발견이었던 적 + 그 사이 새로 깨어난 적
+      if (battleEnded) return;
+      runSystems('onVisionChanged');
+      const planned = new Map(plan.filter(p => p.kind === 'spotted').map(p => [p.e, p]));
+      const list = order.filter(e => !e.dead && !e._aiActed && !aiSkipsTurn(e) && e.aiState === 'spotted')
+        .map(e => planned.get(e) || { e }); // 계획에 없던(새로 깨어난) 적은 지금 판단
+      aiRunMoveBatch(list, true, alertPhase);
+    };
+    const alertPhase = () => {
+      if (battleEnded) return;
+      runSystems('onVisionChanged');
+      const sleepers = order.filter(e => !e.dead && !e._aiActed && !aiSkipsTurn(e) && e.aiState === 'alert');
+      if (!sleepers.length) { onDone(); return; }
+      runAlertBatch(sleepers, onDone);
+    };
+    nextAttacker();
+  };
+  nextBoss();
+}
+
 // ================= 적 AI - 턴 흐름 / 공격 실행 (설계: ENEMY_AI.md 3장) =================
 // ---- 공격 실행 (레거시와 같은 판정/기록 흐름). 다연격(장교 3연타 등)이면 그 횟수만큼, 연출만 간격을 둠 ----
 function aiPerformAttack(enemy, target) {
@@ -5612,7 +6608,7 @@ function aiPerformAreaAttack(enemy, pick) {
   addLog(`${enemy.name}: (${tile.x},${tile.y}) 포격`, 'logSkill');
   const center = charAt(tile.x, tile.y);
   let delay = 0;
-  if (center && center.side === 'player') {
+  if (center && teamOf(center) === 'player') {
     const result = rollAttack(enemy, center, pattern.centerMult && pattern.centerMult !== 1 ? { mult: pattern.centerMult } : {});
     delay = result.presentDelay || 0;
     if (result.hit) enemyDamageDealtThisTurn[enemy.id] = (enemyDamageDealtThisTurn[enemy.id] || 0) + result.dmg;
@@ -5620,7 +6616,7 @@ function aiPerformAreaAttack(enemy, pick) {
   }
   for (const [dx, dy] of pattern.ring) {
     const u = charAt(tile.x + dx, tile.y + dy);
-    if (!u || u.side !== 'player' || u.dead) continue;
+    if (!u || teamOf(u) !== 'player' || u.dead) continue;
     const before = u.hp;
     dealSkillDamage(u, effectiveAtk(enemy), pattern.ringMult, effectiveDmgIncrease(enemy), enemy, { hitDelay: delay });
     enemyDamageDealtThisTurn[enemy.id] = (enemyDamageDealtThisTurn[enemy.id] || 0) + Math.max(0, before - u.hp);
@@ -5650,7 +6646,7 @@ function runSensorEnemyTurn(enemy, onDone) {
   enemy._aiLog = []; // 이번 턴 결정 기록(디버그/테스트용)
 
   function finish() {
-    if (!enemy.dead && enemy.role === '전위' && !enemy.isSummon) enemy.zoneControlArmed = !attacked && !usedSkill && (enemy.aiState || 'combat') === 'combat'; // 아군과 같은 규칙, 전투 상태만(경계/발견은 공격 안 함)
+    if (!enemy.dead && enemy.role === '전위' && !enemy.isSummon && !enemy.noZoneControl) enemy.zoneControlArmed = !attacked && !usedSkill && (enemy.aiState || 'combat') === 'combat'; // 아군과 같은 규칙, 전투 상태만(경계/발견은 공격 안 함)
     if (!enemy.dead && enemy.zoneControlArmed) spawnIconPop(enemy, 'swords');
     draw();
     setTimeout(onDone, (!enemy.dead && enemy.zoneControlArmed) ? Math.max(150, ICON_POP_MS) : 150);
@@ -5778,7 +6774,7 @@ function useSkill(caster, skillIndex) {
     attackRangeTiles = computeAttackRangeTiles(caster, skill.customRange);
     attackRangeTiles.add(caster.x + ',' + caster.y);
     validTargets = [...attackRangeTiles].map(k => k.split(',').map(Number))
-      .filter(([x, y]) => isTileVisibleTo(caster.side, x, y) && (!skill.tileFilter || skill.tileFilter(caster, x, y))) // 스킬별 칸 조건(헌터 갈고리: 빈 칸 + 엄폐물과 붙음)
+      .filter(([x, y]) => isTileVisibleTo(teamOf(caster), x, y) && (!skill.tileFilter || skill.tileFilter(caster, x, y))) // 스킬별 칸 조건(헌터 갈고리: 빈 칸 + 엄폐물과 붙음)
       .map(([x, y]) => ({ id: 'tile_' + x + '_' + y, x, y, isTile: true }));
     flankedTargetIds = new Set();
     hoverPreview = null;
@@ -5790,10 +6786,10 @@ function useSkill(caster, skillIndex) {
   if (skill.targetType === 'enemy_in_range' || skill.targetType === 'ally_in_range') {
     uiMode = { type: 'skill', casterId: caster.id, skillIndex, skill };
     attackRangeTiles = computeAttackRangeTiles(caster, skill.customRange);
-    const wantSide = skill.targetType === 'ally_in_range' ? caster.side : (caster.side === 'player' ? 'enemy' : 'player');
-    validTargets = characters.filter(c => !c.dead && !c.inReserve && c.side === wantSide && (c.id !== caster.id || (skill.includeSelf && c.id === caster.id))
+    const allyT = skill.targetType === 'ally_in_range'; // 아군 = 같은 편, 상대 = 공격 가능한 대상(조종 지혁 포함 규칙은 canAttackTarget)
+    validTargets = characters.filter(c => !c.dead && !c.inReserve && (allyT ? teamOf(c) === teamOf(caster) : canAttackTarget(caster, c)) && (c.id !== caster.id || (skill.includeSelf && c.id === caster.id))
       && (skill.customRange ? manhattan(caster, c) <= skill.customRange : inRange(caster, c))
-      && (c.side === caster.side || isVisibleTo(caster.side, c)) // 상대는 시야 안만
+      && (teamOf(c) === teamOf(caster) || isVisibleTo(teamOf(caster), c)) // 상대는 시야 안만
       && (!skill.targetFilter || skill.targetFilter(caster, c)));
     flankedTargetIds = new Set();
     updatePanel();
@@ -5965,7 +6961,7 @@ function checkBattleEndConditions() {
     }
     return;
   }
-  const enemiesAlive = characters.some(c => c.side === 'enemy' && !c.dead && !c.isObjectiveTarget); // 적 섬멸(목표물 제외)은 항상 승리
+  const enemiesAlive = characters.some(c => c.side === 'enemy' && !c.dead && !c.isObjectiveTarget && !c.isStructure && !c.zhControlled); // 적 섬멸(목표물·구조물·조종 지혁 제외)은 항상 승리
   const playersOnField = characters.some(c => c.side === 'player' && !c.isSummon && !c.dead && !c.inReserve && !c.notInBattle);
   if (!enemiesAlive || objectiveAchieved()) { endBattle('victory'); return; } // 임무 달성 즉시 승리(OBJECTIVES.md)
   if (!playersOnField) { endBattle('defeat'); return; }
@@ -5984,11 +6980,32 @@ function endBattle(result) {
     title.style.color = pvpMode ? '#e0c23c' : (result === 'victory' ? '#3f8f66' : '#e04c4c');
     overlay.style.display = 'flex';
   }
+  const statsBox = document.getElementById('battleResultStats');
+  if (statsBox) statsBox.innerHTML = battleRankingHtml();
   const backBtn = document.getElementById('battleResultBackBtn');
   if (backBtn) backBtn.textContent = pvpMode ? '멀티플레이 메뉴로' : '스테이지 선택으로';
   const endTurnBtn = document.getElementById('endTurnBtn');
   if (endTurnBtn) { endTurnBtn.disabled = true; endTurnBtn.textContent = '턴 종료'; }
   document.body.classList.remove('enemy-turn-active'); // 적 턴 도중 전투가 끝났을 수도 있으므로 확실히 정리
+}
+
+// ---- 전투 종료 피해량 순위 (v11.87): 한 번이라도 투입된 캐릭터별 가한 피해 / 받은 피해. 싱글은 아군만, 대전은 양 진영 ----
+function rankEsc(t) { return String(t).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
+function battleRankingHtml() {
+  const sides = pvpMode ? ['player', 'enemy'] : ['player'];
+  const rows = Object.values(battleDmgStats);
+  return sides.map(side => {
+    const mine = rows.filter(r => r.side === side && r.deployed);
+    const block = (key, label, color) => {
+      const sorted = mine.slice().sort((a, b) => b[key] - a[key]);
+      const max = Math.max(1, ...sorted.map(r => r[key]));
+      const body = sorted.length ? sorted.map((r, i) => `<div class="rankRow"><span class="rankNo">${i + 1}</span><span class="rankName">${rankEsc(r.name)}</span>` +
+        `<span class="rankBar"><i style="width:${(r[key] / max * 100).toFixed(1)}%; background:${color};"></i></span><span class="rankVal">${Math.round(r[key]).toLocaleString()}</span></div>`).join('')
+        : '<div class="rankEmpty">투입된 캐릭터 없음</div>';
+      return `<div class="rankBlock"><div class="rankTitle">${label}</div>${body}</div>`;
+    };
+    return `<div class="rankCol">${pvpMode ? `<div class="rankSide">${rankEsc(pvpSideName(side))}</div>` : ''}${block('dealt', '가한 피해 순위', '#e0a03c')}${block('taken', '받은 피해 순위', '#e04c4c')}</div>`;
+  }).join('');
 }
 
 // ================= 턴 종료 =================
@@ -5999,14 +7016,14 @@ function endTurn() {
   // 포진 자동 실행: 남은 행동력이 있는 전장의 아군은 턴 종료 시 자동으로 포진(남은 행동력 전부 소모 -> 방어막)
   const braced = []; // 이번 턴 종료 포진으로 실제 방어막을 얻은 캐릭터(방패 연출 대기용)
   for (const c of characters) {
-    if (c.side !== side || c.dead || c.isSummon || c.inReserve || c.notInBattle) continue;
+    if (teamOf(c) !== side || c.dead || c.isSummon || c.inReserve || c.notInBattle) continue;
     if (c.ap > 0) { const before = c.shield; performBrace(c); if (c.shield > before) braced.push(c); }
   }
   sideFieldHook('onAllyTurnEnd', side); // 그 진영 턴 종료 훅(시타 용의 핏줄 등)
   runSystems('onAllyTurnEnd', side); // 전역 시스템(캐릭터 소유와 무관하게 반응 - 마르티나 불의 시험 등)
   const armed = []; // 이번 턴 종료에 지역장악을 무장한 캐릭터(교차 검 연출용)
   for (const c of characters) {
-    if (c.side !== side || c.dead || c.isSummon || c.role !== '전위') continue;
+    if (teamOf(c) !== side || c.dead || c.isSummon || c.role !== '전위' || c.noZoneControl) continue;
     if (c.inReserve || c.notInBattle) continue; // 배치구역 대기 중이거나 이번 전투 미참여인 캐릭터는 지역장악 대상 아님
     c.zoneControlArmed = (!c.actedThisTurn && !c.attackedThisTurn && !c.usedSkillThisTurn) || charHook(c, 'forceZoneControlArm') === true; // 공격/스킬을 하지 않은 전위만 무장(캐릭터 훅으로 강제 가능: 가디언 진입 차단 등)
     if (c.zoneControlArmed) { armed.push(c); c.zoneTileHiddenUntil = Infinity; } // 방패 연출 뒤 검 연출이 시작될 때 실제 공개 시각이 정해짐
@@ -6041,7 +7058,7 @@ function endTurn() {
 // 지우기 직전 값은 shieldAtTurnStart에 기록(왕녀 '피할 수 없던 운명': 다음 자기 턴 시작에 방어막이 남아 있었는가)
 function expireSideShields(side) {
   for (const c of characters) {
-    if (c.side !== side || c.dead) continue;
+    if (teamOf(c) !== side || c.dead) continue; // 조종 지혁의 방어막은 아군 편 기준
     c.shieldAtTurnStart = c.shield || 0;
     c.shield = Math.min(c.shield || 0, c.shieldCarryMax || 0);
   }
@@ -6057,7 +7074,7 @@ function beginEnemyPhase() {
 
   // 적 턴이 시작되면, 상대(아군) 턴 동안 발동되지 못한 지역장악 무장은 해제됨 (아군 규칙과 동일)
   for (const c of characters) {
-    if (c.side !== 'enemy' || c.dead) continue;
+    if (teamOf(c) !== 'enemy' || c.dead) continue; // (조종 지혁의 무장은 아군 턴 시작에 해제)
     if (c.zoneControlArmed) c.zoneControlArmed = false;
   }
   expireSideShields('enemy'); // 적 진영 방어막도 자기 턴 시작에 소멸(아군과 같은 규칙 - 이전엔 싱글 적 방어막이 영구 유지되던 문제)
@@ -6072,29 +7089,7 @@ function beginEnemyPhase() {
 
     // ---- 적 턴: 살아있는 적을 한 번에 하나씩, 애니메이션과 함께 순차 처리 ----
     const livingEnemies = aiActionOrder(characters.filter(c => c.side === 'enemy' && !c.dead)); // 행동 순서(ENEMY_AI.md 5-1)
-    let idx = 0, pendingAlertBatch = null;
-    function processNextEnemy() {
-      if (battleEnded) return; // 전투 종료됐으면 남은 적 처리 중단
-      runSystems('onVisionChanged'); // 앞 적의 행동 결과(전투 상태 동료가 보임 등) 반영
-      if (idx >= livingEnemies.length) {
-        if (pendingAlertBatch) { livingEnemies.push(...pendingAlertBatch); pendingAlertBatch = null; processNextEnemy(); return; } // 보류한 경계 무리로 돌아감
-        finishEnemyPhase(); return;
-      }
-      // 경계 상태 적들은 한꺼번에 동시 이동(순서가 전투->발견->경계라 남은 적이 대부분 경계).
-      // 그 사이 깨어난(발견) 적이 있으면 그들을 먼저 하나씩 처리하고 경계 무리는 보류했다가 다시 나눔
-      if (!livingEnemies[idx].dead && livingEnemies[idx].aiState === 'alert') {
-        const rest = livingEnemies.slice(idx).filter(e => !e.dead);
-        const woke = rest.filter(e => e.aiState !== 'alert'), sleepers = rest.filter(e => e.aiState === 'alert');
-        livingEnemies.length = idx;
-        if (!woke.length) { runAlertBatch(sleepers, processNextEnemy); return; } // idx = 끝 -> 다음 호출에서 종료
-        livingEnemies.push(...woke);
-        pendingAlertBatch = sleepers;
-      }
-      const enemy = livingEnemies[idx++];
-      if (enemy.dead) { processNextEnemy(); return; } // 진행 도중 사망했으면 건너뜀
-      runEnemyAITurn(enemy, processNextEnemy);
-    }
-    processNextEnemy();
+    runPlannedEnemyPhase(livingEnemies, finishEnemyPhase); // v11.97 계획형: 보스 → 공격·스킬 적 1명씩 → 이동만(전투) → 발견 → 경계 한꺼번에 (ENEMY_AI.md 5-3)
   });
 }
 
@@ -6139,7 +7134,7 @@ function startSideTurn(side) {
   sideAnyHook('onTurnStartPre', side); // 그 진영 턴 시작 직전 훅(배치구역 포함): 글로리아 복수자의 한 등
 
   for (const c of characters) {
-    if (c.side !== side || c.dead) continue;
+    if (teamOf(c) !== side || c.dead) continue; // 조종 지혁도 아군 턴에 행동력·쿨타임 갱신
 
     if (c.inReserve) {
       if (c.notInBattle) continue; // 이번 전투에 아예 참여하지 않는 캐릭터는 대상 아님
@@ -6386,6 +7381,40 @@ function drawCoverBox(x, y, type) {
   ctx.strokeRect(boxLeft, boxTopY - TILE, TILE, TILE);
 }
 
+// 구덩이: 엄폐물(위로 솟은 상자)의 반대 - 칸 전체가 아래로 뚫린 모습. 안쪽 먼 벽(위쪽)과 좌우 벽이 보이고 바닥은 어둠으로 사라짐.
+// 붙어 있는 구덩이는 하나의 큰 구덩이로 보이게, 이웃도 구덩이인 쪽에는 벽·테두리를 그리지 않음
+const PIT_DEPTH_SCALE = 0.55; // 안쪽 먼 벽이 보이는 깊이(타일 대비) - 엄폐물 높이(COVER_HEIGHT_SCALE)와 비슷한 감각
+function isPitAt(x, y) { return obstacleTypeAt(x, y) === 'pit'; }
+function drawPit(x, y) {
+  const L = x * TILE, T = y * TILE, depth = TILE * PIT_DEPTH_SCALE, side = TILE * 0.14;
+  const up = isPitAt(x, y - 1), down = isPitAt(x, y + 1), left = isPitAt(x - 1, y), right = isPitAt(x + 1, y);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(L, T, TILE, TILE); ctx.clip();
+  ctx.fillStyle = '#040406'; // 바닥(보이지 않을 만큼 깊음)
+  ctx.fillRect(L, T, TILE, TILE);
+  // 좌우 안벽: 이웃이 구덩이가 아닌 쪽만(위쪽이 열려 있으면 위로 이어짐)
+  ctx.fillStyle = '#1c1c22';
+  const topY = up ? T : T + 0;
+  if (!left) { ctx.beginPath(); ctx.moveTo(L, topY); ctx.lineTo(L + side, up ? T : T + depth); ctx.lineTo(L + side, T + TILE); ctx.lineTo(L, T + TILE); ctx.closePath(); ctx.fill(); }
+  if (!right) { ctx.beginPath(); ctx.moveTo(L + TILE, topY); ctx.lineTo(L + TILE - side, up ? T : T + depth); ctx.lineTo(L + TILE - side, T + TILE); ctx.lineTo(L + TILE, T + TILE); ctx.closePath(); ctx.fill(); }
+  // 먼 쪽 안벽(위쪽 이웃이 구덩이가 아닐 때): 위에서 아래로 어두워지는 면
+  if (!up) {
+    const g = ctx.createLinearGradient ? ctx.createLinearGradient(0, T, 0, T + depth) : null;
+    if (g) { g.addColorStop(0, '#4a4a54'); g.addColorStop(1, '#0c0c10'); ctx.fillStyle = g; } else ctx.fillStyle = '#26262c';
+    ctx.beginPath(); ctx.moveTo(L, T); ctx.lineTo(L + TILE, T); ctx.lineTo(L + TILE - (right ? 0 : side), T + depth); ctx.lineTo(L + (left ? 0 : side), T + depth); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+  // 가장자리(바닥과 만나는 선): 구덩이가 아닌 쪽만. 앞쪽(아래) 가장자리는 밝은 턱으로
+  ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+  ctx.beginPath();
+  if (!up) { ctx.moveTo(L, T + 0.5); ctx.lineTo(L + TILE, T + 0.5); }
+  if (!left) { ctx.moveTo(L + 0.5, T); ctx.lineTo(L + 0.5, T + TILE); }
+  if (!right) { ctx.moveTo(L + TILE - 0.5, T); ctx.lineTo(L + TILE - 0.5, T + TILE); }
+  ctx.stroke();
+  if (!down) { ctx.strokeStyle = '#55555f'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(L, T + TILE - 1); ctx.lineTo(L + TILE, T + TILE - 1); ctx.stroke(); }
+  ctx.lineWidth = 1;
+}
+
 function spawnFloatText(target, text, color) {
   floatTexts.push({ x: target.x*TILE + TILE/2, y: target.y*TILE, text, color, start: performance.now(), duration: 900 });
   ensureVfxLoop(); // 예전엔 숫자 하나당 루프가 하나씩 새로 생겨 중복으로 다시 그렸음 -> 공용 단일 루프로 통합
@@ -6469,6 +7498,8 @@ function drawBaseGrid() {
       ctx.strokeRect(x*TILE, y*TILE, TILE, TILE);
     }
   }
+  // 구덩이: 바닥 높이(격자를 다 그린 뒤 - 붙은 구덩이 사이에 격자선이 남지 않게. 안개는 이 위에 덮임)
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) if (isPitAt(x, y) && isTerrainKnown(x, y)) drawPit(x, y);
   // 엄폐물(높이 있는 오브젝트)은 아래쪽 캐릭터 렌더링과 함께 y좌표 기준으로 깊이 정렬해서 그림 (더 아래(가까운) 타일이 위(먼) 타일을 덮도록)
 }
 
@@ -6609,7 +7640,7 @@ function drawDepthSortedTokens() {
   const depthObjects = [];
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
-      const obType = obstacleTypeAt(x, y);
+      const obType = coverTypeAt(x, y); // 위로 솟은 엄폐물만(구덩이는 drawBaseGrid가 바닥에 그림)
       if (obType && isTerrainKnown(x, y)) depthObjects.push({ y, draw: () => drawCoverBox(x, y, obType) });
     }
   }
@@ -6719,7 +7750,7 @@ function drawCharacterToken(c) {
   const fadeMul = fadeAlphaOf(c); // 소멸/재등장 연출
   if (fadeMul <= 0.001) { if (transformActive) ctx.restore(); return; }
   c._fadeMul = fadeMul;
-  ctx.globalAlpha = fadeMul * exitAlpha * ((c.side === mySide && c.side === viewSide() && (c.ap <= 0 || c.actedThisTurn)) ? 0.35 : 1);
+  ctx.globalAlpha = fadeMul * exitAlpha * ((isMyUnit(c) && teamOf(c) === viewSide() && (c.ap <= 0 || c.actedThisTurn)) ? 0.35 : 1);
 
   const imgKey = sdKeyOf(c); // 소환물은 타입(summonType) 기준, 변신 등으로 SD가 바뀌면 sdKey 훅의 값
   const sdInfo = CHARACTER_IMAGES[imgKey];
@@ -6831,7 +7862,7 @@ const FOG_COLOR = 'rgba(0,0,0,0.5)';            // 탐사했지만 지금 시야
 const FOG_DIM_FACTOR = 0.5;                       // 시야 밖 엄폐물 상자 밝기(FOG_COLOR와 같은 정도)
 const FOG_UNEXPLORED_COLOR = 'rgba(0,0,0,0.78)'; // 한 번도 못 본 칸(지형도 안 보임)
 const ENEMY_STATE_COLOR = { alert: '#9a9aa6', spotted: '#9a9aa6', combat: '#ff4a4a' }; // 경계/발견 회색, 전투 붉은색
-function enemyStateColor(c) { return ENEMY_STATE_COLOR[c.aiState || 'combat'] || ENEMY_STATE_COLOR.combat; }
+function enemyStateColor(c) { if (c.isStructure) return '#ffffff'; return ENEMY_STATE_COLOR[c.aiState || 'combat'] || ENEMY_STATE_COLOR.combat; } // 구조물(2지역 페로몬 상자)은 흰색
 // 발견 상태 느낌표(붉은색, 검은 외곽선)
 function drawSpottedMark(cx, y) {
   ctx.save();
@@ -6877,10 +7908,19 @@ function drawFogFloor() {
 function drawWisps() {
   if (!fogEnabled || pvpMode) return; // 대전: 안개 속 상대는 완전히 안 보임(도깨비불 없음)
   for (const c of characters) {
-    if (c.side === viewSide() || c.dead || c.inReserve || c.stealthed) continue; // 은신한 적은 도깨비불도 없음
+    if (c.side === viewSide() || c.dead || c.inReserve || c.stealthed || c.isStructure) continue; // 은신한 적·구조물은 도깨비불도 없음
     if (!isVisibleTo(viewSide(), c)) drawWisp(c);
   }
 }
+// 도깨비불 일렁임: 안개 속 도깨비불이 하나라도 있으면 화면을 계속 다시 그림(전에는 다른 연출이 돌 때만 일렁였음 - v11.94).
+// 테스트 하네스는 __mmNoIdleAnim으로 끔(가짜 화면에서 끝없이 다시 그리면 테스트가 느려짐)
+function wispsAnimating() {
+  if (!fogEnabled || pvpMode || battleEnded || (typeof __mmNoIdleAnim !== 'undefined' && __mmNoIdleAnim)) return false;
+  const gc = document.getElementById('gameContainer');
+  if (gc && gc.style && gc.style.display === 'none') return false; // 메뉴 화면
+  return characters.some(c => c.side !== viewSide() && !c.dead && !c.inReserve && !c.stealthed && !c.isStructure && !isVisibleTo(viewSide(), c));
+}
+registerVfxActive(wispsAnimating);
 
 // 임무 목표 칸: 파란 타일(안개 속에서도 보임) - OBJECTIVES.md
 function drawObjectiveTiles() {
@@ -8683,6 +9723,8 @@ canvas.addEventListener('click', (e) => {
     return;
   }
 
+  if (uiMode.type === 'pheromone') { onPheromoneTileClick(x, y); return; } // 2지역 페로몬 칸 지정(15_pheromone_ui)
+
   if (uiMode.type === 'dropZone') {
     tryPlaceDropZone(x, y);
     return;
@@ -8739,7 +9781,7 @@ canvas.addEventListener('click', (e) => {
   if (!selected) { if (clickedChar && !clickedChar.moving) selectCharacter(clickedChar); return; }
   if (clickedChar && clickedChar.id === selected.id) return;
   if (clickedChar) { if (!clickedChar.moving) selectCharacter(clickedChar); return; }
-  if (selected.side !== mySide || selected.moving) { deselect(); return; }
+  if (!isMyUnit(selected) || selected.moving) { deselect(); return; }
 
   const key = x + ',' + y;
   if (reachable.has(key)) {
@@ -8798,6 +9840,12 @@ canvas.addEventListener('mousemove', (e) => {
     return;
   } else if (deployHoverTile) {
     deployHoverTile = null;
+  }
+
+  if (uiMode.type === 'pheromone') { // 2지역 페로몬 범위 미리보기
+    const next = tile ? tile.x + ',' + tile.y : null, cur = hoverPreview && hoverPreview._tile;
+    if (cur !== next) { hoverPreview = pheromoneHoverPreview(tile); draw(); }
+    return;
   }
 
   if (uiMode.type === 'skill' && uiMode.skill && uiMode.skill.targetType === 'tile_in_range') { // 타일 지정: 고를 수 있는 칸에 올리면 범위 미리보기(보이는 적 강조)
@@ -8859,7 +9907,7 @@ canvas.addEventListener('mouseleave', () => {
 // 소환물 포함, 배치구역/사망/행동력 소진(ap<=0 또는 이미 행동 완료) 캐릭터는 순환 대상에서 제외
 function orderedSelectable() {
   if (!screenCanAct()) return [];
-  return characters.filter(c => c.side === mySide && !c.inReserve && !c.dead && c.ap > 0 && !c.actedThisTurn);
+  return characters.filter(c => isMyUnit(c) && !c.inReserve && !c.dead && c.ap > 0 && !c.actedThisTurn);
 }
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Tab' && e.key !== 'Shift') return;
@@ -8868,13 +9916,13 @@ document.addEventListener('keydown', (e) => {
   if (alive.length === 0) return;
 
   if (e.key === 'Tab') {
-    if (!selected || selected.side !== mySide) selectCharacter(alive[0]);
+    if (!selected || !isMyUnit(selected)) selectCharacter(alive[0]);
     else {
       const curIdx = alive.findIndex(c => c.id === selected.id);
       selectCharacter(alive[curIdx === -1 ? 0 : (curIdx + 1) % alive.length]);
     }
   } else {
-    if (!selected || selected.side !== mySide) selectCharacter(alive[alive.length - 1]);
+    if (!selected || !isMyUnit(selected)) selectCharacter(alive[alive.length - 1]);
     else {
       const curIdx = alive.findIndex(c => c.id === selected.id);
       selectCharacter(alive[curIdx === -1 ? alive.length - 1 : (curIdx - 1 + alive.length) % alive.length]);
@@ -8885,7 +9933,7 @@ document.addEventListener('keydown', (e) => {
 // ================= 단축키: A = 공격 모드 전환/취소 토글 =================
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'a' && e.key !== 'A') return;
-  if (!screenCanAct() || !selected || selected.side !== mySide) return;
+  if (!screenCanAct() || !selected || !isMyUnit(selected)) return;
   e.preventDefault();
   if (uiMode.type === 'attack') { clearUiMode(); updatePanel(); draw(); }
   else enterAttackMode();
@@ -8894,7 +9942,7 @@ document.addEventListener('keydown', (e) => {
 // ================= 단축키: 1/2 = 스킬1/스킬2 사용 (타겟이 필요한 스킬은 사용 모드로 전환, 다시 누르면 취소) =================
 document.addEventListener('keydown', (e) => {
   if (e.key !== '1' && e.key !== '2') return;
-  if (!screenCanAct() || !selected || selected.side !== mySide) return;
+  if (!screenCanAct() || !selected || !isMyUnit(selected)) return;
   e.preventDefault();
   const skillIndex = e.key === '1' ? 0 : 1;
   if (uiMode.type === 'skill' && uiMode.casterId === selected.id && uiMode.skillIndex === skillIndex) {
@@ -8951,8 +9999,146 @@ window.addEventListener('mouseup', () => {
   if (isPanning) { isPanning = false; boardWrap.style.cursor = ''; }
 });
 
+// ================= 2지역 페로몬 보관함 화면 (REGION2.md 1-2) =================
+// 화면 왼쪽 세로 5칸(배치구역 아래 ~ 전투 로그 위, v11.93): 정사각형 - 약병 그림 + 이름, 오른쪽 위 보유 개수 배지. 누르면 칸 지정 모드(범위 미리보기) → 칸을 고르면 명령 'pheromone'.
+// 실명은 범위가 없어 확인 1회 후 바로 사용. 조종은 6단계. 2지역 스테이지(설정 pheromones: true)에서만 보임
+const ZH_PHEROMONE_DESC = {
+  control: '조종: 엘리트 지혁 1명을 5턴간 조종 (이동·공격·스킬)',
+  confuse: '혼란: 3×3 안의 일반 지혁에게 혼란 4턴 - 지혁끼리 공격',
+  rage: '분노: 5×5 안의 일반 지혁 공격력 +50%, 즉시 전투, 턴 종료마다 최대 체력 50% 감소',
+  sonic: '음파: 7×7 안의 알이지혁·부식 알이지혁 파괴, 잠복한 크리살리드 드러냄',
+  blind: '실명: 4턴간 모든 지혁의 시야 절반, 명중률 50% 감소 (범위 없음)',
+};
+// 페로몬 색(사용자 지정 v11.93): 조종 보라 / 혼란 파랑 / 분노 빨강 / 음파 초록 / 실명 노랑 - 약병 액체·칸 테두리·범위 미리보기 공통
+const ZH_PHEROMONE_COLOR = { control: '#a75ad8', confuse: '#4a8ef0', rage: '#e8484a', sonic: '#46c46a', blind: '#e8c43a' };
+function zhHexA(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
+const ZH_PHEROMONE_PREVIEW_COLOR = Object.fromEntries(Object.entries(ZH_PHEROMONE_COLOR).map(([k, c]) => [k, zhHexA(c, 0.33)]));
+// 작은 약병(SVG): 코르크 + 목 + 둥근 몸통, 몸통 아래쪽에 액체
+function zhVialSvg(color) {
+  return `<svg class="phVial" viewBox="0 0 32 36" aria-hidden="true">
+    <rect x="12" y="1" width="8" height="5" rx="1.5" fill="#8a6a4a"/>
+    <path d="M13 6 h6 v7 l7 9 a9 9 0 0 1 -6 13 h-8 a9 9 0 0 1 -6 -13 l7 -9 z" fill="rgba(255,255,255,0.08)" stroke="#d8d8e8" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M8.3 21 h15.4 l2 2.6 a9 9 0 0 1 -6 11.4 h-8 a9 9 0 0 1 -6 -11.4 z" fill="${color}"/>
+    <circle cx="13" cy="27" r="1.6" fill="rgba(255,255,255,0.55)"/><circle cx="18" cy="30.5" r="1" fill="rgba(255,255,255,0.4)"/>
+  </svg>`;
+}
+// 위치: 화면 왼쪽, 배치구역 패널 아래 ~ 전투 로그 위. 정사각형 크기는 그 사이 높이에 맞춤(기본 64px, 최소 40px).
+// 한 줄로 최소 크기도 안 들어가면 2줄, 3줄...로 나눠 쌓음(작은 화면·대기 인원이 많을 때)
+const ZH_PH_GAP = 8, ZH_PH_MAX = 64, ZH_PH_MIN = 40;
+function layoutPheromoneBar() {
+  const bar = document.getElementById('pheromoneBar');
+  const dp = document.getElementById('deploymentPanel'), lp = document.getElementById('logPanel');
+  if (!bar || !dp || !lp || !dp.getBoundingClientRect || !lp.getBoundingClientRect) return;
+  const top = dp.getBoundingClientRect().bottom + 10, bottom = lp.getBoundingClientRect().top - 10;
+  let size = ZH_PH_MAX, cols = 1;
+  if (bottom > top) {
+    const avail = bottom - top;
+    cols = ZH_PHEROMONES.length; size = ZH_PH_MIN;
+    for (let c = 1; c <= ZH_PHEROMONES.length; c++) {
+      const rows = Math.ceil(ZH_PHEROMONES.length / c);
+      const s = Math.floor((avail - ZH_PH_GAP * (rows - 1)) / rows);
+      if (s >= ZH_PH_MIN) { cols = c; size = Math.min(ZH_PH_MAX, s); break; }
+    }
+  }
+  bar.style.top = Math.round(top) + 'px';
+  bar.style.gridTemplateColumns = `repeat(${cols}, var(--phSize))`;
+  bar.style.setProperty && bar.style.setProperty('--phSize', size + 'px');
+}
+// 갱신: 화면을 그릴 때마다(draw → updatePanel → onPanelUpdate) 불리므로 버튼은 처음 한 번만 만들고 이후엔 상태만 바꿈.
+// (v11.95 버그 수정: 예전엔 매번 버튼을 지우고 새로 만들어서, 누르고 떼는 사이에 버튼이 바뀌어 클릭이 사라졌음)
+// 위치·크기 계산(layoutPheromoneBar)도 처음 만들 때·창 크기·배치구역 패널 높이가 바뀔 때만
+let zhPheromoneBtns = null; // { kind: { btn, count, last } }
+function buildPheromoneBar(bar) {
+  bar.innerHTML = '';
+  zhPheromoneBtns = {};
+  for (const kind of ZH_PHEROMONES) {
+    const btn = document.createElement('button');
+    const color = ZH_PHEROMONE_COLOR[kind];
+    btn.className = 'pheromoneBtn';
+    btn.style.borderColor = color;
+    btn.innerHTML = `${zhVialSvg(color)}<span class="phName">${ZH_PHEROMONE_NAMES[kind]}</span><span class="phCount" style="background:${color}">${zhPheromones[kind] || 0}</span>`;
+    btn.title = ZH_PHEROMONE_DESC[kind];
+    btn.addEventListener('click', () => onPheromoneButton(kind));
+    bar.appendChild(btn);
+    zhPheromoneBtns[kind] = { btn, count: btn.querySelector ? btn.querySelector('.phCount') : null, last: '' };
+  }
+  layoutPheromoneBar();
+}
+function renderPheromoneBar() {
+  const bar = document.getElementById('pheromoneBar');
+  if (!bar) return;
+  const on = !!(currentStageConfig && currentStageConfig.pheromones) && !pvpMode;
+  const disp = on ? 'grid' : 'none';
+  if (bar.style.display !== disp) { bar.style.display = disp; if (on) layoutPheromoneBar(); }
+  if (!on) return;
+  if (!zhPheromoneBtns || !bar.contains || !bar.contains(zhPheromoneBtns[ZH_PHEROMONES[0]].btn)) buildPheromoneBar(bar);
+  for (const kind of ZH_PHEROMONES) {
+    const o = zhPheromoneBtns[kind], color = ZH_PHEROMONE_COLOR[kind], n = zhPheromones[kind] || 0;
+    const active = uiMode.type === 'pheromone' && uiMode.kind === kind;
+    const disabled = !(zhPheromoneUsable(kind) && screenCanAct());
+    const key = n + '|' + active + '|' + disabled;
+    if (o.last === key) continue; // 바뀐 게 없으면 손대지 않음
+    o.last = key;
+    o.btn.className = 'pheromoneBtn' + (active ? ' active' : '');
+    o.btn.style.background = active ? zhHexA(color, 0.35) : zhHexA(color, 0.14);
+    o.btn.disabled = disabled;
+    if (o.count) o.count.textContent = String(n);
+  }
+}
+if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', layoutPheromoneBar);
+if (typeof ResizeObserver !== 'undefined') { // 대기 인원 수에 따라 배치구역 패널 높이가 바뀌면 다시 맞춤
+  const dpEl = document.getElementById('deploymentPanel');
+  if (dpEl && dpEl.nodeType === 1) new ResizeObserver(() => layoutPheromoneBar()).observe(dpEl);
+}
+function onPheromoneButton(kind) {
+  if (!zhPheromoneUsable(kind) || !screenCanAct()) return;
+  if (uiMode.type === 'pheromone' && uiMode.kind === kind) { clearUiMode(); renderPheromoneBar(); draw(); return; } // 다시 누르면 취소
+  if (ZH_PHEROMONE_RADIUS[kind] == null) { // 실명: 범위 없음 - 확인 후 바로
+    showChoiceModal(`${ZH_PHEROMONE_NAMES[kind]} 페로몬을 사용할까요?`, [
+      { label: '사용', onClick() { if (zhPheromoneUsable(kind) && screenCanAct()) issueCommand({ t: 'pheromone', kind, x: 0, y: 0 }); } },
+      { label: '취소', onClick() {} },
+    ]);
+    return;
+  }
+  clearUiMode();
+  uiMode = { type: 'pheromone', kind };
+  addLog(`${ZH_PHEROMONE_NAMES[kind]} 페로몬: 쓸 칸을 고르세요 (내 시야 안, 다시 누르면 취소)`, 'logInfo');
+  renderPheromoneBar(); draw();
+}
+// 칸 클릭(15_input): 내 시야 안이면 명령, 아니면 안내
+function onPheromoneTileClick(x, y) {
+  const kind = uiMode.kind;
+  if (!zhPheromoneTileOk(kind, x, y)) { showInvalidAction('내 시야 안의 칸만 고를 수 있습니다'); return; }
+  clearUiMode();
+  issueCommand({ t: 'pheromone', kind, x, y });
+  renderPheromoneBar(); draw();
+}
+// 범위 미리보기(15_input 마우스 이동): 고를 수 있는 칸이면 범위 + 영향받는 보이는 지혁 강조
+function pheromoneHoverPreview(tile) {
+  const kind = uiMode.kind, r = ZH_PHEROMONE_RADIUS[kind];
+  if (!tile || !zhPheromoneTileOk(kind, tile.x, tile.y)) return null;
+  const tiles = squareAreaTiles(tile.x, tile.y, r || 0);
+  const hit = c => !c.dead && !c.inReserve && isVisibleTo(viewSide(), c) && tiles.has(c.x + ',' + c.y) &&
+    (kind === 'sonic' ? !!c.zhEgg : kind === 'control' ? (c.zh && c.grade === 'elite') : zhIsNormalZh(c));
+  return { tiles, targets: characters.filter(hit), color: ZH_PHEROMONE_PREVIEW_COLOR[kind], _tile: tile.x + ',' + tile.y };
+}
+registerSystem('onPheromonesChanged', renderPheromoneBar);
+registerSystem('onPanelUpdate', renderPheromoneBar);
+registerSystem('onStageLoad', renderPheromoneBar);
+
 // ================= 편성 (슬롯 방식, 명일방주 스타일) =================
-let formationSlots = [null, null, null, null, null, null]; // 6칸, 각 칸엔 캐릭터 id 또는 null
+let formationSlots = [null, null, null, null, null, null]; // 편성 칸(일반 6칸 / 총력전 8칸, 대전은 6칸 고정), 각 칸엔 캐릭터 id 또는 null
+// 싱글 편성 칸 수: 총력전이면 8명, 아니면 6명 (대전 편성은 17_pvp.js가 6칸 배열을 직접 만듦)
+function singleFormationSize() { return battleOptions.allIn ? 8 : 6; }
+// 편성 칸 수 맞추기: 늘어나면 빈 칸 추가, 줄어들면 뒤 칸(7~8번)을 비움
+function resizeFormationSlots(n) {
+  formationSlots = formationSlots.slice(0, n);
+  while (formationSlots.length < n) formationSlots.push(null);
+}
+function formationModeTitleText() {
+  const n = formationSlots.length;
+  return quickFormationMode ? `편성 - 캐릭터를 클릭클릭클릭으로 ${n}명 선택` : `편성 - 슬롯을 눌러 ${n}명을 채우세요`;
+}
 let activeSlotIndex = null; // 현재 로스터 선택창이 채우려는 슬롯 번호
 
 let quickFormationMode = false;
@@ -8964,7 +10150,7 @@ function refreshFormationStartBtn() {
 function renderFormationSlots() {
   const box = document.getElementById('formationSlots');
   box.innerHTML = '';
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < formationSlots.length; i++) {
     const cid = formationSlots[i];
     const c = cid ? characters.find(ch => ch.id === cid) : null;
     const slot = document.createElement('div');
@@ -8999,7 +10185,7 @@ function renderQuickFormationGrid() {
         if (idx !== -1) formationSlots[idx] = null;
       } else {
         const emptyIdx = formationSlots.indexOf(null);
-        if (emptyIdx === -1) { addLog('편성 인원은 최대 6명입니다', 'logInfo'); showInvalidAction('편성 최대 6명'); return; }
+        if (emptyIdx === -1) { addLog(`편성 인원은 최대 ${formationSlots.length}명입니다`, 'logInfo'); showInvalidAction(`편성 최대 ${formationSlots.length}명`); return; }
         formationSlots[emptyIdx] = c.id;
       }
       renderQuickFormationGrid();
@@ -9014,9 +10200,7 @@ document.getElementById('quickFormationToggleBtn').addEventListener('click', () 
   document.getElementById('formationSlots').style.display = quickFormationMode ? 'none' : 'flex';
   document.getElementById('quickFormationGrid').style.display = quickFormationMode ? 'grid' : 'none';
   document.getElementById('quickFormationToggleBtn').textContent = quickFormationMode ? '슬롯 편성으로' : '빠른 편성';
-  document.getElementById('formationModeTitle').textContent = quickFormationMode
-    ? '편성 - 캐릭터를 클릭클릭클릭으로 6명 선택'
-    : '편성 - 슬롯을 눌러 6명을 채우세요';
+  if (!pvpFormationStep) document.getElementById('formationModeTitle').textContent = formationModeTitleText(); // (대전 편성 제목은 17_pvp.js가 정함)
   if (quickFormationMode) renderQuickFormationGrid();
   else renderFormationSlots();
 });
@@ -9055,12 +10239,12 @@ document.getElementById('formationStartBtn').addEventListener('click', () => {
   const roster = characters.filter(c => c.side === 'player' && !c.isSummon);
   for (const c of roster) {
     if (!chosenIds.has(c.id)) {
-      // 편성 6명에 들지 않은 캐릭터 - 이번 전투에 아예 참여하지 않음
+      // 편성 인원에 들지 않은 캐릭터 - 이번 전투에 아예 참여하지 않음
       c.inReserve = true;
       c.notInBattle = true;
       continue;
     }
-    // 편성된 6명은 전부 배치구역에서 대기 상태로 전장에 입장, 첫 4명은 전장에서 직접 배치
+    // 편성된 인원(6명, 총력전 8명)은 전부 배치구역에서 대기 상태로 전장에 입장, 첫 4명은 전장에서 직접 배치
     c.inReserve = true;
     c.notInBattle = false;
     charHook(c, 'onFormation'); // 편성 확정 시 훅(메딕 구조팀 등)
@@ -9207,7 +10391,7 @@ const REGIONS = [
   { id: 0, name: '0지역 - 테스트', locked: false, brief: '' },
   { id: 1, name: '1지역 - 상황정리', locked: false,
     brief: '최전선 정찰 보고: 늑대 무리와 설원 병사들이 진지 주변을 배회하고 있다.' },
-  { id: 2, name: '2지역', locked: true },
+  { id: 2, name: '2지역', locked: false, brief: '' }, // v11.96 열림
   { id: 3, name: '3지역', locked: true },
   { id: 4, name: '4지역', locked: true },
   { id: 5, name: '5지역', locked: true },
@@ -9218,7 +10402,9 @@ const REGION_STAGES = {
        { id:'1-2', name:'1-2' },
        ...['1-3', '1-4', '1-5', '1-6', '1-7'].map(id => ({ id, name: id, locked: true })), // 준비 중(임시)
        { id:'1-8', name:'1-8' },
-       { id:'1-9', name:'1-9 복수의 왕녀 (보스)' } ],
+       { id:'1-9', name:'1-9 복수의 왕녀 (보스)' },
+       { id:'2-0', name:'2지역 시험 (임시)' } ], // 2지역 맵을 받기 전 시험용(REGION2.md)
+  2: [ { id:'2-1', name:'2-1 거주지 습격' } ],
 };
 function renderRegionCards() {
   const box = document.getElementById('regionCardList');
@@ -9280,7 +10466,7 @@ function stageEnemyCounts(stageId) {
   let cfg = STAGE_CONFIGS[stageId];
   if (cfg.map) cfg = parseStageMap(cfg.map);
   const counts = {}, order = [];
-  for (const e of cfg.enemies) { if (!(e.template in counts)) { counts[e.template] = 0; order.push(e.template); } counts[e.template]++; }
+  for (const e of cfg.enemies) { const key = ENEMY_TEMPLATES[e.template].disguiseAs || e.template; if (!(key in counts)) { counts[key] = 0; order.push(key); } counts[key]++; } // disguiseAs: 다른 적으로 보이는 적(부식 알 → 알)
   const rank = { boss: 0, elite: 1, normal: 2 }, T = ENEMY_TEMPLATES;
   order.sort((a, b) => ((rank[T[a].grade] ?? 2) - (rank[T[b].grade] ?? 2)) || String(T[a].mapCode || '').localeCompare(String(T[b].mapCode || '')));
   return order.map(key => ({ key, count: counts[key] }));
@@ -9325,15 +10511,16 @@ function enterStage(stageId) {
   closeStageEnemies(); // 등장 적 팝업이 열린 채로 전투에 들어가지 않게
   loadStage(stageId);
   document.querySelectorAll('.menuScreen').forEach(el => el.style.display = 'none');
-  formationSlots = [null, null, null, null, null, null];
+  battleOptions = { fog: fogEnabled, allIn: maxFieldUnits > 4 }; // 스테이지 기본값(loadStage)에서 시작
+  formationSlots = [];
+  resizeFormationSlots(singleFormationSize()); // 일반 6칸 / 총력전 8칸
   quickFormationMode = false;
   document.getElementById('formationSlots').style.display = 'flex';
   document.getElementById('quickFormationGrid').style.display = 'none';
   document.getElementById('quickFormationToggleBtn').textContent = '빠른 편성';
-  document.getElementById('formationModeTitle').textContent = '편성 - 슬롯을 눌러 6명을 채우세요';
+  document.getElementById('formationModeTitle').textContent = formationModeTitleText();
   document.getElementById('squadFormationScreen').style.display = 'flex';
   document.getElementById('battleOptionRow').style.display = 'flex'; // (대전 편성에서 숨겼을 수 있음)
-  battleOptions = { fog: fogEnabled, allIn: maxFieldUnits > 4 }; // 스테이지 기본값(loadStage)에서 시작
   renderBattleOptionButtons();
   renderFormationSlots();
 }
@@ -9343,11 +10530,17 @@ function renderBattleOptionButtons() {
   const f = document.getElementById('fogToggleBtn'), a = document.getElementById('allInToggleBtn');
   f.textContent = `전장의 안개: ${battleOptions.fog ? '켜짐' : '꺼짐'}`;
   f.style.borderColor = battleOptions.fog ? '#9fd3ff' : '#555'; f.style.background = battleOptions.fog ? '#20304a' : '#26262c';
-  a.textContent = `총력전(4~6명 투입): ${battleOptions.allIn ? '켜짐' : '꺼짐'}`;
+  a.textContent = `총력전(8명 편성, 4~6명 투입): ${battleOptions.allIn ? '켜짐' : '꺼짐'}`;
   a.style.borderColor = battleOptions.allIn ? '#e0a03c' : '#555'; a.style.background = battleOptions.allIn ? '#3a2e1c' : '#26262c';
 }
 document.getElementById('fogToggleBtn').addEventListener('click', () => { battleOptions.fog = !battleOptions.fog; renderBattleOptionButtons(); });
-document.getElementById('allInToggleBtn').addEventListener('click', () => { battleOptions.allIn = !battleOptions.allIn; renderBattleOptionButtons(); });
+document.getElementById('allInToggleBtn').addEventListener('click', () => {
+  battleOptions.allIn = !battleOptions.allIn;
+  renderBattleOptionButtons();
+  resizeFormationSlots(singleFormationSize()); // 켜면 8칸, 끄면 6칸(7~8번 칸은 비움)
+  document.getElementById('formationModeTitle').textContent = formationModeTitleText();
+  if (quickFormationMode) { renderQuickFormationGrid(); refreshFormationStartBtn(); } else renderFormationSlots();
+});
 
 // ================= 초기 렌더 =================
 renderReserveList();
@@ -9359,6 +10552,7 @@ updatePanel();
 const COMBAT_RULES = [
   { title: '피해 공식', body: '가하는 피해는 (공격력 + 각종 보정) × 배율에서 대상의 방어력을 뺀 값입니다. 단, 방어력을 빼기 직전 피해량의 10%는 방어력이 아무리 높아도 항상 보장됩니다. 치명타 시 피해량이 추가로 증가하며, 치명타 확률은 근접 공격(+25%p), 측면 공격(+50%p) 등 여러 조건으로 늘어납니다.' },
   { title: '엄폐', body: '원거리 공격만 엄폐의 영향을 받습니다. 완전 엄폐 뒤의 대상은 피해량이 50%로, 반엄폐 뒤의 대상은 75%로 감소합니다. 엄폐물이 없어 측면이 드러난 경우 오히려 치명타 확률이 크게 올라갑니다. 근접 공격은 엄폐의 영향을 받지 않습니다.' },
+  { title: '구덩이', body: '아래로 뚫린 구덩이 칸은 지나가거나 멈춰 설 수 없습니다(이동·순간이동·돌진·강하구역 모두 불가). 엄폐물이 아니라서 구덩이 옆에 있어도 엄폐를 받지 못하며, 시야와 원거리 공격은 가리지 않습니다.' },
   { title: '이동력과 행동력', body: '각 캐릭터는 매 턴 기동력만큼의 행동력(AP)을 받습니다. 이동에는 칸 수만큼, 공격이나 스킬 사용에는 1을 소모합니다. 행동력이 남은 채로 턴을 마치면 자동으로 포진하여 방어막을 얻습니다(포진 보너스는 소모한 행동력에 비례).' },
   { title: '지역장악', body: '전위 캐릭터가 자신의 턴에 공격이나 스킬을 쓰지 않고 턴을 마치면 무장 상태가 됩니다. 상대 턴에 적이 그 주변 8칸으로 들어오면 자동으로 기본공격을 가하며, 1회 사용하면 해제됩니다. 다음 자신의 턴이 오면 사용하지 못한 무장도 해제됩니다.' },
   { title: '배치구역과 강하구역', body: '전장에는 최대 4명까지 배치할 수 있고, 나머지 편성 인원은 배치구역에서 대기합니다. 배치구역의 아군은 매 턴 최대체력의 10%를 회복합니다. 강하구역을 호출하면 지정한 3×3 범위 안에 배치구역의 아군을 투입할 수 있으며, 강하한 턴에는 퇴각할 수 없습니다. 긴급강하는 전장의 캐릭터 한 명을 즉시 빼내고 그 자리에 다른 캐릭터를 배치합니다.' },
@@ -9528,7 +10722,7 @@ function renderMpLobby() {
 
 // 맵 미리보기: 지형만(엄폐물 + 양쪽 시작 구역). 맵 문자열을 게임과 같은 해석(parseStageMap)으로 읽어 별도 작은 캔버스에 그림
 // (loadStage는 게임 상태를 초기화하므로 쓰지 않음)
-const MAP_PREVIEW_COLORS = { floor: '#2a2a31', grid: '#202026', full: '#77778a', half: '#9a7444', deploy: '#3f6fc0', deploy2: '#b84a4a' };
+const MAP_PREVIEW_COLORS = { floor: '#2a2a31', grid: '#202026', full: '#77778a', half: '#9a7444', pit: '#0a0a0d', deploy: '#3f6fc0', deploy2: '#b84a4a' };
 let mapPreviewLastDrawn = null; // (테스트 확인용) 마지막으로 그린 맵 id
 function drawMapPreview(canvasEl, mapId) {
   const cfg = STAGE_CONFIGS[mapId];
@@ -9543,7 +10737,7 @@ function drawMapPreview(canvasEl, mapId) {
   const fill = (x, y, color, inset) => { g.fillStyle = color; g.fillRect(x * cell + inset, y * cell + inset, cell - inset * 2, cell - inset * 2); };
   for (const z of m.deployZone) fill(z.x, z.y, C.deploy, 0);
   for (const z of m.deployZone2) fill(z.x, z.y, C.deploy2, 0);
-  for (const o of m.obstacles) fill(o.x, o.y, o.type === 'full' ? C.full : C.half, o.type === 'full' ? 1 : 2.5); // 반엄폐는 조금 작게
+  for (const o of m.obstacles) fill(o.x, o.y, o.type === 'full' ? C.full : o.type === 'pit' ? C.pit : C.half, o.type === 'full' ? 1 : o.type === 'pit' ? 0 : 2.5); // 반엄폐는 조금 작게, 구덩이는 칸 전체 검게
   g.strokeStyle = C.grid; g.lineWidth = 1;
   for (let x = 1; x < m.cols; x++) { g.beginPath(); g.moveTo(x * cell + 0.5, 0); g.lineTo(x * cell + 0.5, H); g.stroke(); }
   for (let y = 1; y < m.rows; y++) { g.beginPath(); g.moveTo(0, y * cell + 0.5); g.lineTo(W, y * cell + 0.5); g.stroke(); }
@@ -10177,6 +11371,7 @@ const COMMANDS = {
   dropZone:      c => placeDropZone(c.x, c.y),
   initialDeploy: c => applyInitialDeploy(c.ids),
   endTurn:       () => endTurn(),
+  pheromone:     c => zhUsePheromone(c.kind, c.x, c.y), // 2지역 페로몬 사용(REGION2.md 1장)
 };
 function runCommand(cmd) {
   const fn = COMMANDS[cmd.t];
@@ -10189,7 +11384,7 @@ function runCommand(cmd) {
 // 상대 화면(연출이 끝난 뒤 다음 명령 재생)과 실행 순서를 같게 하기 위함 - MULTIPLAYER.md 2-3-2
 function issueCommand(cmd) {
   if (netCanActFn && !netCanActFn()) { showInvalidAction('상대 차례입니다'); return null; }
-  if (netBusyFn && netBusyFn()) { showInvalidAction('진행 중인 동작이 끝난 뒤 다시 시도하세요'); return null; }
+  if ((netBusyFn && netBusyFn()) || reactionLocks > 0) { showInvalidAction('진행 중인 동작이 끝난 뒤 다시 시도하세요'); return null; }
   const r = runCommand(cmd);
   if (netCommandSink) netCommandSink(cmd);
   return r;

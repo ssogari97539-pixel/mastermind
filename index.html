@@ -289,6 +289,23 @@
   .logMiss { color: #8ab4ff; }
   .logSkill { color: #9fd3ff; }
   .logInfo { color: #888; }
+
+/* 보스 공용 화면 (BOSSES.md 0-2, v12.05): 큰 체력바(턴 종료 아래) + 스킬 알림창(오른쪽) */
+#bossHpBars { position: fixed; top: 62px; left: 50%; transform: translateX(-50%); width: min(520px, 50vw); z-index: 420; flex-direction: column; gap: 6px; pointer-events: none; }
+.bossHpHead { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: bold; color: #ecd8ff; text-shadow: 0 1px 3px #000; margin-bottom: 3px; }
+.bossHpNum { font-size: 12px; font-weight: normal; color: #d8c4f0; }
+.bossHpTrack { position: relative; height: 16px; background: #1a1022; border: 2px solid #6a3f90; border-radius: 4px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.6); }
+.bossHpTrail, .bossHpFill, .bossHpShield { position: absolute; top: 0; bottom: 0; left: 0; width: 0; }
+.bossHpTrail { background: #ffffff; transition: width 0.6s ease-out 0.45s; }
+.bossHpFill { background: linear-gradient(#c07af0, #7c36bc); }
+.bossHpShield { background: linear-gradient(#cfeaff, #8ccaf5); }
+#bossSkillToasts { position: fixed; top: 70px; right: 284px; z-index: 460; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: none; }
+.bossSkillToast { min-width: 220px; max-width: 320px; box-sizing: border-box; padding: 9px 14px; border-radius: 6px; background: rgba(30, 16, 44, 0.95); border: 1px solid #8a52b8; border-left: 6px solid #b06ae8; color: #eee; box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+  transform: translateX(calc(100% + 320px)); opacity: 0; transition: transform 0.35s ease-out, opacity 0.35s ease-out; }
+.bossSkillToast.in { transform: translateX(0); opacity: 1; }
+.bossSkillToast.out { transform: translateX(calc(100% + 320px)); opacity: 0; transition: transform 0.35s ease-in, opacity 0.35s ease-in; }
+.bstName { font-size: 15px; font-weight: bold; color: #e8c8ff; margin-bottom: 3px; }
+.bstBrief { font-size: 12px; color: #ddd; line-height: 1.4; }
 </style>
 
 
@@ -325,7 +342,10 @@
     <button id="quickFormationToggleBtn" class="menuBtn" style="padding:8px 18px; font-size:13px; border-color:#e0c23c; background:#3a3420; margin-bottom:16px;">빠른 편성</button>
 
     <div id="formationSlots" style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-bottom:24px; flex-shrink:0;"></div>
-    <div id="quickFormationGrid" style="display:none; flex-shrink:0; grid-template-rows:repeat(2, auto); grid-auto-flow:column; grid-auto-columns:126px; gap:10px; max-width:820px; overflow-x:auto; padding-bottom:10px; margin-bottom:24px;"></div>
+    <div id="quickFormationArea" style="display:none; gap:10px; align-items:flex-start; width:100%; max-width:920px; box-sizing:border-box; margin-bottom:24px; flex-shrink:0;">
+      <div id="quickFormationTags" style="display:flex; flex-direction:column; gap:6px; width:80px; flex-shrink:0;"></div>
+      <div id="quickFormationGrid" style="display:grid; min-width:0; flex:0 1 auto; flex-shrink:0; grid-template-rows:repeat(2, auto); grid-auto-flow:column; grid-auto-columns:126px; gap:10px; max-width:820px; overflow-x:auto; padding-bottom:10px;"></div>
+    </div>
 
     <button id="formationStartBtn" class="menuBtn" style="border-color:#3f8f66; background:#2c4a3d;" disabled>작전 시작</button>
     <div id="battleOptionRow" style="display:flex; gap:10px; margin-top:14px; flex-shrink:0;">
@@ -385,6 +405,9 @@
   .quickPickCard { border-radius:8px; border:2px solid #444; background:#2a2a30; color:#eee; text-align:center; cursor:pointer; overflow:hidden; }
   .quickPickCard:hover { border-color:#3c5ea8; }
   .quickPickCard.selected { border-color:#3f8f66; background:#1f2e26; }
+  .quickTagBtn { padding:6px 4px; font-size:12px; border-radius:6px; border:1px solid #555; background:#26262c; color:#ddd; cursor:pointer; text-align:center; }
+  .quickTagBtn:hover { border-color:#3c5ea8; }
+  .quickTagBtn.active { border-color:#e0c23c; background:#3a3420; color:#fff; font-weight:bold; }
   .quickPickPortrait { width:100%; aspect-ratio:3/4; background:linear-gradient(160deg,#33333c,#232328); display:flex; align-items:center; justify-content:center; color:#555; font-size:10px; }
   .quickPickInfo { padding:5px 4px; font-size:11px; }
 </style>
@@ -525,6 +548,8 @@
 <button id="endTurnBtn">턴 종료</button>
 <div id="pheromoneBar" style="display:none;"></div>
 <div id="pvpTimer" style="display:none;"></div>
+<div id="bossHpBars" style="display:none;"></div>
+<div id="bossSkillToasts"></div>
 <div id="netStatusBar" style="display:none;"></div>
 <div id="invalidActionToast">불가</div>
 <div id="teamCostDisplay" style="position:fixed; top:14px; right:284px; z-index:400; font-size:13px; color:#9fd3ff; border:1px solid #3c5ea8; background:#20263a; padding:8px 14px; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.5);">팀 스킬 코스트: 0 / 200</div>
@@ -577,8 +602,8 @@
 </div>
 
 <script>
-const GAME_BUILD = '86bc812301'; // 빌드 식별값(자동 생성)
-const GAME_VERSION = '11.97'; // 버전 번호(VERSION 파일)
+const GAME_BUILD = '4ff88327bc'; // 빌드 식별값(자동 생성)
+const GAME_VERSION = '12.07'; // 버전 번호(VERSION 파일)
 // ================= 기본 설정 =================
 // 판 크기는 스테이지마다 다를 수 있음 - loadStage가 setBoardSize로 바꿈(모든 사용처가 함수 안이라 바뀐 값이 바로 반영됨)
 let COLS = 20;
@@ -794,6 +819,22 @@ const STAGE_CONFIGS = {
       ".  .  ?  ?  .  .  .  ?  !  !  !  !  !  !  !  !  !  ?  .  .  b1  b1  .  .  .  b1  .  .  .  .  b1  .  .  .  .",
     ],
   },
+  // 2-2 공포의 숲(v11.99): 10턴 안에 오른쪽 끝 탈출 타일(E)에서 3명 탈출. 섬멸로는 승리하지 않음(noAnnihilateWin)
+  '2-2': {
+    pheromones: true,
+    objective: { type: 'escape', count: 3, turns: 10, noAnnihilateWin: true },
+    map: [
+      ".  .  ?  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  ?  .  .",
+      ".  .  .  .  .  .  .  .  .  .  !  .  .  .  .  .  .  ?  .  .  .  b9  .  .  .",
+      ".  .  .  .  .  !  .  .  .  b9  .  .  .  .  !  .  .  .  .  .  .  .  .  .  .",
+      "@  @  @  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  !  .  .  E",
+      "@  @  @  .  .  .  .  .  .  ?  .  .  .  b8  .  .  b9  .  !  .  .  .  .  .  E",
+      "@  @  @  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  b9  .  .  .  E",
+      ".  b17  b14  .  .  .  .  .  .  .  .  .  .  !  .  .  .  .  .  .  .  .  .  .  .",
+      ".  .  .  .  .  .  !  .  .  .  .  .  .  .  .  .  .  .  .  .  .  !  .  b9  .",
+      ".  ?  .  .  .  .  .  .  .  .  !  b9  .  .  .  !  .  .  ?  .  .  .  .  .  .",
+    ],
+  },
   // 2지역 시험(임시, v11.92): 지혁 일반·엘리트·페로몬 상자를 한 판에서 확인. 실제 2지역 맵을 받으면 뺌 (REGION2.md)
   '2-0': {
     pheromones: true, allIn: true,
@@ -884,13 +925,13 @@ const STAGE_CONFIGS = {
     allIn: true, // 보스전: 총력전 기본 켜짐
     map: [
       '.   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .',
-      '.   .   .   !   .   !   !   .   .   !   !   .   .   !   !   .   .   !   !   .   !   .   .   !   .',
-      '.   .   !   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   !   .   .   .',
+      '.   .   .   ?   .   ?   ?   .   .   ?   ?   .   .   ?   ?   .   .   ?   ?   .   ?   .   .   ?   .',
+      '.   .   ?   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   ?   .   .   .',
       '.   .   .   .   .   .   .   @   @   @   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .',
-      '.   !   .   .   !   !   .   @   @   @   .   !   !   .   .   a10 .   .   !   !   .   .   !   .   .',
+      '.   ?   .   .   ?   ?   .   @   @   @   .   ?   ?   .   .   a10 .   .   ?   ?   .   .   ?   .   .',
       '.   .   .   .   .   .   .   @   @   @   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .',
-      '.   .   !   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   !   .   .   .',
-      '.   .   .   !   .   !   !   .   .   !   !   .   .   !   !   .   .   !   !   .   !   .   .   !   .',
+      '.   .   ?   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   ?   .   .   .',
+      '.   .   .   ?   .   ?   ?   .   .   ?   ?   .   .   ?   ?   .   .   ?   ?   .   ?   .   .   ?   .',
       '.   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .',
     ],
   },
@@ -1237,7 +1278,7 @@ function effectiveDmgTakenRate(c, attacker) {
 //     aiTurnStart(c) 적 턴 시작 고유 처리('end'면 턴 종료) / beforeAiAttack(c) 기본 공격 직전 /
 //     areaPattern(c) 범위 공격 패턴 { centerMult, ring:[[dx,dy]..], ringMult } (있으면 칸 조준) / afterAreaAttack(c) 범위 공격 후
 //   afterBasicAttack(c)   플레이어가 직접 한 기본공격으로 기동력/행동이 소모된 직후(지역장악 반격 제외) - 기동력/행동 상태를 바꿀 수 있음
-//   시스템 이름: onStageLoad · onEnemyTurnStart · onEnemyTurnEnd(싱글 적 턴 종료, 적 디버프 감소 뒤) · onAllyTurnStart · onAllyTurnEnd · onBuffTick(c) · onAllyDeath(dead) · onRetreat(c) · onAttackResolved(attacker,target,res,opts) · onSkillUsed(caster,skill) · onDamageTaken(target,dmg)
+//   시스템 이름: onStageLoad · onEnemyTurnStart · onEnemyTurnEnd(싱글 적 턴 종료, 적 디버프 감소 뒤) · onAllyTurnStart · onAllyTurnEnd · onBuffTick(c) · onAllyDeath(dead) · onRetreat(c) · onEscape(c)(탈출 - 퇴각과 별개) · onEnemySkillUsed(enemy, skill)(적 AI 스킬 사용 - 보스 알림창) · onAttackResolved(attacker,target,res,opts) · onSkillUsed(caster,skill) · onDamageTaken(target,dmg)
 
 function defineHooks(id, hooks, priority) { // 같은 캐릭터에 여러 번 호출하면 훅이 합쳐진다
   const c = characters.find(x => x.id === id);
@@ -1478,9 +1519,11 @@ function dealDamage(target, dmg, gainStackOverride, source) {
   if (dmg > 0) runSystems('onDamaged', target, dmg); // 피해 발생 알림(적 AI: 경계 중인 적 발견 등 - 10_ai_state.js)
   let remaining = dmg;
   if (target.shield > 0) {
-    const absorbed = Math.min(target.shield, remaining);
-    target.shield -= absorbed;
-    remaining -= absorbed;
+    // 공격자 훅 shieldBreakMult(기본 1): 피해 1당 깎는 방어막(왕녀 철갑분쇄자 = 2, v12.07). 화상 등 출처가 배열이면 1
+    const brk = (source && !Array.isArray(source) && source !== target && charHook(source, 'shieldBreakMult')) || 1;
+    const used = Math.min(remaining, Math.ceil(target.shield / brk)); // 방어막을 깎는 데 쓰인 피해
+    target.shield = Math.max(0, target.shield - used * brk);
+    remaining -= used;
   }
   target.hp -= remaining;
   if (target.hp <= 0) {
@@ -1886,7 +1929,7 @@ function isVisibleTo(side, c) {
 // ================= 벨라 (전위) =================
 characters.push(
   {
-    id:'bella', role:'전위', inReserve:false, justDroppedThisTurn:false, name:'벨라', side:'player', x:1, y:1, spd:5, ap:5,
+    id:'bella', tags:['화상', '피격 시', '자해', '코스트'], role:'전위', inReserve:false, justDroppedThisTurn:false, name:'벨라', side:'player', x:1, y:1, spd:5, ap:5,
     hp:3750, maxHp:3750, atk:390, def:400, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:'melee', color:'#e0566b', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -2027,7 +2070,7 @@ defineHooks('bella', {
 characters.push(
   {
     // 패시브1(고독함)은 조건 없는 상시효과라 기본 스탯에 직접 반영(가하는피해1.25, 받는피해1.1)
-    id:'siku', role:'후위', inReserve:false, justDroppedThisTurn:false, name:'시쿠', side:'player', x:3, y:1, spd:3, ap:3,
+    id:'siku', tags:['소환물'], role:'후위', inReserve:false, justDroppedThisTurn:false, name:'시쿠', side:'player', x:3, y:1, spd:3, ap:3,
     hp:2250, maxHp:2250, atk:750, def:100, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.25, dmgTakenRate:1.1, range:6, color:'#7a6ad8', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -2147,7 +2190,7 @@ defineHooks('siku', {
 // ================= 모니카 (후위) =================
 characters.push(
   {
-    id:'monica', role:'후위', inReserve:false, justDroppedThisTurn:false, name:'모니카', side:'player', x:5, y:1, spd:4, ap:4,
+    id:'monica', tags:['치명타'], role:'후위', inReserve:false, justDroppedThisTurn:false, name:'모니카', side:'player', x:5, y:1, spd:4, ap:4,
     hp:3000, maxHp:3000, atk:650, def:120, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:5, color:'#63d471', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -2248,7 +2291,7 @@ defineHooks('sniper', {
 // ================= 길버트 (전위) =================
 characters.push(
   {
-    id:'gilbert', role:'전위', inReserve:false, justDroppedThisTurn:false, name:'길버트', side:'player', x:8, y:1, spd:4, ap:4,
+    id:'gilbert', tags:['피격 시', '코스트'], role:'전위', inReserve:false, justDroppedThisTurn:false, name:'길버트', side:'player', x:8, y:1, spd:4, ap:4,
     hp:4500, maxHp:4500, atk:450, def:360, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:'melee', color:'#8a9bd8', shield:0, shieldCarryMax:1200,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -2320,7 +2363,7 @@ defineHooks('gilbert', {
 // ================= 블레이드 (전위) =================
 characters.push(
   {
-    id:'blade', role:'전위', inReserve:false, justDroppedThisTurn:false, name:'블레이드', side:'player', x:9, y:1, spd:4, ap:4,
+    id:'blade', tags:['자해'], role:'전위', inReserve:false, justDroppedThisTurn:false, name:'블레이드', side:'player', x:9, y:1, spd:4, ap:4,
     hp:4200, maxHp:4200, atk:460, def:260, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:'melee', color:'#c96a4a', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -2397,7 +2440,7 @@ defineHooks('blade', {
 // ================= 가디언 (전위) =================
 characters.push(
   {
-    id:'guardian', role:'전위', inReserve:false, justDroppedThisTurn:false, name:'가디언', side:'player', x:10, y:3, spd:3, ap:3, // 엄폐물과 안 겹치는 자리로 배치
+    id:'guardian', tags:['지역장악'], role:'전위', inReserve:false, justDroppedThisTurn:false, name:'가디언', side:'player', x:10, y:3, spd:3, ap:3, // 엄폐물과 안 겹치는 자리로 배치
     hp:4500, maxHp:4500, atk:360, def:400, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:'melee', color:'#6a8a5a', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -2479,7 +2522,7 @@ defineHooks('guardian', {
 // ================= 테크니션 (후위) =================
 characters.push(
   {
-    id:'technician', role:'후위', inReserve:false, justDroppedThisTurn:false, name:'테크니션', side:'player', x:11, y:3, spd:4, ap:4,
+    id:'technician', tags:['소환물'], role:'후위', inReserve:false, justDroppedThisTurn:false, name:'테크니션', side:'player', x:11, y:3, spd:4, ap:4,
     hp:2400, maxHp:2400, atk:550, def:200, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:6, color:'#4aa8a0', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -2561,7 +2604,7 @@ defineHooks('technician', {
 // ================= 글로리아 (전위) =================
 characters.push(
   {
-    id:'gloria', role:'전위', inReserve:false, justDroppedThisTurn:false, name:'글로리아', side:'player', x:13, y:1, spd:6, ap:6,
+    id:'gloria', tags:['빙결', '강하'], role:'전위', inReserve:false, justDroppedThisTurn:false, name:'글로리아', side:'player', x:13, y:1, spd:6, ap:6,
     hp:2400, maxHp:2400, atk:600, def:240, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:'melee', color:'#5da8ff', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -2696,6 +2739,7 @@ defineHooks('gloria', {
   },
 });
 
+registerSystem('onRetreat', c => { delete c.hasVengeanceMark; }); // 퇴각하면 복수 표식 해제(v12.00 - 대전에서 상대 캐릭터)
 registerBadges(c => {
   const b = [];
   if (c.hasVengeanceMark) b.push({ label: '복수 표식', color: '#ff3b3b', tooltip: '글로리아 패시브(복수자의 한): 글로리아가 이 대상에게 가하는 다음 1회 타격이 400% 피해가 됩니다(방어력 적용 전 피해 기준).' });
@@ -2710,7 +2754,7 @@ defineHooks('gloria', {
 // ================= 쉐도우 (전위) =================
 characters.push(
   {
-    id:'shadow', role:'전위', inReserve:false, justDroppedThisTurn:false, name:'쉐도우', side:'player', x:14, y:1, spd:6, ap:6,
+    id:'shadow', tags:['강하'], role:'전위', inReserve:false, justDroppedThisTurn:false, name:'쉐도우', side:'player', x:14, y:1, spd:6, ap:6,
     hp:2200, maxHp:2200, atk:570, def:200, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:'melee', color:'#7a7a8a', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -2759,7 +2803,7 @@ defineHooks('shadow', {
 // ================= 리오베 (후위) =================
 characters.push(
   {
-    id:'riobe', role:'후위', inReserve:false, justDroppedThisTurn:false, name:'리오베', side:'player', x:15, y:1, spd:4, ap:4,
+    id:'riobe', tags:['치유', '코스트'], role:'후위', inReserve:false, justDroppedThisTurn:false, name:'리오베', side:'player', x:15, y:1, spd:4, ap:4,
     hp:1800, maxHp:1800, atk:300, def:40, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:6, color:'#e0c0f0', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -2873,7 +2917,7 @@ defineHooks('riobe', {
 // ================= 메딕 (후위) =================
 characters.push(
   {
-    id:'medic', role:'후위', inReserve:false, justDroppedThisTurn:false, name:'메딕', side:'player', x:16, y:1, spd:4, ap:4,
+    id:'medic', tags:['치유'], role:'후위', inReserve:false, justDroppedThisTurn:false, name:'메딕', side:'player', x:16, y:1, spd:4, ap:4,
     hp:2250, maxHp:2250, atk:600, def:200, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:6, color:'#7fd4c1', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -2925,7 +2969,7 @@ registerModifier('healTaken', t => (onFieldUnit(t) && characters.some(m => baseI
 // ================= 시타 (전위) =================
 characters.push(
   {
-    id:'sita', role:'전위', inReserve:false, justDroppedThisTurn:false, name:'시타', side:'player', x:17, y:1, spd:4, ap:4,
+    id:'sita', tags:['빙결'], role:'전위', inReserve:false, justDroppedThisTurn:false, name:'시타', side:'player', x:17, y:1, spd:4, ap:4,
     hp:4200, maxHp:4200, atk:480, def:300, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:'melee', color:'#7fc8ff', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -3041,7 +3085,7 @@ defineHooks('sita', {
 // ================= 이타 (후위) =================
 characters.push(
   {
-    id:'ita', role:'후위', inReserve:false, justDroppedThisTurn:false, name:'이타', side:'player', x:18, y:1, spd:4, ap:4,
+    id:'ita', tags:['빙결', '코스트'], role:'후위', inReserve:false, justDroppedThisTurn:false, name:'이타', side:'player', x:18, y:1, spd:4, ap:4,
     hp:2780, maxHp:2780, atk:690, def:130, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:6, color:'#a8e6ff', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -3198,6 +3242,7 @@ registerSystem('onAllyTurnStart', (side = 'player') => { // 구역 주인 진영
 registerSystem('onEnemyTurnEnd', side => applyCrystalZonesAtTurnEnd(side));   // 싱글: 적 턴 종료(적 디버프 감소 뒤 - 빙결이 다음 적 턴에 온전히 걸림)
 registerSystem('onAllyTurnEnd', side => applyCrystalZonesAtTurnEnd(side || 'player')); // 대전: 턴을 끝내는 진영(싱글 아군 턴 종료는 구역 주인이라 반응 없음)
 
+registerSystem('onRetreat', c => { c.crystalStacks = 0; }); // 퇴각하면 수정체 해제(v12.00)
 registerBadges(c => c.crystalStacks ? [{ label: '수정체×' + c.crystalStacks, color: '#9fe8ff',
   tooltip: '수정체: 받는 피해량 +' + c.crystalStacks + '% (최대 25중첩, 턴 제한 없음)' }] : []);
 // 수정의 숲 수정 구역 (옅은 하늘색 바닥 효과)
@@ -3250,7 +3295,7 @@ defineHooks('ita', {
 // ================= 빅토리아 (전위) =================
 characters.push(
   {
-    id:'victoria', role:'전위', inReserve:false, justDroppedThisTurn:false, name:'빅토리아', side:'player', x:19, y:1, spd:5, ap:5,
+    id:'victoria', tags:['치명타'], role:'전위', inReserve:false, justDroppedThisTurn:false, name:'빅토리아', side:'player', x:19, y:1, spd:5, ap:5,
     hp:3000, maxHp:3000, atk:350, def:250, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:'melee', color:'#f2c94c', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -3446,6 +3491,7 @@ registerSystem('onRetreat', c => { // 퇴각한 캐릭터의 부여 영광 제�
   delete c.tempGlory;
   if (baseIdOf(c) !== 'victoria' && c.hopeStacks) redistributeHope(c);
 });
+registerSystem('onEscape', c => { if (baseIdOf(c) !== 'victoria' && c.hopeStacks) redistributeHope(c); }); // 탈출: 희망은 남은 아군에게(사망과 같이). 빅토리아 퇴각 패시브(영광 분배)는 탈출에선 없음
 registerSystem('onBuffTick', c => { // 땅 종료 시 남은 공격 충전 제거, 부여된 영광 지속시간 감소
   if (baseIdOf(c) === 'victoria' && !(c.tempStatMods || []).some(m => m.id === 'victoria_s2')) c.bonusAttackCharges = 0;
   if (c.tempGlory) { c.tempGlory.turnsLeft -= 1; if (c.tempGlory.turnsLeft <= 0) delete c.tempGlory; }
@@ -3475,7 +3521,7 @@ defineHooks('victoria', {
 // ================= 로코소프스키 (후위) =================
 characters.push(
   {
-    id:'loco', role:'후위', inReserve:false, justDroppedThisTurn:false, name:'로코소프스키', side:'player', x:19, y:2, spd:3, ap:3,
+    id:'loco', tags:['소환물'], role:'후위', inReserve:false, justDroppedThisTurn:false, name:'로코소프스키', side:'player', x:19, y:2, spd:3, ap:3,
     hp:2100, maxHp:2100, atk:750, def:150, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:6, color:'#a1887f', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false, conscriptUses:0,
@@ -3607,7 +3653,7 @@ registerBadges(c => {
 // ================= 마르티나 (전위) =================
 characters.push(
   {
-    id:'martina', role:'전위', inReserve:false, justDroppedThisTurn:false, name:'마르티나', side:'player', x:2, y:1, spd:5, ap:5,
+    id:'martina', tags:['화상', '피격 시', '자해'], role:'전위', inReserve:false, justDroppedThisTurn:false, name:'마르티나', side:'player', x:2, y:1, spd:5, ap:5,
     hp:3800, maxHp:3800, atk:440, def:330, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:'melee', color:'#d9534f', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -3828,7 +3874,7 @@ defineHooks('jihyeok', {
 // 악의 승천: 탄검이 소멸할 때마다(탄검을 가진 적이 살아 있을 때만) 체력 5% 회복 + 다음 턴 시작 기동력 +1(누적).
 characters.push(
   {
-    id:'susanoo', role:'전위', inReserve:false, justDroppedThisTurn:false, name:'쇼군 스사노오', side:'player', x:2, y:6, spd:2, ap:2,
+    id:'susanoo', tags:['지역장악'], role:'전위', inReserve:false, justDroppedThisTurn:false, name:'쇼군 스사노오', side:'player', x:2, y:6, spd:2, ap:2,
     hp:5300, maxHp:5300, atk:750, def:250, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:'melee', color:'#8e3b46', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -3973,7 +4019,7 @@ defineHooks('susanoo', {
 // 환경 최적화: 공격할 때마다 치명타 확률 +10% 중첩(살상지대 반응 사격 포함), 이동하면(갈고리 포함) 소멸
 characters.push(
   {
-    id:'hunter', role:'후위', inReserve:false, justDroppedThisTurn:false, name:'아라미스', side:'player', x:3, y:6, spd:2, ap:2,
+    id:'hunter', tags:['치명타'], role:'후위', inReserve:false, justDroppedThisTurn:false, name:'아라미스', side:'player', x:3, y:6, spd:2, ap:2,
     hp:1900, maxHp:1900, atk:900, def:80, evasion:5, critChance:10, critMult:1.5,
     dmgIncrease:1.0, dmgTakenRate:1.0, range:7, color:'#6d7f3f', shield:0,
     moving:false, dead:false, actedThisTurn:false, hasMovedThisTurn:false,
@@ -4098,6 +4144,7 @@ function huntMarkedUnit() { return characters.find(c => c.huntMarked && !c.dead 
 
 // 스테이지를 새로 불러오면 이전 전투의 부상/표식/은신은 지움
 registerSystem('onStageLoad', () => { for (const c of characters) { c.injuredTurns = 0; c.huntMarked = false; c.stealthed = false; } });
+registerSystem('onRetreat', c => { c.injuredTurns = 0; c.huntMarked = false; }); // 퇴각하면 부상·표식 해제(v12.00)
 registerModifier('turnStartAp', c => c.injuredTurns > 0 ? -3 : 0);
 registerModifier('dmgTaken', c => c.huntMarked ? 2.5 : 1);
 registerSystem('onAllyTurnStart', (side = 'player') => { // 그 진영 턴: 이번 턴 기동력에 -3이 적용된 뒤 1 감소
@@ -4298,6 +4345,7 @@ function region1Summon(off) {
   addLog(`${off.name}: 증원 소환 (${n}명)`, 'logSkill');
   region1RefreshCommand();
 }
+registerSystem('onRetreat', c => { c.aiMarked = false; }); // 퇴각하면 장교 표적 해제(v12.00) - 표적 지시(aiOrder 'mark')는 valid에서 aiMarked를 보므로 자동 무효
 function region1Mark(off) {
   const pick = aiDecideTarget(off); // 장교의 대상 성향(기대 피해 + 처치)으로 표적 선정
   if (!pick || !pick.target) return;
@@ -4359,8 +4407,14 @@ function princessEnterStealth(c) {
   c.stealthed = true;
   addLog(`${c.name}: 은신`, 'logSkill');
   // 복수자의 한: 은신에 들어갈 때마다 현재 체력이 가장 높은 아군 1명에게 표식
-  const cands = princessFieldAllies().filter(p => !p.stealthed);
+  princessMarkHighestHp();
+}
+// 현재 체력이 가장 높은 아군 1명(전장, 은신 제외)에게 표식 - 복수자의 한 / 처형(v12.07) 공통
+function princessMarkCandidates() { return princessFieldAllies().filter(p => !p.stealthed); }
+function princessMarkHighestHp() {
+  const cands = princessMarkCandidates();
   if (cands.length) setHuntMark(cands.reduce((a, b) => (b.hp > a.hp ? b : a)));
+  return huntMarkedUnit();
 }
 function princessBreakStealth(c, reason) {
   if (!c.stealthed) return;
@@ -4461,7 +4515,9 @@ function princessSkill3(c, done) { // 사라지는 바람: 디버프 해제 -> �
   runSystems('onVisionChanged');
   done();
 }
-function princessSkill4(c, done) { // 처형: 도약(전장에서 사라짐), 다음 턴 시작에 착지
+function princessSkill4(c, done) { // 처형(v12.07): 체력이 가장 높은 아군에게 표식 → 도약(전장에서 사라짐), 다음 턴 시작에 착지
+  princessBreakStealth(c, '처형');
+  princessMarkHighestHp();
   c.executeOrigin = { x: c.x, y: c.y };
   startExitAnim(c);
   c.airborne = true; c.inReserve = true;
@@ -4483,6 +4539,7 @@ function princessLand(c) { // 처형 착지(턴 시작): 표식 대상 2칸 안 
   c.airborne = false; c.inReserve = false; // 칸을 정한 뒤 전장에 올림
   startDropAnim(c);
   const delay = Math.round(DROP_ANIM_MS * 0.8);
+  runSystems('onEnemySkillUsed', c, { name: '처형 (착지)', brief: '표식 대상 공격력 300% + 부상 3턴, 주변 아군 150%' }); // 보스 스킬 알림창
   addLog(`${c.name}: 처형 착지${target ? ' -> ' + target.name : ' (표식 대상 없음, 처음 자리)'}`, 'logSkill');
   if (target) princessHit(c, target, 3.0, 3, delay);
   for (const p of princessFieldAllies()) {
@@ -4492,6 +4549,33 @@ function princessLand(c) { // 처형 착지(턴 시작): 표식 대상 2칸 안 
   runSystems('onVisionChanged');
   checkBattleEndConditions();
 }
+// 처형 위험구역(v12.06): 도약 중(다음 적 턴 착지 전) 피해를 받는 칸 - 표식 대상이 있으면 그 대상의 지금 위치, 없으면 처형 전 원래 자리 기준
+// 맨해튼 3칸(중심 포함). 표식 대상 칸(300%)은 core. 착지 판정과 같은 기준이라 표식 대상이 움직이면 구역도 따라감
+function princessDangerTiles(c) {
+  if (!c || c.dead || !c.airborne) return [];
+  const target = huntMarkedUnit();
+  const center = target ? { x: target.x, y: target.y } : c.executeOrigin;
+  if (!center) return [];
+  const out = [];
+  for (let y = center.y - 3; y <= center.y + 3; y++) for (let x = center.x - 3; x <= center.x + 3; x++) {
+    if (x < 0 || x >= COLS || y < 0 || y >= ROWS || Math.abs(x - center.x) + Math.abs(y - center.y) > 3) continue;
+    out.push({ x, y, core: !!target && x === target.x && y === target.y });
+  }
+  return out;
+}
+registerRenderLayer('overFog', () => { // 안개 위에도 표시(경고) - 짙은 붉은색 칸 + 붉은 테두리, 표식 대상 칸은 더 진하게
+  for (const c of characters) {
+    if (c.side !== 'enemy' || !c.airborne) continue;
+    for (const t of princessDangerTiles(c)) {
+      const L = t.x * TILE, T = t.y * TILE;
+      ctx.fillStyle = t.core ? 'rgba(175, 10, 10, 0.72)' : 'rgba(110, 0, 0, 0.5)';
+      ctx.fillRect(L, T, TILE, TILE);
+      ctx.strokeStyle = t.core ? '#ff4a4a' : '#d42020'; ctx.lineWidth = t.core ? 3 : 2;
+      ctx.strokeRect(L + 1.5, T + 1.5, TILE - 3, TILE - 3);
+    }
+  }
+  ctx.lineWidth = 1;
+});
 function princessVolley(c) { // 피할 수 없던 운명 1회: 모든 행, 오른쪽부터 첫 아군에게 200% (엄폐물 통과)
   let deaths = 0;
   for (let y = 0; y < ROWS; y++) for (let x = COLS - 1; x >= 0; x--) {
@@ -4513,38 +4597,44 @@ function princessSkill6(c, done) {
 
 Object.assign(ENEMY_TEMPLATES, {
   [PRINCESS]: { name: '복수의 왕녀', mapCode: 'a10', grade: 'boss', role: '전위', unique: true,
-    hp: 45000, atk: 1200, def: 100, evasion: 0, critChance: 5, critMult: 1.5, dmgIncrease: 1.0, dmgTakenRate: 1.0,
+    hp: 35000, atk: 1200, def: 100, evasion: 0, critChance: 5, critMult: 1.5, dmgIncrease: 1.0, dmgTakenRate: 1.0,
     spd: 6, range: 'melee', color: '#5a3a8a',
     passives: [
       { name: '복수자의 한', desc: "은신에 진입할 때마다 현재 체력이 가장 높은 아군 1명에게 '표식'(받는 피해 +150%, 1회 피격 시 해제, 최대 1명). 기본 공격은 표식 대상을 우선 공격" },
-      { name: '추격자의 의지', desc: '기본 공격 후 턴을 끝내지 않고 남은 기동력 + 5로 이동 (추가 기본 공격 불가). 엄폐물 뒤로 물러남' },
+      { name: '추격자의 의지', desc: '기본 공격 후 턴을 끝내지 않고 남은 기동력 + 4로 이동 (추가 기본 공격 불가). 엄폐물 뒤로 물러남' },
       { name: '작별의 바람', desc: '첫 턴 시작 시 은신. 은신 중엔 위치가 보이지 않고 대상 지정 불가. 피해를 입거나, 맨해튼 2칸 안에 아군이 있거나, 공격하면 해제' },
+      { name: '암살자', desc: '턴마다 지역장악에 1번 맞은 뒤에는 나머지 지역장악을 모두 회피' },
+      { name: '철갑분쇄자', desc: '모든 공격은 절반의 피해량만으로 방어막을 파괴 (피해 1당 방어막 2)' },
     ],
     hooks: {
       aiTurnStart(c) {
+        c.princessZcHits = 0; // 암살자: 이번 턴 지역장악 적중 횟수
         if (c.airborne) { princessLand(c); return 'end'; } // 처형 착지 후 턴 종료
         if (c.gloryPending && !(c.shieldAtTurnStart > 0)) { c.gloryPending = false; addLog(`${c.name}: 방어막이 깨져 운명이 무산되었다`, 'logInfo'); } // 턴 시작 소멸 직전 값으로 판정(expireSideShields)
         if (!c.princessStarted) { c.princessStarted = true; princessEnterStealth(c); } // 작별의 바람: 첫 턴 시작 시 은신
       },
       beforeAiAttack(c) { princessBreakStealth(c, '공격'); },
+      evadeZoneControl(c) { return (c.princessZcHits || 0) >= 1; },                                    // 암살자: 이번 턴 1번 맞은 뒤엔 회피
+      afterZoneControlTaken(c, results) { if (results.some(r => r.hit)) c.princessZcHits = (c.princessZcHits || 0) + 1; },
+      shieldBreakMult() { return 2; },                                                                // 철갑분쇄자: 피해 1당 방어막 2
     },
     ai: {
-      move: { attack: 4, approach: 1.5, cover: 0.5 }, approachTo: 'prey',     // 체력 45000: 지역장악 위험 무시
+      move: { attack: 4, approach: 1.5, cover: 0.5 }, approachTo: 'prey',     // 체력 35000: 지역장악 위험 무시
       target: { huntMark: 10, kill: 2, damage: 1 },                         // 표식 대상 우선(사냥감 = 표식 대상)
-      postAttackMove: { cover: 3, approach: -2 }, postAttackBonusSteps: 5,   // 추격자의 의지: 완전엄폐 우선, 아군에게서 먼 쪽
+      postAttackMove: { cover: 3, approach: -2 }, postAttackBonusSteps: 4,   // 추격자의 의지: 완전엄폐 우선, 아군에게서 먼 쪽
       skills: [ // start: 5 -> 6 -> 4 / afterMove: 2 -> 1 (기본 공격과 함께) / afterAttack: 3
-        { name: '끝나지 않을 영광', cooldown: 0, desc: '체력 50% 이하 최초 진입 후 1회: 방어막 +10000, 은신 해제, 턴 종료. 다음 턴 시작까지 방어막이 남아 있으면 피할 수 없던 운명(방어막은 다음 자기 턴 시작에 소멸)',
+        { name: '끝나지 않을 영광', cooldown: 0, brief: '방어막 +10000, 은신 해제', desc: '체력 50% 이하 최초 진입 후 1회: 방어막 +10000, 은신 해제, 턴 종료. 다음 턴 시작까지 방어막이 남아 있으면 피할 수 없던 운명(방어막은 다음 자기 턴 시작에 소멸)',
           cond: c => !c.gloryUsed && c.hp <= c.maxHp * 0.5,
           run: (c, done) => { c.gloryUsed = true; c.shield = (c.shield || 0) + 10000; princessBreakStealth(c, '끝나지 않을 영광'); c.gloryPending = true; spawnFloatText(c, '방어막 +10000', '#9fd3ff'); done(); }, after: 'end' },
-        { name: '피할 수 없던 운명', cooldown: 0, desc: '전장의 모든 행에 오른쪽부터 얼음 파편, 부딪히는 첫 아군에게 공격력 200%. 첫 사용으로 2명 이상 사망하면 1번 더. 이후 턴 종료',
+        { name: '피할 수 없던 운명', cooldown: 0, brief: '모든 행에 얼음 파편 - 처음 맞는 아군에게 공격력 200%', desc: '전장의 모든 행에 오른쪽부터 얼음 파편, 부딪히는 첫 아군에게 공격력 200%. 첫 사용으로 2명 이상 사망하면 1번 더. 이후 턴 종료',
           cond: c => c.gloryPending && c.shieldAtTurnStart > 0, run: princessSkill6, after: 'end' }, // 방어막은 이 턴 시작에 이미 소멸, 남아 있었는지는 기록값으로
-        { name: '처형', cooldown: 8, desc: '도약해 사라지고 턴 종료. 다음 턴 시작에 표식 대상 근처(2칸)에 착지해 공격력 300% + 부상 3턴, 대상 맨해튼 3칸 안 아군에게 절반 피해 + 부상 2턴. 표식 대상이 없으면 처음 자리에 착지',
-          cond: c => !c.stealthed && !!huntMarkedUnit(), run: princessSkill4, after: 'end' },
-        { name: '살점 뜯기', cooldown: 3, phase: 'afterMove', desc: '상하좌우 한 방향 3×3에 공격력 110% + 부상 1턴',
+        { name: '처형', cooldown: 8, brief: '표식 부여 후 도약 - 다음 턴 표식 대상 곁에 착지해 공격력 300%', desc: '체력이 가장 높은 아군 1명에게 표식을 부여한 뒤 도약해 사라지고 턴 종료. 다음 턴 시작에 표식 대상 근처(2칸)에 착지해 공격력 300% + 부상 3턴, 대상 맨해튼 3칸 안 아군에게 절반 피해 + 부상 2턴. 표식 대상이 없어졌으면 처음 도약한 자리에 착지해 주변 3칸 아군에게 절반 피해 + 부상 2턴',
+          cond: c => !huntMarkedUnit() && princessMarkCandidates().length > 0, run: princessSkill4, after: 'end' }, // v12.07: 표식 대상이 없을 때 사용
+        { name: '살점 뜯기', cooldown: 3, brief: '3×3 범위 공격력 110% + 부상 1턴', phase: 'afterMove', desc: '상하좌우 한 방향 3×3에 공격력 110% + 부상 1턴',
           cond: c => { const b = princessBestBlock(c); return !!b && b.hit.length >= 2; }, run: princessSkill2 },
-        { name: '복수를 위하여', cooldown: 4, phase: 'afterMove', desc: '사거리 4칸 적 1명에게 공격력 75% × 3회 원거리 공격, 치명타마다 부상 1턴',
+        { name: '복수를 위하여', cooldown: 4, brief: '공격력 75% × 3회 원거리 공격', phase: 'afterMove', desc: '사거리 4칸 적 1명에게 공격력 75% × 3회 원거리 공격, 치명타마다 부상 1턴',
           cond: c => princessFlankTargets(c).length > 0, run: princessSkill1 },
-        { name: '사라지는 바람', cooldown: 3, phase: 'afterAttack', desc: '기본 공격 후: 자신의 디버프 해제, 은신, 무작위 아군에게서 4칸 떨어진 곳으로 순간이동 후 턴 종료',
+        { name: '사라지는 바람', cooldown: 3, brief: '디버프 해제, 은신 후 순간이동', phase: 'afterAttack', desc: '기본 공격 후: 자신의 디버프 해제, 은신, 무작위 아군에게서 4칸 떨어진 곳으로 순간이동 후 턴 종료',
           cond: c => !c.stealthed && !huntMarkedUnit() && !!princessTeleportSpot(), run: princessSkill3 },
       ] } },
 });
@@ -5518,7 +5608,10 @@ function updatePanel() {
     skill2Btn._tooltipHtml = null;
   }
 
-  retreatBtn.style.display = canActNow && canRetreat(selected) ? 'block' : 'none';
+  const escNow = canActNow && canEscape(selected); // 탈출 타일 위: 같은 자리 버튼이 '탈출'(강하구역과 겹치면 탈출 우선)
+  retreatBtn.style.display = escNow || (canActNow && canRetreat(selected)) ? 'block' : 'none';
+  const retreatLabel = escNow ? '탈출 (임무)' : '퇴각 (배치구역으로)';
+  if (retreatBtn.textContent !== retreatLabel) retreatBtn.textContent = retreatLabel;
   cancelBtn.style.display = (uiMode.type !== 'none') ? 'block' : 'none';
 }
 
@@ -5675,7 +5768,6 @@ function performBrace(caster) {
 // 퇴각: 체력을 제외한 모든 버프/디버프/스킬 쿨타임 등을 초기화하고 배치구역으로 돌려보냄. 소환물은 자동 사망.
 function retreatCharacter(c) {
   const vacated = { x: c.x, y: c.y };
-  const escaping = isEscapeTile(c.x, c.y);
   startExitAnim(c); // 퇴각 이펙트: 위로 떠오르며 사라짐 (상태 초기화 전에 지금 모습을 본떠 잔상 생성)
 
   // 이 캐릭터의 소환물은 전부 소멸 (사망이 아니므로 사망 이벤트 없음)
@@ -5694,6 +5786,7 @@ function retreatCharacter(c) {
   c.atkBonusFromDeaths = 0;
   c.forgedStacks = 0; delete c.trialTurnsLeft; c.temperStacks = 0; // 마르티나: 불꽃 속에서 벼려진 / 불의 시험 상태 정리
   c.insectLives = 0; c.basicAttackCharge = 0; // 지혁이: 목숨/기본공격 자원 정리
+  c.burnStacks = 0; c.burnTurnsLeft = 0; c.burnSources = []; // 화상 해제(v12.00 - 이전엔 다시 배치해도 남았음)
   delete c.multiHitHits; delete c.multiHitMult; delete c.multiHitLabel;
   clearMaxHpMods(c); // 최대체력 증감 효과 해제 (현재 체력 비율 유지)
   for (const skill of (c.skills || [])) {
@@ -5714,8 +5807,28 @@ function retreatCharacter(c) {
   if (selected && selected.id === c.id) deselect();
   renderReserveList();
   checkBattleEndConditions();
-  if (escaping && objectiveOnRetreat(c, vacated.x, vacated.y)) { updateObjectivePanel(); checkBattleEndConditions(); } // 탈출 집계 -> 달성 시 승리
   return vacated;
+}
+
+// 탈출(OBJECTIVES.md 2장, v12.01): 퇴각과 별개 - 배치구역에 들어가지 않고 이번 전투에서 바로 빠짐(재투입 불가).
+// 상태 초기화·재배치 잠금·교체 투입 창·퇴각 패시브(쉐도우 코스트, 빅토리아 영광 분배) 없음. 소환물은 소멸, 희망은 남은 아군에게(onEscape)
+function canEscape(c) {
+  if (c.side !== mySide || c.dead || c.inReserve || c.isSummon) return false;
+  if (!isEscapeTile(c.x, c.y)) return false;
+  if (c.justDroppedThisTurn) return false; // 강하한 턴에는 불가(퇴각과 같은 규칙)
+  return true;
+}
+function escapeCharacter(c) {
+  if (!canEscape(c)) return;
+  startExitAnim(c); // 퇴각과 같은 연출(위로 떠오르며 사라짐)
+  dismissSummonsOf(c);
+  c.zoneControlArmed = false;
+  c.inReserve = true; c.notInBattle = true; // 이번 전투 미참여(배치구역 목록에도 안 나옴)
+  objectiveOnEscape(c); // 집계 먼저 -> 마지막 1명이 탈출해도 달성이면 승리
+  runSystems('onEscape', c);
+  if (selected && selected.id === c.id) deselect();
+  renderReserveList(); updateObjectivePanel();
+  checkBattleEndConditions();
 }
 
 // 강하/배치: 예비 인원을 특정 타일로 투입. cooldownBonus: 최초 편성 4명은 3, 이후 강하/긴급강하는 2.
@@ -5723,6 +5836,7 @@ function deployCharacter(c, x, y, cooldownBonus) {
   if (c.redeployLockTurns > 0) { addLog(`${c.name}: 퇴각 후 재배치 대기 중 (${c.redeployLockTurns}턴 남음)`, 'logInfo'); showInvalidAction('재배치 대기 중'); return; }
   c.x = x; c.y = y;
   c.inReserve = false;
+  c.ap = effectiveSpd(c); // 배치하면 행동력 최대치로(v12.00 - 대기 중엔 턴 시작 회복이 없어 퇴각할 때 값이 남던 문제). 배치 훅이 바꾸면 그 값이 우선
   noteDeployedForStats(c); // 전투 종료 순위 표시 대상(한 번이라도 투입)
   sideDeployed[c.side] = true;
   c.justDroppedThisTurn = true;
@@ -5747,8 +5861,7 @@ function countDeployed() {
 
 function canRetreat(c) {
   if (c.side !== mySide || c.dead || c.inReserve || c.isSummon) return false;
-  const onEscape = isEscapeTile(c.x, c.y); // 탈출 임무: 탈출 타일도 퇴각 가능(탈출로 집계)
-  if (!onEscape && (!dropZoneTiles || !dropZoneTiles.has(c.x + ',' + c.y))) return false;
+  if (!dropZoneTiles || !dropZoneTiles.has(c.x + ',' + c.y)) return false; // 탈출 타일은 퇴각이 아니라 탈출(canEscape)
   if (c.justDroppedThisTurn) return false; // 강하한 턴에는 퇴각 불가 (예외 없음)
   return true;
 }
@@ -5882,6 +5995,11 @@ function checkZoneControlTrigger(mover) {
   for (const c of armedDefenders) {
     if (mover.dead) break; // 다른 지역장악으로 먼저 사망했다면 중단
     if (charHook(c, 'keepZoneControlArmed') !== true) c.zoneControlArmed = false; // 1회 사용 시 사라짐(스사노오 검귀는 유지)
+    if (charHook(mover, 'evadeZoneControl', c) === true) { // 대상 쪽 훅: 이 지역장악을 회피(무장은 소모 - 왕녀 암살자, v12.07)
+      addLog(`${c.name}: 지역장악 발동 - ${mover.name} 회피`, 'logMiss');
+      spawnFloatText(mover, '회피', '#d0d0d0');
+      continue;
+    }
     addLog(`${c.name}: 지역장악 발동! ${mover.name}에게 선제공격`, 'logSkill');
     spawnFloatText(c, '지역장악!', '#ff6a4d');
     updateFacing(c, mover.x - c.x, mover.y - c.y);
@@ -5896,6 +6014,7 @@ function checkZoneControlTrigger(mover) {
       results.push(result);
     }
     if (!mover.dead) charHook(c, 'afterZoneControlHit', mover, results); // 지역장악 공격 뒤 효과(가디언 진입 차단: 기동력 빼앗기 + 이동 멈춤)
+    if (!mover.dead) charHook(mover, 'afterZoneControlTaken', results);     // 대상 쪽 훅: 지역장악을 받은 뒤(왕녀 암살자 적중 횟수)
     checkBattleEndConditions();
   }
   return armedDefenders.length > 0;
@@ -6674,6 +6793,7 @@ function runSensorEnemyTurn(enemy, onDone) {
         usedSkill = true; used = sk; cds[i] = sk.cooldown || 0;
         enemy._aiLog.push({ phase: 'skill', name: sk.name, at: phase });
         addLog(`${enemy.name}: ${sk.name}`, 'logSkill');
+        runSystems('onEnemySkillUsed', enemy, sk); // 보스 스킬 알림창 등(14_boss_ui)
         sk.run(enemy, () => { if (!enemy.dead) runSystems('onUnitActed', enemy, 'skill'); if (onlyFirst) next(used); else step(); });
         return;
       }
@@ -6735,6 +6855,7 @@ function runSensorEnemyTurn(enemy, onDone) {
     cds[i] = sk.cooldown || 0;
     enemy._aiLog.push({ phase: 'skill', name: sk.name });
     addLog(`${enemy.name}: ${sk.name}`, 'logSkill');
+    runSystems('onEnemySkillUsed', enemy, sk); // 보스 스킬 알림창 등(14_boss_ui)
     sk.run(enemy, () => {
       if (enemy.dead || battleEnded) { finish(); return; }
       if (sk.after === 'move') normalFlow();
@@ -6832,6 +6953,7 @@ document.getElementById('attackBtn').addEventListener('click', enterAttackMode);
 document.getElementById('skill1Btn').addEventListener('click', () => { if (selected) useSkill(selected, 0); });
 document.getElementById('skill2Btn').addEventListener('click', () => { if (selected) useSkill(selected, 1); });
 document.getElementById('retreatBtn').addEventListener('click', () => {
+  if (selected && canEscape(selected)) { issueCommand({ t: 'escape', id: selected.id }); updatePanel(); draw(); return; } // 탈출 타일: 탈출 우선(교체 투입 창 없음)
   if (selected && canRetreat(selected)) {
     const vacated = issueCommand({ t: 'retreat', id: selected.id }); // 명령 경로
     updatePanel();
@@ -6869,8 +6991,8 @@ wireSkillHoverPreview('skill1Btn', 0);
 wireSkillHoverPreview('skill2Btn', 1);
 
 // ================= 임무 목표 (OBJECTIVES.md) =================
-// 스테이지 설정 objective: { type: 'annihilate'|'assassinate'|'destroy'|'escape'|'defend', turns?, target?, count?, targetHp?, targetDef?, objectiveWeight? }
-// 공통: 달성 즉시 승리, 적 섬멸(목표물 제외)도 항상 승리, N턴(아군 턴 기준) 초과 시 패배(수비는 버티면 승리). 대전은 섬멸 고정.
+// 스테이지 설정 objective: { type: 'annihilate'|'assassinate'|'destroy'|'escape'|'defend', turns?, target?, count?, targetHp?, targetDef?, objectiveWeight?, noAnnihilateWin? }
+// 공통: 달성 즉시 승리, 적 섬멸(목표물 제외)도 승리(noAnnihilateWin: true인 임무는 제외 - 2-2), N턴(아군 턴 기준) 초과 시 패배(수비는 버티면 승리). 대전은 섬멸 고정.
 const OBJECTIVE_NAMES = { annihilate: '적 섬멸', assassinate: '암살', destroy: '목표물 파괴', escape: '탈출', defend: '수비' };
 let objectiveState = { type: 'annihilate' };
 let allyTurnNumber = 1; // 지금 몇 번째 아군 턴인지
@@ -6925,14 +7047,11 @@ function objectiveDefendBreached() {
 function objectiveMarkDefendHolders() { // 적 턴이 끝날 때: 수비 타일 위에서 턴을 끝낸 적 표시
   for (const c of characters) if (c.side === 'enemy') c.heldDefendTile = !c.dead && !c.inReserve && isDefendTile(c.x, c.y);
 }
-// 탈출 퇴각 집계
-function objectiveOnRetreat(c, x, y) {
-  if (!isEscapeTile(x, y)) return false;
+// 탈출 집계(escapeCharacter에서 - 퇴각과 별개)
+function objectiveOnEscape(c) {
   objectiveState.escaped += 1;
   c.escaped = true;
-  c.notInBattle = true; // 이번 전투에서 빠짐(재투입 불가)
-  addLog(`${c.name}: 탈출 (${objectiveState.escaped} / ${objectiveState.count || 1})`, 'logSkill');
-  return true;
+  addLog(`${c.name}: 탈출 - 이번 전투에서 빠짐 (${objectiveState.escaped} / ${objectiveState.count || 1})`, 'logSkill');
 }
 // 표시 상자(배치구역 패널 오른쪽)
 function updateObjectivePanel() {
@@ -6944,7 +7063,7 @@ function updateObjectivePanel() {
     if (o.type === 'escape') lines.push(`탈출 ${o.escaped} / ${o.count || 1}명`);
     if (o.type === 'destroy') lines.push(`남은 목표물 ${characters.filter(c => c.isObjectiveTarget && !c.dead).length}`);
     if (o.turns) lines.push(`남은 턴 ${Math.max(0, o.turns - allyTurnNumber + 1)} / ${o.turns}`);
-    if (o.type !== 'annihilate') lines.push('<span style="color:#aaa;">혹은 적 섬멸 시 승리</span>');
+    if (o.type !== 'annihilate' && !o.noAnnihilateWin) lines.push('<span style="color:#aaa;">혹은 적 섬멸 시 승리</span>');
   }
   const html = lines.join('<br>');
   if (el._last !== html) { el.innerHTML = html; el._last = html; }
@@ -6961,9 +7080,9 @@ function checkBattleEndConditions() {
     }
     return;
   }
-  const enemiesAlive = characters.some(c => c.side === 'enemy' && !c.dead && !c.isObjectiveTarget && !c.isStructure && !c.zhControlled); // 적 섬멸(목표물·구조물·조종 지혁 제외)은 항상 승리
+  const enemiesAlive = characters.some(c => c.side === 'enemy' && !c.dead && !c.isObjectiveTarget && !c.isStructure && !c.zhControlled); // 적 섬멸(목표물·구조물·조종 지혁 제외)은 승리(noAnnihilateWin 임무 제외)
   const playersOnField = characters.some(c => c.side === 'player' && !c.isSummon && !c.dead && !c.inReserve && !c.notInBattle);
-  if (!enemiesAlive || objectiveAchieved()) { endBattle('victory'); return; } // 임무 달성 즉시 승리(OBJECTIVES.md)
+  if ((!enemiesAlive && !objectiveState.noAnnihilateWin) || objectiveAchieved()) { endBattle('victory'); return; } // 임무 달성 즉시 승리(OBJECTIVES.md). 섬멸 승리 없는 임무(2-2)는 섬멸해도 계속
   if (!playersOnField) { endBattle('defeat'); return; }
 }
 function endBattle(result) {
@@ -7310,6 +7429,95 @@ function getTileFromEvent(e) {
   return { x, y };
 }
 
+// ================= 보스 공용 화면 (BOSSES.md 0-2, v12.05) =================
+// 1) 큰 보스 체력바: 화면 위 가운데(턴 종료 아래), 이름 + 보라색 체력 + 하늘색 방어막 + 하얀 잔상(깎인 만큼 하얗게 남았다가 잠시 뒤 쭉 줄어듦 - CSS transition)
+// 2) 보스 스킬 알림창: 오른쪽에서 슥 나타났다 사라짐. 적 AI가 스킬을 쓸 때 보내는 신호 onEnemySkillUsed(enemy, skill) 중 보스(grade 'boss')만.
+//    문구는 스킬의 brief(짧은 효과) - 없으면 desc. 엘리트·일반 적 스킬에는 띄우지 않음.
+// 패널 갱신(onPanelUpdate)마다 불리므로 체력바 요소는 보스 구성이 바뀔 때만 새로 만들고, 평소엔 폭·숫자만 바꿈.
+const BOSS_TOAST_MS = 2200;        // 알림창이 머무는 시간
+const BOSS_TOAST_SLIDE_MS = 350;   // 들어오고 나가는 시간(style.css와 같게)
+let bossHpRows = {};               // 보스 id -> 체력바 요소
+let bossHpBarsKey = null;          // 지금 체력바를 만든 보스 구성(id 목록)
+let bossToasts = [];               // 떠 있는 알림창 { el, name, brief, timers }
+
+const bossUiEsc = t => String(t).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+function bossesForHpBar() { return pvpMode ? [] : characters.filter(c => c.side === 'enemy' && c.grade === 'boss' && !c.dead); }
+
+function buildBossHpRow(b) {
+  const row = document.createElement('div'); row.className = 'bossHpRow';
+  const head = document.createElement('div'); head.className = 'bossHpHead';
+  const name = document.createElement('span'); name.textContent = b.name;
+  const num = document.createElement('span'); num.className = 'bossHpNum';
+  head.appendChild(name); head.appendChild(num);
+  const track = document.createElement('div'); track.className = 'bossHpTrack';
+  const trail = document.createElement('div'); trail.className = 'bossHpTrail';   // 하얀 잔상(맨 아래)
+  const fill = document.createElement('div'); fill.className = 'bossHpFill';      // 보라색 체력
+  const shield = document.createElement('div'); shield.className = 'bossHpShield'; // 하늘색 방어막(체력 뒤에 이어 붙음)
+  track.appendChild(trail); track.appendChild(fill); track.appendChild(shield);
+  row.appendChild(head); row.appendChild(track);
+  return { row, num, trail, fill, shield, lastTotal: null };
+}
+// 비율 계산(테스트에서도 사용): 기준 = max(최대 체력, 체력 + 방어막)
+function bossHpBarState(b) {
+  const hp = Math.max(0, displayHpOf(b)), sh = Math.max(0, b.shield || 0);
+  const scale = Math.max(b.maxHp || 1, hp + sh);
+  return { hp, sh, hpPct: hp / scale * 100, shPct: sh / scale * 100, totalPct: (hp + sh) / scale * 100 };
+}
+function updateBossHpRow(r, b) {
+  const s = bossHpBarState(b);
+  r.fill.style.width = s.hpPct + '%';
+  r.shield.style.left = s.hpPct + '%'; r.shield.style.width = s.shPct + '%';
+  if (r.lastTotal === null || s.totalPct > r.lastTotal) { // 처음/회복: 잔상 없이 바로 맞춤(전환 효과 잠깐 끔)
+    r.trail.style.transition = 'none';
+    r.trail.style.width = s.totalPct + '%';
+    void r.trail.offsetWidth; // 지금 폭을 확정한 뒤 전환 효과 복구
+    r.trail.style.transition = '';
+  } else if (s.totalPct < r.lastTotal) r.trail.style.width = s.totalPct + '%'; // 깎임: 하얀 잔상이 CSS 지연(0.45초) 뒤 0.6초에 걸쳐 줄어듦
+  r.lastTotal = s.totalPct;
+  const text = `${Math.round(s.hp).toLocaleString()} / ${Math.round(b.maxHp).toLocaleString()}` + (s.sh ? `  (방어막 ${Math.round(s.sh).toLocaleString()})` : '');
+  if (r.num.textContent !== text) r.num.textContent = text;
+}
+function renderBossHpBars() {
+  const box = document.getElementById('bossHpBars');
+  if (!box) return;
+  const bosses = bossesForHpBar();
+  const key = bosses.map(b => b.id).join(',');
+  if (key !== bossHpBarsKey) { // 보스 구성이 바뀔 때만(전투 시작·보스 사망) 새로 만듦
+    box.innerHTML = ''; bossHpRows = {};
+    for (const b of bosses) { bossHpRows[b.id] = buildBossHpRow(b); box.appendChild(bossHpRows[b.id].row); }
+    bossHpBarsKey = key;
+  }
+  box.style.display = bosses.length ? 'flex' : 'none';
+  for (const b of bosses) updateBossHpRow(bossHpRows[b.id], b);
+}
+registerSystem('onPanelUpdate', renderBossHpBars);
+
+// ---- 스킬 알림창 ----
+function showBossSkillToast(name, brief) {
+  const box = document.getElementById('bossSkillToasts');
+  if (!box) return;
+  const el = document.createElement('div');
+  el.className = 'bossSkillToast';
+  el.innerHTML = `<div class="bstName">${bossUiEsc(name)}</div>` + (brief ? `<div class="bstBrief">${bossUiEsc(brief)}</div>` : '');
+  box.appendChild(el);
+  const t = { el, name, brief, timers: [] };
+  bossToasts.push(t);
+  t.timers.push(setTimeout(() => el.classList.add('in'), 20)); // 붙인 뒤 다음 틱에 들어오기 시작(전환 효과가 걸리게)
+  t.timers.push(setTimeout(() => {
+    el.classList.remove('in'); el.classList.add('out');
+    t.timers.push(setTimeout(() => { el.remove(); bossToasts = bossToasts.filter(x => x !== t); }, BOSS_TOAST_SLIDE_MS));
+  }, BOSS_TOAST_MS));
+}
+function clearBossSkillToasts() {
+  for (const t of bossToasts) { t.timers.forEach(clearTimeout); t.el.remove(); }
+  bossToasts = [];
+}
+registerSystem('onEnemySkillUsed', (enemy, skill) => {
+  if (!enemy || enemy.grade !== 'boss' || !skill || replayFast) return;
+  showBossSkillToast(skill.name, skill.brief || skill.desc || '');
+});
+registerSystem('onStageLoad', () => { clearBossSkillToasts(); bossHpBarsKey = null; });
+
 // ================= 로그/이펙트 =================
 function addLog(text, cls) {
   const box = document.getElementById('logBox');
@@ -7439,6 +7647,7 @@ function draw() {
   endFogClip(fogClip);
   drawFogFloor();                 // 전장의 안개: 바닥 칸(유닛·엄폐물보다 먼저 - 위로 솟은 것은 각자 어둡게 그림)
   drawObjectiveTiles();           // 임무 목표 칸(파란 타일, 안개 위에도)
+  runRenderLayers('overFog');     // 안개 위에도 보이는 바닥 경고(왕녀 처형 위험구역 등)
   updateObjectivePanel();         // 임무 목표 표시 상자
   drawDepthSortedTokens();        // 엄폐물 + 캐릭터를 y좌표 기준으로 함께 정렬해서 그림
   drawWisps();                    // 안개 속 적의 도깨비불
@@ -10142,6 +10351,26 @@ function formationModeTitleText() {
 let activeSlotIndex = null; // 현재 로스터 선택창이 채우려는 슬롯 번호
 
 let quickFormationMode = false;
+// 빠른 편성 태그(v12.02): 왼쪽 세로 목록, 하나만 선택(다시 누르면 해제) - 캐릭터 템플릿의 tags 필드로 거름. 고른 캐릭터는 걸러져도 편성에 남음
+const FORMATION_TAGS = ['화상', '빙결', '치명타', '피격 시', '치유', '자해', '코스트', '강하', '지역장악', '소환물'];
+let quickFormationTag = null; // null = 전체
+// 빠른 편성 화면 보이기/숨기기(태그 목록 + 그리드를 감싼 칸) - 슬롯 편성과 서로 바뀜
+function setQuickFormationVisible(on) {
+  document.getElementById('formationSlots').style.display = on ? 'none' : 'flex';
+  document.getElementById('quickFormationArea').style.display = on ? 'flex' : 'none';
+}
+function renderQuickFormationTags() {
+  const box = document.getElementById('quickFormationTags');
+  if (!box) return;
+  box.innerHTML = '';
+  for (const tag of [null, ...FORMATION_TAGS]) {
+    const b = document.createElement('div');
+    b.className = 'quickTagBtn' + (quickFormationTag === tag ? ' active' : '');
+    b.textContent = tag || '전체';
+    b.addEventListener('click', () => { quickFormationTag = (tag && quickFormationTag !== tag) ? tag : null; renderQuickFormationGrid(); });
+    box.appendChild(b);
+  }
+}
 
 function refreshFormationStartBtn() {
   document.getElementById('formationStartBtn').disabled = formationSlots.some(s => s === null);
@@ -10167,9 +10396,10 @@ function renderFormationSlots() {
 }
 
 function renderQuickFormationGrid() {
+  renderQuickFormationTags();
   const box = document.getElementById('quickFormationGrid');
   box.innerHTML = '';
-  const roster = characters.filter(c => c.side === 'player' && !c.isSummon);
+  const roster = characters.filter(c => c.side === 'player' && !c.isSummon && (!quickFormationTag || (c.tags || []).includes(quickFormationTag)));
   for (const c of roster) {
     const selected = formationSlots.includes(c.id);
     const card = document.createElement('div');
@@ -10197,8 +10427,7 @@ function renderQuickFormationGrid() {
 
 document.getElementById('quickFormationToggleBtn').addEventListener('click', () => {
   quickFormationMode = !quickFormationMode;
-  document.getElementById('formationSlots').style.display = quickFormationMode ? 'none' : 'flex';
-  document.getElementById('quickFormationGrid').style.display = quickFormationMode ? 'grid' : 'none';
+  setQuickFormationVisible(quickFormationMode);
   document.getElementById('quickFormationToggleBtn').textContent = quickFormationMode ? '슬롯 편성으로' : '빠른 편성';
   if (!pvpFormationStep) document.getElementById('formationModeTitle').textContent = formationModeTitleText(); // (대전 편성 제목은 17_pvp.js가 정함)
   if (quickFormationMode) renderQuickFormationGrid();
@@ -10404,7 +10633,7 @@ const REGION_STAGES = {
        { id:'1-8', name:'1-8' },
        { id:'1-9', name:'1-9 복수의 왕녀 (보스)' },
        { id:'2-0', name:'2지역 시험 (임시)' } ], // 2지역 맵을 받기 전 시험용(REGION2.md)
-  2: [ { id:'2-1', name:'2-1 거주지 습격' } ],
+  2: [ { id:'2-1', name:'2-1 거주지 습격' }, { id:'2-2', name:'2-2 공포의 숲' } ],
 };
 function renderRegionCards() {
   const box = document.getElementById('regionCardList');
@@ -10514,9 +10743,8 @@ function enterStage(stageId) {
   battleOptions = { fog: fogEnabled, allIn: maxFieldUnits > 4 }; // 스테이지 기본값(loadStage)에서 시작
   formationSlots = [];
   resizeFormationSlots(singleFormationSize()); // 일반 6칸 / 총력전 8칸
-  quickFormationMode = false;
-  document.getElementById('formationSlots').style.display = 'flex';
-  document.getElementById('quickFormationGrid').style.display = 'none';
+  quickFormationMode = false; quickFormationTag = null; // 편성 화면을 새로 열면 태그는 '전체'
+  setQuickFormationVisible(false);
   document.getElementById('quickFormationToggleBtn').textContent = '빠른 편성';
   document.getElementById('formationModeTitle').textContent = formationModeTitleText();
   document.getElementById('squadFormationScreen').style.display = 'flex';
@@ -10757,9 +10985,8 @@ function pvpFormationBegin(step) {
   const side = step === 3 ? (net.isHost ? 'player' : 'enemy') : step === 1 ? 'player' : 'enemy'; // 온라인: 각자 자기 화면에서 동시에
   document.querySelectorAll('.menuScreen').forEach(el => el.style.display = 'none');
   formationSlots = [null, null, null, null, null, null];
-  quickFormationMode = false;
-  document.getElementById('formationSlots').style.display = 'flex';
-  document.getElementById('quickFormationGrid').style.display = 'none';
+  quickFormationMode = false; quickFormationTag = null; // 편성 화면을 새로 열면 태그는 '전체'
+  setQuickFormationVisible(false);
   document.getElementById('quickFormationToggleBtn').textContent = '빠른 편성';
   document.getElementById('formationModeTitle').textContent = `${pvpSetup.names[side]} 편성 - 슬롯을 눌러 6명을 채우세요`;
   document.getElementById('battleOptionRow').style.display = 'none'; // 일반전: 안개 켜짐/총력전 없음 고정
@@ -11219,7 +11446,7 @@ function netPump() {
   while (net.queue.length && !net.awaitTurnStart && gameSettled()) {
     const cmd = net.queue.shift();
     if (cmd.t === 'endTurn') net.awaitTurnStart = true; // 진영 전환이 끝날 때까지 다음 명령 대기
-    runCommand(cmd);
+    try { runCommand(cmd); } catch (e) { reportCommandError(cmd, e); } // 재생 오류로 대기열이 멈추지 않게(2-4-3)
     if (!net.replaying) { renderReserveList(); updatePanel(); draw(); }
   }
   if (net.replaying) { // 재연결 복원: 진행률 표시, 다 따라잡고 연출이 끝나면 완료
@@ -11366,6 +11593,7 @@ const COMMANDS = {
     if (t) executeSkillOnTarget(u, c.idx, t, c.choice);
   },
   retreat:       c => { const u = cmdUnit(c.id); return u ? retreatCharacter(u) : null; },
+  escape:        c => { const u = cmdUnit(c.id); if (u) escapeCharacter(u); }, // 탈출 임무(OBJECTIVES.md 2장)
   emergency:     c => { const u = cmdUnit(c.id); return u ? doEmergencyRecall(u) : null; },
   deploy:        c => { const u = cmdUnit(c.id); if (u) deployCharacter(u, c.x, c.y, c.bonus); },
   dropZone:      c => placeDropZone(c.x, c.y),
@@ -11385,9 +11613,21 @@ function runCommand(cmd) {
 function issueCommand(cmd) {
   if (netCanActFn && !netCanActFn()) { showInvalidAction('상대 차례입니다'); return null; }
   if ((netBusyFn && netBusyFn()) || reactionLocks > 0) { showInvalidAction('진행 중인 동작이 끝난 뒤 다시 시도하세요'); return null; }
-  const r = runCommand(cmd);
+  // 실행 중 오류가 나도 명령은 반드시 전송(MULTIPLAYER.md 2-4-3): 내 기록(commandLog)에는 이미 들어갔으므로,
+  // 안 보내면 그 순번이 서버에 영원히 비어 상대는 이후 명령을 하나도 재생하지 못함(양쪽 "상대 차례"로 멈춤)
+  let r = null, err = null;
+  try { r = runCommand(cmd); } catch (e) { err = e; }
   if (netCommandSink) netCommandSink(cmd);
+  if (err) { reportCommandError(cmd, err); if (!netCommandSink) throw err; } // 싱글은 지금처럼 오류를 그대로 올림(표시만 추가)
   return r;
+}
+// 명령 실행 오류 표시(2-4-3): 전투 로그 + 온라인이면 상태 표시줄. 원인 추적용으로 오류 문구와 첫 위치를 함께
+function reportCommandError(cmd, e) {
+  const where = String((e && e.stack) || '').split('\n').slice(1).map(s => s.trim()).find(Boolean) || '';
+  const text = `오류: '${cmd && cmd.t}' 명령 실행 중 문제 - ${(e && e.message) || e}${where ? ' (' + where + ')' : ''}`;
+  try { console.error(text, e); } catch (_) {}
+  addLog(text, 'logMiss');
+  if (typeof netInBattle === 'function' && netInBattle()) netSetStatus('cmdError', text + ' - 이 문구를 개발자에게 알려주세요');
 }
 
 // 동기화 확인용 상태 요약값(양쪽이 같은 명령을 실행했으면 같아야 함)

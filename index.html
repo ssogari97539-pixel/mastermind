@@ -299,6 +299,8 @@
 .bossHpTrail { background: #ffffff; transition: width 0.6s ease-out 0.45s; }
 .bossHpFill { background: linear-gradient(#c07af0, #7c36bc); }
 .bossHpShield { background: linear-gradient(#cfeaff, #8ccaf5); }
+.bossHpIntro { animation: bossHpIntroFade 0.3s ease-out; } /* 등장 연출: 서서히 나타남(v12.50) */
+@keyframes bossHpIntroFade { from { opacity: 0; } to { opacity: 1; } }
 #bossSkillToasts { position: fixed; top: 70px; right: 284px; z-index: 460; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: none; }
 .bossSkillToast { min-width: 220px; max-width: 320px; box-sizing: border-box; padding: 9px 14px; border-radius: 6px; background: rgba(30, 16, 44, 0.95); border: 1px solid #8a52b8; border-left: 6px solid #b06ae8; color: #eee; box-shadow: 0 4px 14px rgba(0,0,0,0.6);
   transform: translateX(calc(100% + 320px)); opacity: 0; transition: transform 0.35s ease-out, opacity 0.35s ease-out; }
@@ -351,6 +353,9 @@
     <div id="battleOptionRow" style="display:flex; gap:10px; margin-top:14px; flex-shrink:0;">
       <button id="fogToggleBtn" class="menuBtn" style="padding:8px 16px; font-size:13px;">전장의 안개: 켜짐</button>
       <button id="allInToggleBtn" class="menuBtn" style="padding:8px 16px; font-size:13px;">총력전(4~6명 투입): 꺼짐</button>
+    </div>
+    <div id="introOptionRow" style="display:none; gap:10px; margin-top:8px; flex-shrink:0;">
+      <button id="skipIntroBtn" class="menuBtn" style="padding:8px 16px; font-size:13px;">등장 씬 건너뛰기: 꺼짐</button>
     </div>
   </div>
 
@@ -602,8 +607,8 @@
 </div>
 
 <script>
-const GAME_BUILD = 'dcba232e0c'; // 빌드 식별값(자동 생성)
-const GAME_VERSION = '12.42'; // 버전 번호(VERSION 파일)
+const GAME_BUILD = '119242a4ec'; // 빌드 식별값(자동 생성)
+const GAME_VERSION = '12.50'; // 버전 번호(VERSION 파일)
 // ================= 기본 설정 =================
 // 판 크기는 스테이지마다 다를 수 있음 - loadStage가 setBoardSize로 바꿈(모든 사용처가 함수 안이라 바뀐 값이 바로 반영됨)
 let COLS = 20;
@@ -983,6 +988,7 @@ const STAGE_CONFIGS = {
   // 1-9 (25x9, 1지역 마지막: 보스 복수의 왕녀 단독) - BOSSES.md
   '1-9': {
     allIn: true, // 보스전: 총력전 기본 켜짐
+    intro: 'princessArrival', // 첫 배치 뒤 왕녀 등장 씬(v12.48, 15_boss_intro) - 편성 화면에서 건너뛰기 가능
     map: [
       '.   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .',
       '.   .   .   ?   .   ?   ?   .   .   ?   ?   .   .   ?   ?   .   .   ?   ?   .   ?   .   .   ?   .',
@@ -1398,6 +1404,9 @@ function registerSmokeAuraMulti(fn) { SMOKE_AURA_MULTI_RULES.push(fn); }
 // 피격 연출 대체(v12.34): fn(target, opts) -> true면 기존 피격 연출(붉은 플래시·떨림·파티클) 대신 그 함수가 담당(왕녀 영광 보호막 등)
 const HIT_PRESENT_OVERRIDES = [];
 function registerHitPresentOverride(fn) { HIT_PRESENT_OVERRIDES.push(fn); }
+// 사망 연출 종류(v12.44): 템플릿 vfx.death가 이 이름이면 기본 사망 연출 대신 fn(잔상)을 부름(왕녀 퇴각 등)
+const DEATH_STYLES = {};
+function registerDeathStyle(name, fn) { DEATH_STYLES[name] = fn; }
 const VFX_ACTIVE_CHECKS = [], VFX_MOTION_CHECKS = [];
 // opts.ambient(v12.41): 계속 도는 효과(도깨비불·사이렌·맹독 표시·수정 구역 등) - 전투 종료 결과 화면은 이것을 기다리지 않음(battleMotionBusy)
 function registerVfxActive(fn, opts) { VFX_ACTIVE_CHECKS.push(fn); if (!(opts && opts.ambient)) VFX_MOTION_CHECKS.push(fn); }
@@ -4750,6 +4759,17 @@ function princessRendVfx(c, b) {
 }
 // 표식 대상: 온몸에서 검은 연기(v12.41) - 아주 진한 보라빛 검정(어두운 바닥에 묻히지 않게), 상태 연기의 1.2배
 registerSmokeAuraMulti(c => c.huntMarked && !c.dead && !c.inReserve ? [{ rgb: [25, 20, 30], rate: 1.2 }] : null);
+const PRINCESS_GLORY_LINES = ['우리의 영광은···', '끝나지 않으리라']; // 끝나지 않을 영광 대사(v12.45, v12.46 '우리의')
+const PRINCESS_INTRO_LINES = ['내가 잃은 것보다···', '더 내놓아야 할 것이다']; // 첫 턴 대사(v12.46)
+// 첫 턴(v12.46): 대사 두 줄 → 끝나는 순간 작별의 바람(은신 + 표식, 흩어짐) → 흩어짐 + 0.5초 뒤 행동(actionWaitMs).
+// 시야 밖이면 로그만 남기고 바로 은신(위치를 드러내지 않음). 빠른 재생도 바로. 스테이지를 다시 불러오면 미룬 은신은 취소
+function princessFirstTurn(c) {
+  const ms = speakLines(c, PRINCESS_INTRO_LINES, { onlyIfVisible: true });
+  if (!(ms > 0) || replayFast) { princessEnterStealth(c); return; }
+  c._introPending = true;
+  const gen = fxGen;
+  setTimeout(() => { if (gen !== fxGen) return; c._introPending = false; if (!c.dead && !c.inReserve) princessEnterStealth(c); }, ms);
+}
 function princessSdKey(c) { return execSdKey(c) || fateSdKey(c) || aimPoseKey(c) || princessPoseKey(c) || gloryPoseKey(c); } // 공격 자세 > 영광 자세(보호막 구체가 있는 동안 - v12.34, 15_boss_vfx)
 registerVfxActive(() => characters.some(c => c._pPoseAt && performance.now() < princessPoseEndAt(c) + 50));
 
@@ -4757,6 +4777,7 @@ Object.assign(ENEMY_TEMPLATES, {
   [PRINCESS]: { name: '복수의 왕녀', mapCode: 'a10', grade: 'boss', role: '전위', unique: true,
     hp: 35000, atk: 1200, def: 100, evasion: 0, critChance: 5, critMult: 1.5, dmgIncrease: 1.0, dmgTakenRate: 1.0,
     spd: 6, range: 'melee', color: '#5a3a8a',
+    vfx: { death: 'princess_retreat' }, // 사망: 쓰러지지 않고 대사 후 위로 퇴각(v12.44, 15_boss_vfx)
     passives: [
       { name: '복수자의 한', desc: "은신에 진입할 때마다 현재 체력이 가장 높은 아군 1명에게 '표식'(받는 피해 +150%, 1회 피격 시 해제, 최대 1명). 기본 공격은 표식 대상을 우선 공격" },
       { name: '추격자의 의지', desc: '기본 공격 후 턴을 끝내지 않고 남은 기동력 + 4로 이동 (추가 기본 공격 불가). 엄폐물 뒤로 물러남' },
@@ -4769,7 +4790,7 @@ Object.assign(ENEMY_TEMPLATES, {
         c.princessZcHits = 0; // 암살자: 이번 턴 지역장악 적중 횟수
         if (c.airborne) { princessLand(c); return 'end'; } // 처형 착지 후 턴 종료
         if (c.gloryPending && !(c.shieldAtTurnStart > 0)) { c.gloryPending = false; addLog(`${c.name}: 방어막이 깨져 운명이 무산되었다`, 'logInfo'); } // 턴 시작 소멸 직전 값으로 판정(expireSideShields)
-        if (!c.princessStarted) { c.princessStarted = true; princessEnterStealth(c); } // 작별의 바람: 첫 턴 시작 시 은신
+        if (!c.princessStarted) { c.princessStarted = true; princessFirstTurn(c); } // 첫 턴: 대사 → 작별의 바람(은신) - v12.46
       },
       beforeAiAttack(c) { princessBreakStealth(c, '공격'); },
       evadeZoneControl(c) { return (c.princessZcHits || 0) >= 1; },                                    // 암살자: 이번 턴 1번 맞은 뒤엔 회피
@@ -4780,7 +4801,7 @@ Object.assign(ENEMY_TEMPLATES, {
       renderLiftPx(c) { return fateLiftPx(c) || execLiftPx(c); }, // 피할 수 없던 운명: 공중에 떠오름(그림만 - v12.38)
       moveSpeedMult() { return 0.85; }, // 이동 속도 0.85배(v12.37에 0.7, v12.39에 0.85 - 사용자)
       actionGapMs() { return 400; },     // 이동·스킬·기본 공격 뒤 0.4초 쉬고 다음 행동(v12.37)
-      actionWaitMs(c) { const now = performance.now(); return Math.max(c._pPoseAt ? princessPoseEndAt(c) - now : 0, c._windEndAt ? c._windEndAt + 500 - now : 0, gloryFadeRemainMs(c), aimRemainMs(c), execRemainMs(c), 0); }, // 공격 자세(v12.30)·바람에 흩어짐 + 0.5초(v12.33)·영광 구체가 스르륵 사라짐(v12.34 - 피할 수 없던 운명은 그 뒤)이 끝날 때까지 다음 행동 대기
+      actionWaitMs(c) { const now = performance.now(); return Math.max(c._pPoseAt ? princessPoseEndAt(c) - now : 0, c._windEndAt ? c._windEndAt + 500 - now : 0, gloryFadeRemainMs(c), aimRemainMs(c), execRemainMs(c), speechRemainMs(c), c._introPending ? 50 : 0, 0); }, // 공격 자세(v12.30)·바람에 흩어짐 + 0.5초(v12.33)·영광 구체가 스르륵 사라짐(v12.34 - 피할 수 없던 운명은 그 뒤)이 끝날 때까지 다음 행동 대기
     },
     ai: {
       move: { attack: 4, approach: 1.5, cover: 0.5 }, approachTo: 'prey',     // 체력 35000: 지역장악 위험 무시
@@ -4789,7 +4810,7 @@ Object.assign(ENEMY_TEMPLATES, {
       skills: [ // start: 5 -> 6 -> 4 / afterMove: 2 -> 1 (기본 공격과 함께) / afterAttack: 3
         { name: '끝나지 않을 영광', cooldown: 0, brief: '방어막 +10000, 은신 해제', desc: '체력 50% 이하 최초 진입 후 1회: 방어막 +10000, 은신 해제, 턴 종료. 다음 턴 시작까지 방어막이 남아 있으면 피할 수 없던 운명(방어막은 다음 자기 턴 시작에 소멸)',
           cond: c => !c.gloryUsed && c.hp <= c.maxHp * 0.5,
-          run: (c, done) => { c.gloryUsed = true; c.shield = (c.shield || 0) + 10000; princessBreakStealth(c, '끝나지 않을 영광'); c.gloryPending = true; spawnFloatText(c, '방어막 +10000', '#9fd3ff'); startGloryBubble(c); done(); }, after: 'end' }, // 영광 자세 SD + 구체 보호막 연출(v12.34)
+          run: (c, done) => { c.gloryUsed = true; c.shield = (c.shield || 0) + 10000; princessBreakStealth(c, '끝나지 않을 영광'); c.gloryPending = true; spawnFloatText(c, '방어막 +10000', '#9fd3ff'); startGloryBubble(c); speakLines(c, PRINCESS_GLORY_LINES); done(); }, after: 'end' }, // 영광 자세 SD + 구체 보호막 연출(v12.34) + 대사 두 줄(v12.45, 끝날 때까지 다음 행동 대기)
         { name: '피할 수 없던 운명', cooldown: 0, brief: '모든 행에 얼음 파편 - 처음 맞는 아군에게 공격력 200%', desc: '전장의 모든 행에 오른쪽부터 얼음 파편, 부딪히는 첫 아군에게 공격력 200%. 첫 사용으로 2명 이상 사망하면 1번 더. 이후 턴 종료',
           cond: c => c.gloryPending && c.shieldAtTurnStart > 0, run: princessSkill6, after: 'end' }, // 방어막은 이 턴 시작에 이미 소멸, 남아 있었는지는 기록값으로
         { name: '처형', cooldown: 8, brief: '표식 부여 후 도약 - 다음 턴 표식 대상 곁에 착지해 공격력 300%', desc: '체력이 가장 높은 아군 1명에게 표식을 부여한 뒤 도약해 사라지고 턴 종료. 다음 턴 시작에 표식 대상 근처(2칸)에 착지해 공격력 300% + 부상 3턴, 대상 맨해튼 3칸 안 아군에게 절반 피해 + 부상 2턴. 표식 대상이 없어졌으면 처음 도약한 자리에 착지해 주변 3칸 아군에게 절반 피해 + 부상 2턴',
@@ -7006,9 +7027,15 @@ function runSensorEnemyTurn(enemy, onDone) {
 
   // 이 적의 연출이 남아 있으면(템플릿 훅 actionWaitMs - 왕녀 공격 자세·바람에 흩어짐, v12.30/v12.33) 끝날 때까지 기다린 뒤 진행. 빠른 재생이면 바로
   // gap(v12.37): 행동(이동·스킬·기본 공격)이 끝난 뒤면 템플릿 훅 actionGapMs(왕녀 0.4초)만큼 더 쉼 - 연출 사이 간격
+  // (v12.46) 기다린 뒤 다시 재서 남아 있으면 또 기다림(대사가 끝나며 시작되는 은신 연출 등) - 간격(gap)은 마지막에 한 번
   function afterActionWait(next, gap) {
-    const wait = !enemy.dead && !replayFast ? (charHook(enemy, 'actionWaitMs') || 0) + (gap ? (charHook(enemy, 'actionGapMs') || 0) : 0) : 0;
-    if (wait > 0) setTimeout(next, wait); else next();
+    const step = () => {
+      const wait = !enemy.dead && !replayFast ? (charHook(enemy, 'actionWaitMs') || 0) : 0;
+      if (wait > 0) { setTimeout(step, wait); return; }
+      const g = gap && !enemy.dead && !replayFast ? (charHook(enemy, 'actionGapMs') || 0) : 0;
+      if (g > 0) setTimeout(next, g); else next();
+    };
+    step();
   }
   function finish() {
     if (!enemy.dead && enemy.role === '전위' && !enemy.isSummon && !enemy.noZoneControl) enemy.zoneControlArmed = !attacked && !usedSkill && (enemy.aiState || 'combat') === 'combat'; // 아군과 같은 규칙, 전투 상태만(경계/발견은 공격 안 함)
@@ -7731,7 +7758,7 @@ let bossHpBarsKey = null;          // 지금 체력바를 만든 보스 구성(i
 let bossToasts = [];               // 떠 있는 알림창 { el, name, brief, timers }
 
 const bossUiEsc = t => String(t).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-function bossesForHpBar() { return pvpMode ? [] : characters.filter(c => c.side === 'enemy' && c.grade === 'boss' && !c.dead); }
+function bossesForHpBar() { return pvpMode ? [] : characters.filter(c => c.side === 'enemy' && c.grade === 'boss' && !c.dead && !c.hpBarHidden); } // hpBarHidden: 등장 전(1-9 등장 씬 - v12.50)
 
 function buildBossHpRow(b) {
   const row = document.createElement('div'); row.className = 'bossHpRow';
@@ -7753,11 +7780,26 @@ function bossHpBarState(b) {
   const scale = Math.max(b.maxHp || 1, hp + sh);
   return { hp, sh, hpPct: hp / scale * 100, shPct: sh / scale * 100, totalPct: (hp + sh) / scale * 100 };
 }
+// 등장 연출(v12.50): 체력바가 0.3초에 서서히 나타나며 체력이 0 → 가득 1.2초(처음 빠르고 끝에서 느리게). 보여주는 값만(실제 체력은 그대로), 잔상 없음
+const BOSS_HP_INTRO_MS = 1200;
+function bossHpIntroK(b) { if (!b.hpBarIntroAt) return 1; const t = Math.min(1, (performance.now() - b.hpBarIntroAt) / BOSS_HP_INTRO_MS); return 1 - Math.pow(1 - t, 3); }
+function bossHpBarIntro(b) {
+  b.hpBarHidden = false; b.hpBarIntroAt = performance.now();
+  renderBossHpBars();
+  const r = bossHpRows[b.id]; if (r && r.row && r.row.classList) r.row.classList.add('bossHpIntro'); // 서서히 나타남(style.css)
+  const tick = () => {
+    if (!bossHpRows[b.id] || b.dead) return;
+    updateBossHpRow(bossHpRows[b.id], b);
+    if (performance.now() - b.hpBarIntroAt < BOSS_HP_INTRO_MS) requestAnimationFrame(tick); else b.hpBarIntroAt = 0;
+  };
+  tick();
+}
 function updateBossHpRow(r, b) {
-  const s = bossHpBarState(b);
+  const s0 = bossHpBarState(b), k = bossHpIntroK(b);
+  const s = k < 1 ? { hp: s0.hp * k, sh: s0.sh * k, hpPct: s0.hpPct * k, shPct: s0.shPct * k, totalPct: s0.totalPct * k } : s0;
   r.fill.style.width = s.hpPct + '%';
   r.shield.style.left = s.hpPct + '%'; r.shield.style.width = s.shPct + '%';
-  if (r.lastTotal === null || s.totalPct > r.lastTotal) { // 처음/회복: 잔상 없이 바로 맞춤(전환 효과 잠깐 끔)
+  if (r.lastTotal === null || s.totalPct > r.lastTotal || k < 1) { // 처음/회복/등장 연출: 잔상 없이 바로 맞춤(전환 효과 잠깐 끔)
     r.trail.style.transition = 'none';
     r.trail.style.width = s.totalPct + '%';
     void r.trail.offsetWidth; // 지금 폭을 확정한 뒤 전환 효과 복구
@@ -7806,7 +7848,7 @@ registerSystem('onEnemySkillUsed', (enemy, skill) => {
   if (!enemy || enemy.grade !== 'boss' || !skill || replayFast) return;
   showBossSkillToast(skill.name, skill.brief || skill.desc || '');
 });
-registerSystem('onStageLoad', () => { clearBossSkillToasts(); bossHpBarsKey = null; });
+registerSystem('onStageLoad', () => { clearBossSkillToasts(); bossHpBarsKey = null; for (const c of characters) { c.hpBarHidden = false; c.hpBarIntroAt = 0; } });
 
 // ================= 로그/이펙트 =================
 function addLog(text, cls) {
@@ -8297,7 +8339,7 @@ function drawCharacterToken(c) {
     // 원본 스프라이트는 좌측을 바라보는 그림이므로, facingRight일 때만 좌우반전해서 그림
     const sx = cx - drawW/2, sy = footY - drawH;
     if (c.facingRight) { ctx.save(); ctx.translate(cx, 0); ctx.scale(-1, 1); ctx.translate(-cx, 0); }
-    if (c.side !== viewSide() && !c.isGhost && !isSelected) { // 적 상태 테두리(경계/발견 회색, 전투 붉은색). 구조물은 얇고 흐린 흰색(v12.13)
+    if (c.side !== viewSide() && (!c.isGhost || c.ghostOutline) && !isSelected) { // 적 상태 테두리(경계/발견 회색, 전투 붉은색). 구조물은 얇고 흐린 흰색(v12.13)
       if (c.isStructure) drawColoredOutline(imgKey, sdImg, sx, sy, drawW, drawH, 'rgba(255,255,255,0.45)', 1);
       else drawColoredOutline(imgKey, sdImg, sx, sy, drawW, drawH, enemyStateColor(c), undefined, ENEMY_OUTLINE_SKIP_THIN_PX); // 더듬이 등 얇은 부분은 건너뜀(v12.16)
     } // 적 상태 테두리(경계/발견 회색, 전투 붉은색)
@@ -8597,6 +8639,7 @@ function snapshotForGhost(c) {
     tempStatMods: c.tempStatMods || [], burnStacks: c.burnStacks, burnTurnsLeft: c.burnTurnsLeft, hasVengeanceMark: false,
     isGhost: true, // 선택 표시 등 '살아있는 토큰' 전용 연출에서 제외
     ghostSdKey: sdKeyOf(c), // 그 순간의 SD(적=템플릿 키, 변신 중이면 바뀐 SD) 그대로 쓰러지게
+    deathParticleMult: c.deathParticleMult || 1, // 사망 파티클 배수(v12.48 - 왕녀 등장 씬 희생자 2배)
     vfxStyle: vfxStyleOf(c), // 피격·사망 연출 종류(지혁 터짐 / 상자 파편 - v12.12)
     ghostHidden: c.side !== viewSide() && !isVisibleTo(viewSide(), c), // 안개 속에서 죽은 적은 정체를 드러내지 않음
   };
@@ -8961,7 +9004,8 @@ function emitStatusParticles(now) {
   const dt = lastStatusEmit ? Math.min(100, now - lastStatusEmit) : 0;
   lastStatusEmit = now;
   for (const c of characters) {
-    if (c.dead || c.inReserve) { c._frostAcc = 0; c._emberAcc = 0; c._vengAcc = 0; c._lineAcc = 0; c._smokeAccs = null; continue; }
+    // 화면 진영이 볼 수 없는 유닛(은신·전장 밖·시야 밖)은 상태 입자를 만들지 않음(v12.43 - 은신한 왕녀의 복수 표식 연기 등이 위치를 드러내던 문제). 효과 자체는 그대로
+    if (c.dead || c.inReserve || !isVisibleTo(viewSide(), c)) { c._frostAcc = 0; c._emberAcc = 0; c._vengAcc = 0; c._lineAcc = 0; c._smokeAccs = null; c._smokeAcc = 0; c._burstAcc = 0; continue; }
     const multi = fadeAlphaOf(c) > 0.5 ? smokeAuraMulti(c) : null; // 여러 색 연기(페로몬 등 - v12.17): 색마다 따로 누적
     if (multi && multi.length) {
       c._smokeAccs = c._smokeAccs || {};
@@ -10310,6 +10354,7 @@ function burstSizeOf(c) {
 }
 function startDeathAnim(g) {
   const st = vfxStyleOf(g), death = st && st.death, now = performance.now();
+  if (death && DEATH_STYLES[death]) { DEATH_STYLES[death](g); ensureVfxLoop(); return; } // 등록된 사망 연출(왕녀 퇴각 등 - v12.44)
   g.deathAnim = { start: now, style: death || null };
   deathGhosts.push(g);
   if (death === 'burst') { // 크기별 범위(v12.16): 그림 배율 기준 - 잡졸·부식시키지혁처럼 작은 지혁은 좁고 작게, 여왕은 조금 넓게
@@ -10320,7 +10365,7 @@ function startDeathAnim(g) {
     const hs = VFX_HIT_STYLE[st.hit] || VFX_HIT_STYLE.crate;
     spawnHitParticles(g, now + 40, 26, 1.8, 760, 4, hs);                          // 깨지는 순간 파편
     spawnHitParticles(g, now + 420, 12, 1.1, 600, 3.2, hs);                       // 쓰러질 때 한 번 더
-  } else spawnHitParticles(g, now + 60, 22, 1.6, 480, 3.8);
+  } else spawnHitParticles(g, now + 60, Math.round(22 * (g.deathParticleMult || 1)), 1.6, 480, 3.8);
   ensureVfxLoop();
 }
 // 피격 연출(presentHit)을 거치지 않는 사망(화상 틱, 자해, 비탄 폭발 등)도 사망 연출이 나오도록.
@@ -10414,6 +10459,69 @@ function drawGrapples() {
 registerRenderLayer('underTokens', drawGrapples);
 VFX_ACTIVE_CHECKS.push(() => grapples.length > 0);
 registerSystem('onStageLoad', () => { afterimages = []; grapples = []; });
+
+// ================= 스테이지 등장 씬 (v12.48, BOSSES.md) =================
+// 스테이지 설정 intro: '이름' → 첫 배치(applyInitialDeploy) 직후 runStageIntro(이름, 끝나면) - 편성 화면 '등장 씬 건너뛰기'(introSkip, 16_menu)로 생략.
+// 씬 동안: 입력 막힘(sideTurnOpen·턴 종료 버튼 "적 턴 진행 중"·붉은 테두리) + 안개 전부 걷힘. 끝나면 원래대로 + "내 턴" 배너.
+// 씬 속 유닛·처치는 순수 연출 - 피해 집계·사망 이벤트·승패·쿨타임과 무관(dealDamage를 쓰지 않음), 끝나면 목록에서 지움. 스테이지를 다시 불러오면 남은 단계 폐기(fxGen)
+const STAGE_INTROS = {};
+let stageIntroActive = false;
+function runStageIntro(name, done) {
+  const fn = STAGE_INTROS[name];
+  if (!fn || replayFast) { done(); return; }
+  const gen = fxGen, prevFog = fogEnabled, endBtn = document.getElementById('endTurnBtn');
+  stageIntroActive = true; sideTurnOpen = false; fogEnabled = false;
+  if (endBtn) { endBtn.disabled = true; endBtn.textContent = '적 턴 진행 중'; }
+  if (document.body && document.body.classList) document.body.classList.add('enemy-turn-active');
+  showTurnBanner('적 턴', '');
+  const later = (f, ms) => setTimeout(() => { if (gen === fxGen) f(); }, ms);
+  fn({ later, finish: () => {
+    stageIntroActive = false; sideTurnOpen = true; fogEnabled = prevFog;
+    if (endBtn) { endBtn.disabled = false; endBtn.textContent = '턴 종료'; }
+    if (document.body && document.body.classList) document.body.classList.remove('enemy-turn-active');
+    runSystems('onVisionChanged'); updatePanel(); draw(); done();
+  } });
+  draw();
+}
+
+// ---- 1-9 복수의 왕녀 등장: 가운데 장교 + 상하좌우 2칸 떨어진 기수 4(v12.49 - 전사 제외) → 3초에 장교 "괴...괴물!" →
+//      말풍선이 사라지고 2.5초 뒤 장교 칸에 처형 → 9999로 몰살(여파 5×5 사각형, 붉은 파티클 2배) ----
+const INTRO_SPEAK_AT = 3000, INTRO_FALL_AFTER_SPEECH = 2500, INTRO_END_PAUSE = 800;
+const INTRO_OFFICER_LINES = ['괴...괴물!'];
+STAGE_INTROS.princessArrival = ({ later, finish }) => {
+  const P = characters.find(c => c.templateKey === 'vengeful_princess' && !c.dead);
+  if (!P) { finish(); return; }
+  const center = { x: P.x, y: P.y };
+  P.inReserve = true; P.hpBarHidden = true; updatePanel(); // 아직 등장 전(전장 밖) - 체력바도 숨김(v12.50)
+  const extras = [];
+  for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+    const x = center.x + dx, y = center.y + dy, ring = Math.max(Math.abs(dx), Math.abs(dy));
+    if (x < 0 || y < 0 || x >= COLS || y >= ROWS || isObstacle(x, y)) continue;
+    const key = ring === 0 ? 'wikat_officer' : (ring === 2 && (dx === 0 || dy === 0)) ? 'faded_bearer' : null; // 장교 + 상하좌우 2칸 기수
+    if (!key) continue;
+    const e = spawnEnemy(key, x, y); if (!e) continue;
+    e.sceneOnly = true; e.aiState = 'combat'; e.deathParticleMult = 2; e.facingRight = dx < 0 || (dx === 0 && x < center.x);
+    extras.push({ e, ring });
+  }
+  draw();
+  const officer = extras.find(o => o.ring === 0);
+  const speechMs = speechTypeEndMs(INTRO_OFFICER_LINES[0]) + 600 + 200; // 글자 입력 + 유지 + 사라짐(speakLines 기본 fade)
+  later(() => { if (officer) speakLines(officer.e, INTRO_OFFICER_LINES, { lastHold: 600 }); }, INTRO_SPEAK_AT);
+  later(() => {
+    P.inReserve = false; P.x = center.x; P.y = center.y; // 장교 자리에 내리찍기(처형 연출 재사용)
+    execBegin(P, center); execScheduleImpact(P, center, true, true);
+    later(() => bossHpBarIntro(P), execImpactMs()); // 착지 순간 체력바가 나타나며 차오름(v12.50)
+    let last = 0;
+    for (const { e, ring } of extras) {
+      const delay = execRingDelay(ring), hb = e.hp;
+      e.hp = 0; e.dead = true; // 순수 연출: dealDamage·사망 이벤트 없이
+      presentHit(e, { delay, hpBefore: hb, lethal: true, text: 9999, textColor: DMG_TEXT_COLOR });
+      last = Math.max(last, delay);
+    }
+    const endIn = Math.max(execRemainMs(P), last + DEATH_ANIM_MS) + INTRO_END_PAUSE;
+    later(() => { for (const { e } of extras) { const i = characters.indexOf(e); if (i >= 0) characters.splice(i, 1); } finish(); }, endIn);
+  }, INTRO_SPEAK_AT + speechMs + INTRO_FALL_AFTER_SPEECH); // 말풍선이 사라지고 2.5초 뒤
+};
 
 // ================= 복수의 왕녀: 바람에 흩어지며 사라짐 (v12.32, BOSSES.md) =================
 // 작별의 바람(첫 턴 은신)·사라지는 바람(공격 후 은신·순간이동) - 은신에 들어가는 순간, 그 자리 SD를 올려다보는 자세(vengeful_princess_wind)로 바꾸고
@@ -10813,7 +10921,8 @@ function execUpdate() { // 매 프레임: 그림 위치(renderX/Y) 갱신 + 착�
   }
 }
 // 착지 순간 연출(시각 예약): 흔들림 + 얼음 결정(3×3) + 여파(맨해튼 3칸)
-function execScheduleImpact(c, center, shake) {
+// square(v12.48, 등장 씬): 여파를 사각형(체비쇼프 2칸 = 5×5)으로. 기본은 맨해튼 3칸(처형 피해 범위)
+function execScheduleImpact(c, center, shake, square) {
   const now = performance.now(), at = now + EXEC_FALL_MS;
   for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
     const x = center.x + dx, y = center.y + dy;
@@ -10823,7 +10932,7 @@ function execScheduleImpact(c, center, shake) {
       h: TILE * (core ? 0.75 + vfxRand() * 0.45 : 0.4 + vfxRand() * 0.4), w: TILE * (0.1 + vfxRand() * 0.09), tilt: (vfxRand() - 0.5) * 0.7,
       start: at + (core ? vfxRand() * 20 : 30 + vfxRand() * 50) }); // 대상 칸은 착지 순간 바로
   }
-  execWaves.push({ cx: center.x, cy: center.y, start: at });
+  execWaves.push({ cx: center.x, cy: center.y, start: at, square: !!square, max: square ? 2 : 3 });
   setTimeout(() => { if (shake) startScreenShake(320, TILE * 0.18); }, replayFast ? 0 : EXEC_FALL_MS);
   ensureVfxLoop();
 }
@@ -10853,11 +10962,11 @@ function drawExecSpikes() {
 function drawExecWaves() { // 여파: 링 d가 닿는 순간 그 칸들이 옅은 푸른빛으로 번쩍였다 사라짐 + 서리 가루
   const now = performance.now(), FLASH = 280;
   for (const w of execWaves) {
-    for (let d = 0; d <= 3; d++) {
+    for (let d = 0; d <= w.max; d++) {
       const el = now - (w.start + d * EXEC_RING_MS); if (el < 0 || el > FLASH) continue;
       const a = (1 - el / FLASH) * (d === 0 ? 0.55 : 0.4);
       for (let y = w.cy - d; y <= w.cy + d; y++) for (let x = w.cx - d; x <= w.cx + d; x++) {
-        if (Math.abs(x - w.cx) + Math.abs(y - w.cy) !== d || x < 0 || y < 0 || x >= COLS || y >= ROWS) continue;
+        if ((w.square ? Math.max(Math.abs(x - w.cx), Math.abs(y - w.cy)) : Math.abs(x - w.cx) + Math.abs(y - w.cy)) !== d || x < 0 || y < 0 || x >= COLS || y >= ROWS) continue;
         ctx.fillStyle = `rgba(170,220,255,${a})`; ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
         if (!w['p' + d + x + ',' + y]) { w['p' + d + x + ',' + y] = 1;
           for (let k = 0; k < 3; k++) statusParticles.push({ kind: 'frost', x: (x + vfxRand()) * TILE, y: (y + 0.4 + vfxRand() * 0.5) * TILE, start: now, duration: 420 + vfxRand() * 260,
@@ -10865,12 +10974,94 @@ function drawExecWaves() { // 여파: 링 d가 닿는 순간 그 칸들이 옅�
       }
     }
   }
-  execWaves = execWaves.filter(w => now - w.start < 3 * EXEC_RING_MS + FLASH);
+  execWaves = execWaves.filter(w => now - w.start < w.max * EXEC_RING_MS + FLASH);
 }
 registerRenderLayer('underTokens', () => { execUpdate(); drawExecWaves(); });
 registerRenderLayer('overTokensFx', drawExecSpikes);
 registerVfxActive(() => execSpikes.length > 0 || execWaves.length > 0 || characters.some(c => c._exec));
 registerSystem('onStageLoad', () => { execSpikes = []; execWaves = []; screenShake = null; for (const c of characters) c._exec = null; });
+
+// ================= 대사 말풍선 (v12.44, v12.45 일반화) =================
+// speakLines(유닛, [줄...], opts): 머리 위 말풍선에 줄마다 한 글자씩(0.07초) → 다 나오면 gap(0.6초) 뒤 다음 줄(같은 말풍선, 글을 지우고) →
+// 마지막 줄이 다 나오고 lastHold 뒤 fade 동안 흐려지며 사라짐. 줄이 나타날 때 로그에 `이름: "줄"`. 유닛은 살아 있는 유닛이나 잔상 모두.
+// (v12.45) 모양: 각진 직사각형(꼬리 없음), 안쪽 검정·흰 테두리·흰 글씨. 크기는 줄마다 그 줄 전체 기준(글자가 늘어도 흔들리지 않게)
+const SPEECH_TYPE_MS = 70, SPEECH_GAP_MS = 600;
+let speechBubbles = [];
+function speechTypeEndMs(text) { return text.length * SPEECH_TYPE_MS; }
+// onlyIfVisible(v12.46): 화면 진영이 그 유닛을 볼 수 없으면 말풍선 없이 로그만, 대기 0(위치를 드러내지 않음)
+function speakLines(c, lines, { delay = 0, gap = SPEECH_GAP_MS, lastHold = 1000, fade = 200, onlyIfVisible = false } = {}) {
+  if (onlyIfVisible && !replayFast && !isVisibleTo(viewSide(), c)) { for (const t of lines) addLog(`${c.name}: "${t}"`, 'logSkill'); return 0; }
+  const now = performance.now(), segs = [];
+  let t = now + delay;
+  lines.forEach((text, i) => { segs.push({ text, start: t }); t += speechTypeEndMs(text) + (i < lines.length - 1 ? gap : lastHold); });
+  const b = { c, segs, start: now + delay, fadeFrom: t, end: t + fade };
+  if (!replayFast) speechBubbles.push(b);
+  const gen = fxGen;
+  for (const sg of segs) { const log = () => { if (gen === fxGen) addLog(`${c.name}: "${sg.text}"`, 'logSkill'); };
+    if (replayFast) log(); else setTimeout(log, sg.start - now); }
+  ensureVfxLoop();
+  return t + fade - now; // 말풍선이 다 사라질 때까지(ms)
+}
+function speechRemainMs(c) { const now = performance.now(); return speechBubbles.reduce((m, b) => b.c === c ? Math.max(m, b.end - now) : m, 0); }
+function speechTopY(c) { // 머리(그림 맨 위) 위. 영광 구체가 있으면 구체 위
+  const rx = c.renderX !== undefined ? c.renderX : c.x, ry = c.renderY !== undefined ? c.renderY : c.y;
+  const info = CHARACTER_IMAGES[c.ghostSdKey || sdKeyOf(c)], drawH = TILE * 1.5 * ((info && info.sdScale) || 1);
+  let top = ry * TILE + TILE - drawH - 12;
+  if (c._glory && !c.isGhost) { const g = gloryGeom(c); top = Math.min(top, g.cy - g.r - 6); }
+  return { cx: rx * TILE + TILE / 2, top };
+}
+function drawSpeechBubble(b, now) {
+  let seg = b.segs[0]; for (const sg of b.segs) if (now >= sg.start) seg = sg;
+  if (now < seg.start) return;
+  const n = Math.min(seg.text.length, Math.floor((now - seg.start) / SPEECH_TYPE_MS) + 1), shown = seg.text.slice(0, n);
+  const a = Math.min(1, (now - b.start) / 150) * (now > b.fadeFrom ? Math.max(0, 1 - (now - b.fadeFrom) / (b.end - b.fadeFrom)) : 1);
+  if (a <= 0) return;
+  const { cx, top } = speechTopY(b.c);
+  ctx.save();
+  ctx.globalAlpha = a; ctx.font = 'bold 10px sans-serif'; // (v12.47) 12 → 10px
+  const mt = ctx.measureText && ctx.measureText(seg.text), w = ((mt && mt.width) || seg.text.length * 10) + 12, h = 18;
+  const x = Math.max(2, Math.min(COLS * TILE - w - 2, cx - w / 2)), y = top - h; // 판 밖으로 나가지 않게
+  ctx.fillStyle = 'rgba(0,0,0,0.88)'; ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.8; ctx.strokeRect(x + 0.4, y + 0.4, w - 0.8, h - 0.8); // (v12.47) 테두리 1.5 → 0.8px
+  ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(shown, x + 6, y + h / 2 + 1);
+  ctx.restore();
+}
+function drawSpeechBubbles() {
+  const now = performance.now();
+  speechBubbles = speechBubbles.filter(b => now < b.end);
+  for (const b of speechBubbles) drawSpeechBubble(b, now);
+}
+
+// ================= 복수의 왕녀: 사망 = 퇴각 (v12.44, BOSSES.md) =================
+// 마지막 타격에 붉게 번쩍이고 떨린 뒤 쓰러지지 않고 선 채로(상태 테두리 유지) 0.85초 → 머리 위 말풍선에 대사가 한 글자씩(0.07초) →
+// 다 나온 뒤 1.2초 → 처형 도약처럼 웅크렸다가 위로 솟구쳐 사라짐(말풍선도 함께 흐려짐). 판정(사망·승리)은 즉시, 결과 화면은 이 연출 뒤(battleMotionBusy)
+const RETREAT_WAIT_MS = 850, SPEECH_HOLD_MS = 1200;
+const PRINCESS_LAST_WORDS = '이게 끝이라고 생각하지 마라';
+let retreatGhosts = [];
+registerDeathStyle('princess_retreat', g => {
+  const now = performance.now(), text = PRINCESS_LAST_WORDS;
+  g.hitAnim = { start: now }; g.ghostOutline = true; // 일반 피격처럼 번쩍·떨림, 붉은 테두리 유지
+  const leapAt = now + RETREAT_WAIT_MS + speechTypeEndMs(text) + SPEECH_HOLD_MS;
+  g.retreat = { start: now, leapAt };
+  retreatGhosts.push(g);
+  speakLines(g, [text], { delay: RETREAT_WAIT_MS, lastHold: SPEECH_HOLD_MS, fade: LEAP_ANIM_MS }); // 솟구치는 동안 말풍선도 흐려짐
+});
+function drawRetreatGhosts() {
+  const now = performance.now();
+  for (const g of retreatGhosts) {
+    if (now >= g.retreat.leapAt) { // 위로 솟구쳐 사라짐(처형 도약과 같은 동작)
+      g.dropAnim = { start: g.retreat.leapAt, reverse: true, style: 'leap', dur: LEAP_ANIM_MS };
+      exitingGhosts.push(g); g.retreat.done = true; continue;
+    }
+    drawCharacterToken(g);
+  }
+  retreatGhosts = retreatGhosts.filter(g => !g.retreat.done);
+  drawSpeechBubbles();
+}
+registerRenderLayer('overTokensFx', drawRetreatGhosts);
+registerVfxActive(() => retreatGhosts.length > 0 || speechBubbles.length > 0);
+registerSystem('onStageLoad', () => { retreatGhosts = []; speechBubbles = []; });
 
 // ================= 캔버스 클릭 =================
 canvas.addEventListener('click', (e) => {
@@ -11799,7 +11990,10 @@ function applyInitialDeploy(ids) {
     addLog('최초 투입 완료 (이번 턴 안에는 투입구역에서 바로 퇴각도 가능)', 'logSkill');
     updatePanel();
     draw();
-    if (!(typeof net !== 'undefined' && net.replaying)) turnBannerForSide(mySide); // 첫 턴 배너(최초 투입 직후 - v12.26)
+    if (!(typeof net !== 'undefined' && net.replaying)) { // 첫 턴 배너(최초 투입 직후 - v12.26). 등장 씬이 있는 스테이지는 씬이 끝난 뒤(v12.48)
+      if (!pvpMode && currentStageConfig && currentStageConfig.intro && !introSkip) runStageIntro(currentStageConfig.intro, () => turnBannerForSide(mySide));
+      else turnBannerForSide(mySide);
+    }
   }
 }
 
@@ -12068,7 +12262,15 @@ function renderBattleOptionButtons() {
   f.style.borderColor = battleOptions.fog ? '#9fd3ff' : '#555'; f.style.background = battleOptions.fog ? '#20304a' : '#26262c';
   a.textContent = `총력전(8명 편성, 4~6명 투입): ${battleOptions.allIn ? '켜짐' : '꺼짐'}`;
   a.style.borderColor = battleOptions.allIn ? '#e0a03c' : '#555'; a.style.background = battleOptions.allIn ? '#3a2e1c' : '#26262c';
+  const s = document.getElementById('skipIntroBtn'), row = document.getElementById('introOptionRow'); // 등장 씬 건너뛰기(v12.48): 씬이 있는 스테이지만
+  if (s && row) {
+    row.style.display = currentStageConfig && currentStageConfig.intro ? 'flex' : 'none';
+    s.textContent = `등장 씬 건너뛰기: ${introSkip ? '켜짐' : '꺼짐'}`;
+    s.style.borderColor = introSkip ? '#c9a6ff' : '#555'; s.style.background = introSkip ? '#2e2440' : '#26262c';
+  }
 }
+let introSkip = false; // 등장 씬 건너뛰기(앱을 켜 둔 동안 유지 - 다시 도전할 때마다 끄지 않아도 되게)
+document.getElementById('skipIntroBtn').addEventListener('click', () => { introSkip = !introSkip; renderBattleOptionButtons(); });
 document.getElementById('fogToggleBtn').addEventListener('click', () => { battleOptions.fog = !battleOptions.fog; renderBattleOptionButtons(); });
 document.getElementById('allInToggleBtn').addEventListener('click', () => {
   battleOptions.allIn = !battleOptions.allIn;
@@ -12300,6 +12502,7 @@ function pvpFormationBegin(step) {
   document.getElementById('quickFormationToggleBtn').textContent = '빠른 편성';
   document.getElementById('formationModeTitle').textContent = `${pvpSetup.names[side]} 편성 - 슬롯을 눌러 6명을 채우세요`;
   document.getElementById('battleOptionRow').style.display = 'none'; // 일반전: 안개 켜짐/총력전 없음 고정
+  { const r = document.getElementById('introOptionRow'); if (r) r.style.display = 'none'; } // 등장 씬 건너뛰기도 숨김(v12.48)
   document.getElementById('squadFormationScreen').style.display = 'flex';
   renderFormationSlots();
 }

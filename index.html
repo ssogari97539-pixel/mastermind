@@ -299,6 +299,7 @@
 .bossHpTrail { background: #ffffff; transition: width 0.6s ease-out 0.45s; }
 .bossHpFill { background: linear-gradient(#c07af0, #7c36bc); }
 .bossHpShield { background: linear-gradient(#cfeaff, #8ccaf5); }
+.bossHpSub { margin-top: 3px; font-size: 12px; font-weight: bold; color: #ffd86a; text-shadow: 0 1px 3px #000; text-align: center; } /* 보스 부목표(v12.53) */
 .bossHpIntro { animation: bossHpIntroFade 0.3s ease-out; } /* 등장 연출: 서서히 나타남(v12.50) */
 @keyframes bossHpIntroFade { from { opacity: 0; } to { opacity: 1; } }
 #bossSkillToasts { position: fixed; top: 70px; right: 284px; z-index: 460; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: none; }
@@ -607,8 +608,8 @@
 </div>
 
 <script>
-const GAME_BUILD = '119242a4ec'; // 빌드 식별값(자동 생성)
-const GAME_VERSION = '12.50'; // 버전 번호(VERSION 파일)
+const GAME_BUILD = 'f9d9e2cc24'; // 빌드 식별값(자동 생성)
+const GAME_VERSION = '12.57'; // 버전 번호(VERSION 파일)
 // ================= 기본 설정 =================
 // 판 크기는 스테이지마다 다를 수 있음 - loadStage가 setBoardSize로 바꿈(모든 사용처가 함수 안이라 바뀐 값이 바로 반영됨)
 let COLS = 20;
@@ -901,6 +902,23 @@ const STAGE_CONFIGS = {
     ],
   },
   // 2지역 시험(임시, v11.92): 지혁 일반·엘리트·페로몬 상자를 한 판에서 확인. 실제 2지역 맵을 받으면 뺌 (REGION2.md)
+  '2-5': { // 환영인사(v12.54 사용자 제공 32x11): 15턴 안에 1명 탈출(혹은 적 섬멸)
+    pheromones: true,
+    objective: { type: 'escape', count: 1, turns: 15 },
+    map: [
+      "!  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  .  .",
+      "!  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  .  .  .",
+      "!  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  b5  !  !  !  !  !  !  !  !  !  !  !  .  .  b9  .",
+      "!  !  !  .  .  .  !  .  .  .  !  b9  .  .  .  .  .  .  .  .  .  .  !  !  !  b5  .  b2  b2  .  .  .",
+      ".  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  b2  b2  !  !  .  .  .  .  .  .  .  .  .  .  E",
+      ".  b13  b13  .  .  .  .  b7  .  .  .  .  .  .  b7  .  .  .  b13  .  .  .  .  b9  .  .  .  .  .  .  b11  E",
+      "@  @  @  .  !  .  .  .  .  .  .  !  !  .  .  .  .  .  .  .  b8  .  .  .  .  .  .  .  .  .  .  E",
+      "@  @  @  .  !  !  .  .  .  .  b2  b2  .  .  .  b9  .  b5  !  !  !  !  !  b5  .  .  .  b2  b2  .  .  .",
+      "@  @  @  .  .  .  .  .  .  .  .  .  b5  !  !  !  !  !  !  !  !  !  !  !  !  b5  b7  .  .  .  .  .",
+      ".  .  .  .  .  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  .  b9  .",
+      ".  .  .  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  !  .  .",
+    ],
+  },
   '2-0': {
     pheromones: true, allIn: true,
     map: [
@@ -4753,6 +4771,7 @@ function princessRendVfx(c, b) {
   if (replayFast) return 0;
   c._pPoseAt = performance.now(); c._pRaiseMs = PRINCESS_REND_RAISE_MS; c._rendTiles = b.tiles.slice(); // 차징 동안 붉은 칸(v12.42)
   c.chargeAnim = { start: c._pPoseAt, dur: PRINCESS_REND_RAISE_MS, amp: PRINCESS_REND_SHAKE_PX };
+  if (vfxRand() < PRINCESS_REND_LINE_CHANCE) speakLines(c, [PRINCESS_REND_LINE], { lastHold: 500, onlyIfVisible: true }); // 30% 차징 대사(v12.51) - 다 나온 뒤 0.5초
   const mid = b.dir === 'left' ? { x: c.x - 2, y: c.y } : b.dir === 'right' ? { x: c.x + 2, y: c.y } : b.dir === 'up' ? { x: c.x, y: c.y - 2 } : { x: c.x, y: c.y + 2 };
   ensureVfxLoop();
   return playHeavySlashAttack(c, mid, { color: '#5aa8ff', R: TILE * 2.2, duration: 520, thick: 4, delay: PRINCESS_REND_RAISE_MS });
@@ -4760,16 +4779,17 @@ function princessRendVfx(c, b) {
 // 표식 대상: 온몸에서 검은 연기(v12.41) - 아주 진한 보라빛 검정(어두운 바닥에 묻히지 않게), 상태 연기의 1.2배
 registerSmokeAuraMulti(c => c.huntMarked && !c.dead && !c.inReserve ? [{ rgb: [25, 20, 30], rate: 1.2 }] : null);
 const PRINCESS_GLORY_LINES = ['우리의 영광은···', '끝나지 않으리라']; // 끝나지 않을 영광 대사(v12.45, v12.46 '우리의')
-const PRINCESS_INTRO_LINES = ['내가 잃은 것보다···', '더 내놓아야 할 것이다']; // 첫 턴 대사(v12.46)
-// 첫 턴(v12.46): 대사 두 줄 → 끝나는 순간 작별의 바람(은신 + 표식, 흩어짐) → 흩어짐 + 0.5초 뒤 행동(actionWaitMs).
-// 시야 밖이면 로그만 남기고 바로 은신(위치를 드러내지 않음). 빠른 재생도 바로. 스테이지를 다시 불러오면 미룬 은신은 취소
-function princessFirstTurn(c) {
-  const ms = speakLines(c, PRINCESS_INTRO_LINES, { onlyIfVisible: true });
-  if (!(ms > 0) || replayFast) { princessEnterStealth(c); return; }
-  c._introPending = true;
-  const gen = fxGen;
-  setTimeout(() => { if (gen !== fxGen) return; c._introPending = false; if (!c.dead && !c.inReserve) princessEnterStealth(c); }, ms);
-}
+const PRINCESS_REND_LINE = '네 살점을 뜯어내라', PRINCESS_REND_LINE_CHANCE = 0.3; // 살점 뜯기 차징 대사(v12.51) - 연출 전용 난수
+// 첫 턴: 작별의 바람(은신 + 표식) - v12.46의 첫 턴 대사는 v12.51에 삭제
+function princessFirstTurn(c) { princessEnterStealth(c); }
+// 영광 보호막 파괴 → 다음 자기 턴 기절(v12.53): 피해로 보호막이 0이 되는 순간 '기절 (1턴)'(아군 턴 동안 정보 창에 보임). 턴 시작 자연 소멸은 해당 없음(그땐 운명)
+const PRINCESS_STUN_ID = 'princess_stun';
+registerSystem('onDamageTaken', target => {
+  if (target.templateKey !== PRINCESS || target.dead || !target.gloryPending || target.shield > 0 || hasTempMod(target, PRINCESS_STUN_ID)) return;
+  (target.tempStatMods = target.tempStatMods || []).push({ id: PRINCESS_STUN_ID, stat: 'spd', value: -10, turnsLeft: 1, label: '기절', color: '#ffd23f',
+    tooltip: '기절: 끝나지 않을 영광의 보호막이 파괴됨. 다음 자기 턴에 이동·공격·스킬 없이 턴을 넘깁니다' });
+  addLog(`${target.name}: 보호막 파괴 - 다음 턴 기절`, 'logSkill');
+});
 function princessSdKey(c) { return execSdKey(c) || fateSdKey(c) || aimPoseKey(c) || princessPoseKey(c) || gloryPoseKey(c); } // 공격 자세 > 영광 자세(보호막 구체가 있는 동안 - v12.34, 15_boss_vfx)
 registerVfxActive(() => characters.some(c => c._pPoseAt && performance.now() < princessPoseEndAt(c) + 50));
 
@@ -4790,6 +4810,7 @@ Object.assign(ENEMY_TEMPLATES, {
         c.princessZcHits = 0; // 암살자: 이번 턴 지역장악 적중 횟수
         if (c.airborne) { princessLand(c); return 'end'; } // 처형 착지 후 턴 종료
         if (c.gloryPending && !(c.shieldAtTurnStart > 0)) { c.gloryPending = false; addLog(`${c.name}: 방어막이 깨져 운명이 무산되었다`, 'logInfo'); } // 턴 시작 소멸 직전 값으로 판정(expireSideShields)
+        if (hasTempMod(c, PRINCESS_STUN_ID)) { addLog(`${c.name}: 기절하여 움직이지 못한다`, 'logSkill'); spawnFloatText(c, '기절', '#ffd23f'); return 'end'; } // 영광 보호막을 파괴당함(v12.53): 이 턴은 이동·공격·스킬 없이 종료
         if (!c.princessStarted) { c.princessStarted = true; princessFirstTurn(c); } // 첫 턴: 대사 → 작별의 바람(은신) - v12.46
       },
       beforeAiAttack(c) { princessBreakStealth(c, '공격'); },
@@ -4799,9 +4820,14 @@ Object.assign(ENEMY_TEMPLATES, {
       basicAttackVfx(c, t, info) { return princessBasicAttackVfx(c, t, info); },                     // 기본 공격 연출(v12.29): 칼 치켜듦 → 내리벰 + 연보라 두꺼운 검격
       sdKey(c) { return princessSdKey(c); },
       renderLiftPx(c) { return fateLiftPx(c) || execLiftPx(c); }, // 피할 수 없던 운명: 공중에 떠오름(그림만 - v12.38)
+      bossSubGoal(c) { // 보스 체력바 밑 부목표(v12.53, 14_boss_ui)
+        if (c.gloryPending && c.shield > 0) return `부목표: 보호막을 파괴하세요 (남은 보호막 ${Math.round(c.shield).toLocaleString()})`;
+        if (hasTempMod(c, PRINCESS_STUN_ID)) return '보호막 파괴 - 다음 턴 기절';
+        return null;
+      },
       moveSpeedMult() { return 0.85; }, // 이동 속도 0.85배(v12.37에 0.7, v12.39에 0.85 - 사용자)
       actionGapMs() { return 400; },     // 이동·스킬·기본 공격 뒤 0.4초 쉬고 다음 행동(v12.37)
-      actionWaitMs(c) { const now = performance.now(); return Math.max(c._pPoseAt ? princessPoseEndAt(c) - now : 0, c._windEndAt ? c._windEndAt + 500 - now : 0, gloryFadeRemainMs(c), aimRemainMs(c), execRemainMs(c), speechRemainMs(c), c._introPending ? 50 : 0, 0); }, // 공격 자세(v12.30)·바람에 흩어짐 + 0.5초(v12.33)·영광 구체가 스르륵 사라짐(v12.34 - 피할 수 없던 운명은 그 뒤)이 끝날 때까지 다음 행동 대기
+      actionWaitMs(c) { const now = performance.now(); return Math.max(c._pPoseAt ? princessPoseEndAt(c) - now : 0, c._windEndAt ? c._windEndAt + 500 - now : 0, gloryFadeRemainMs(c), aimRemainMs(c), execRemainMs(c), speechRemainMs(c), 0); }, // 공격 자세(v12.30)·바람에 흩어짐 + 0.5초(v12.33)·영광 구체가 스르륵 사라짐(v12.34 - 피할 수 없던 운명은 그 뒤)이 끝날 때까지 다음 행동 대기
     },
     ai: {
       move: { attack: 4, approach: 1.5, cover: 0.5 }, approachTo: 'prey',     // 체력 35000: 지역장악 위험 무시
@@ -5053,13 +5079,13 @@ Object.assign(ENEMY_TEMPLATES, {
 
   // b4 알이지혁: 전투 상태에서 1턴이 지나면 잡졸이지혁 3명을 낳고 사망
   zh_egg: Object.assign({ name: '알이지혁', mapCode: 'b4', grade: 'normal', role: '후위',
-    hp: 900, atk: 0, def: 0, spd: 0, range: 2, /* 시야 4칸(v12.24) */ color: '#b0a070', flags: { zh: true, passThrough: true, zhEgg: { key: 'zh_grunt', count: 3 } },
+    hp: 300, atk: 0, def: 0, spd: 0, range: 2, /* 시야 4칸(v12.24), 체력 900 → 300(v12.55) */ color: '#b0a070', flags: { zh: true, passThrough: true, zhEgg: { key: 'zh_grunt', count: 3 } },
     passives: ZH_EGG_PASSIVES, ai: { move: { stay: 1 }, target: {}, noAttack: true } }, ZH_BASE),
 
   // b5 부식 알이지혁: 플레이어에게는 알이지혁과 같게 보임(이름·정보·등장 적 목록 disguiseAs). 사망 시 주변 8칸 아군에게 900 + 방깎 100,
   //   전투 상태에서 1턴이 지나면 부식시키지혁 2명을 낳고 사망(부화로 인한 사망은 폭발 없음)
   zh_egg_corrosive: Object.assign({ name: '알이지혁', mapCode: 'b5', grade: 'normal', role: '후위', disguiseAs: 'zh_egg',
-    hp: 900, atk: 0, def: 0, spd: 0, range: 2, /* 시야 4칸(v12.24, 알과 같게) */ color: '#b0a070', flags: { zh: true, passThrough: true, zhEgg: { key: 'zh_corroder', count: 2 }, zhCorrosive: true },
+    hp: 300, atk: 0, def: 0, spd: 0, range: 2, /* 시야 4칸(v12.24, 알과 같게), 체력 900 → 300(v12.55) */ color: '#b0a070', flags: { zh: true, passThrough: true, zhEgg: { key: 'zh_corroder', count: 2 }, zhCorrosive: true },
     passives: ZH_EGG_PASSIVES, ai: { move: { stay: 1 }, target: {}, noAttack: true } }, ZH_BASE),
 
   // b6 부식시키지혁: 물량으로 밀어붙이는 후위 - 엄폐보다 사거리 안 공격 우선. 4연타, 타격마다 방깎 10
@@ -7771,8 +7797,9 @@ function buildBossHpRow(b) {
   const fill = document.createElement('div'); fill.className = 'bossHpFill';      // 보라색 체력
   const shield = document.createElement('div'); shield.className = 'bossHpShield'; // 하늘색 방어막(체력 뒤에 이어 붙음)
   track.appendChild(trail); track.appendChild(fill); track.appendChild(shield);
-  row.appendChild(head); row.appendChild(track);
-  return { row, num, trail, fill, shield, lastTotal: null };
+  const sub = document.createElement('div'); sub.className = 'bossHpSub'; sub.style.display = 'none'; // 부목표 줄(v12.53): 보스 템플릿 훅 bossSubGoal(c) -> 문구 | null
+  row.appendChild(head); row.appendChild(track); row.appendChild(sub);
+  return { row, num, trail, fill, shield, sub, lastTotal: null };
 }
 // 비율 계산(테스트에서도 사용): 기준 = max(최대 체력, 체력 + 방어막)
 function bossHpBarState(b) {
@@ -7808,6 +7835,7 @@ function updateBossHpRow(r, b) {
   r.lastTotal = s.totalPct;
   const text = `${Math.round(s.hp).toLocaleString()} / ${Math.round(b.maxHp).toLocaleString()}` + (s.sh ? `  (방어막 ${Math.round(s.sh).toLocaleString()})` : '');
   if (r.num.textContent !== text) r.num.textContent = text;
+  if (r.sub) { const goal = charHook(b, 'bossSubGoal') || ''; if (r.sub.textContent !== goal) r.sub.textContent = goal; r.sub.style.display = goal ? 'block' : 'none'; }
 }
 function renderBossHpBars() {
   const box = document.getElementById('bossHpBars');
@@ -8022,7 +8050,8 @@ function beginFogClip(tiles) {
   if (!tiles) return;
   ctx.save();
   ctx.beginPath();
-  for (const key of tiles) { const [x, y] = key.split(',').map(Number); ctx.rect(x * TILE, y * TILE, TILE, TILE); }
+  const topY = -topMarginLogical() / TILE_COMPRESS; // (v12.56) 맨 윗줄 시야 칸은 그 위 검은 여백까지 - 위로 솟는 연출(영광 구체·도약·말풍선 등)이 여백에서 잘리지 않게
+  for (const key of tiles) { const [x, y] = key.split(',').map(Number); if (y === 0) ctx.rect(x * TILE, topY, TILE, TILE - topY); else ctx.rect(x * TILE, y * TILE, TILE, TILE); }
   ctx.clip();
   fogClipCount++;
 }
@@ -10510,7 +10539,8 @@ STAGE_INTROS.princessArrival = ({ later, finish }) => {
   later(() => {
     P.inReserve = false; P.x = center.x; P.y = center.y; // 장교 자리에 내리찍기(처형 연출 재사용)
     execBegin(P, center); execScheduleImpact(P, center, true, true);
-    later(() => bossHpBarIntro(P), execImpactMs()); // 착지 순간 체력바가 나타나며 차오름(v12.50)
+    const execEnd = execRemainMs(P);
+    later(() => bossHpBarIntro(P), execEnd); // 착지 동작이 다 끝난 뒤(원래 SD로 돌아온 순간) 체력바가 나타나며 차오름(v12.50, v12.55)
     let last = 0;
     for (const { e, ring } of extras) {
       const delay = execRingDelay(ring), hb = e.hp;
@@ -10518,7 +10548,7 @@ STAGE_INTROS.princessArrival = ({ later, finish }) => {
       presentHit(e, { delay, hpBefore: hb, lethal: true, text: 9999, textColor: DMG_TEXT_COLOR });
       last = Math.max(last, delay);
     }
-    const endIn = Math.max(execRemainMs(P), last + DEATH_ANIM_MS) + INTRO_END_PAUSE;
+    const endIn = Math.max(execEnd + BOSS_HP_INTRO_MS, last + DEATH_ANIM_MS) + INTRO_END_PAUSE; // 체력바가 다 차고 0.8초 뒤(v12.55)
     later(() => { for (const { e } of extras) { const i = characters.indexOf(e); if (i >= 0) characters.splice(i, 1); } finish(); }, endIn);
   }, INTRO_SPEAK_AT + speechMs + INTRO_FALL_AFTER_SPEECH); // 말풍선이 사라지고 2.5초 뒤
 };
@@ -10624,17 +10654,20 @@ registerRenderLayer('overTokensFx', drawWindDissolves);
 registerVfxActive(() => windDissolves.length > 0);
 registerSystem('onStageLoad', () => { windDissolves = []; });
 
-// ================= 복수의 왕녀: 끝나지 않을 영광 - 구체 보호막 (v12.34, BOSSES.md) =================
-// 사용 시 SD가 검을 세워 든 자세(vengeful_princess_glory)로 바뀌고, 옅은 푸른 기운의 투명한 구체가 0.4초에 걸쳐 감쌈.
+// ================= 복수의 왕녀: 끝나지 않을 영광 - 구체 보호막 (v12.34, v12.56 디자인 교체, BOSSES.md) =================
+// 사용 시 SD가 검을 세워 든 자세(vengeful_princess_glory)로 바뀌고, (v12.56) 차가운 기운 두 줄기가 X자로 교차하며 돌다가(0.6초) 모여 구체가 형성(0.25초) →
+// 형성이 끝나는 순간 기운이 둘레로 퍼지며 흩어짐. 구체: 청보라빛 투명 + 안쪽 얼음 대리석 무늬(천천히 돎) + 하얗게 빛나는 두꺼운 테두리 + 반사광.
 // 구체가 있는 동안 맞으면 기존 피격 연출(붉은 플래시·떨림·피) 대신 구체만 0.18초 빛나며 1~2px 흔들림(피해 숫자는 그대로).
-// 방어막이 0이 된 타격이 '보이는' 시각에 구체가 푸른 조각으로 깨지고 SD는 원래대로(그 타격이 체력도 깎았으면 기존 피격 연출도).
+// 방어막이 0이 된 타격이 '보이는' 시각에 구체가 조각으로 깨지고 SD는 원래대로(그 타격이 체력도 깎았으면 기존 피격 연출도).
 // 깨지지 않고 다음 자기 턴 시작(방어막 소멸)을 맞으면 0.6초에 걸쳐 스르륵 사라지고, 다 사라진 뒤 SD 복귀·'피할 수 없던 운명'(actionWaitMs).
 // 순수 연출 - 판정(방어막·운명 조건)은 02_region1_boss 그대로. 시야 밖·은신·대기 중엔 그리지 않음(overTokensFx는 안개로 잘림)
-const GLORY_GROW_MS = 400, GLORY_GLINT_MS = 180, GLORY_FADE_MS = 600, GLORY_SHATTER_MS = 520;
-const GLORY_RGB = '150,205,255';
+const GLORY_SWIRL_MS = 600, GLORY_FORM_MS = 250, GLORY_GLINT_MS = 180, GLORY_FADE_MS = 600, GLORY_SHATTER_MS = 520, GLORY_BURST_MS = 450;
+const GLORY_FORMED_MS = GLORY_SWIRL_MS + GLORY_FORM_MS;
 let gloryBubbles = []; // 깨지는 중인 잔상(구체 상태는 c._glory)
+let gloryBursts = [];  // 형성 끝에 퍼지는 기운
+let gloryTexture;      // 안쪽 얼음 대리석 무늬(한 번 만들어 둠, 만들 수 없으면 null)
 function startGloryBubble(c) {
-  c._glory = { state: 'on', start: performance.now(), glintAt: -1e9 };
+  c._glory = { state: 'on', start: performance.now(), glintAt: -1e9, burst: false };
   ensureVfxLoop();
 }
 function gloryPoseKey(c) { return c._glory && !c.dead && (c._glory.state === 'on' || c._glory.state === 'fading') ? 'vengeful_princess_glory' : null; }
@@ -10644,17 +10677,53 @@ function gloryGeom(c) { // 영광 SD 키 기준(v12.35): 발끝부터 머리 위
   const info = CHARACTER_IMAGES.vengeful_princess_glory, h = TILE * 1.5 * ((info && info.sdScale) || 1);
   return { cx: rx * TILE + TILE / 2, cy: ry * TILE + TILE - h * 0.5, r: h * 0.58 };
 }
+// 얼음 대리석 무늬: 가운데는 투명하고 가장자리로 갈수록 짙은 청보라 + 밝고 어두운 결(곡선)과 얼음 조각 면이 얽힘. 연출 전용 난수
+function makeGloryTexture() {
+  try {
+    const S = 256, cv = document.createElement('canvas'); cv.width = S; cv.height = S;
+    const g = cv.getContext && cv.getContext('2d');
+    if (!g || !g.createRadialGradient || !g.arc) return null;
+    const c = S / 2;
+    g.save(); g.beginPath(); g.arc(c, c, c, 0, Math.PI * 2); g.clip();
+    const base = g.createRadialGradient(c, c, 0, c, c, c);
+    base.addColorStop(0, 'rgba(150,140,245,0.14)'); base.addColorStop(0.6, 'rgba(140,130,240,0.34)'); base.addColorStop(1, 'rgba(120,110,235,0.66)');
+    g.fillStyle = base; g.fillRect(0, 0, S, S);
+    if ('filter' in g) g.filter = 'blur(3px)'; // 결·면을 부드럽게 번지게(대리석 느낌)
+    for (let i = 0; i < 26; i++) { // 얼음 조각 면
+      const a = vfxRand() * Math.PI * 2, d = c * (0.3 + vfxRand() * 0.75), x = c + Math.cos(a) * d, y = c + Math.sin(a) * d, k = 8 + vfxRand() * 26;
+      g.beginPath(); g.moveTo(x, y - k); g.lineTo(x + k * 0.8, y + (vfxRand() - 0.3) * k); g.lineTo(x - k * (0.4 + vfxRand() * 0.5), y + k * 0.7); g.closePath();
+      g.fillStyle = vfxRand() < 0.5 ? `rgba(225,228,255,${0.14 + vfxRand() * 0.18})` : `rgba(70,60,180,${0.14 + vfxRand() * 0.18})`; g.fill();
+    }
+    g.lineCap = 'round';
+    for (let i = 0; i < 46; i++) { // 결(대리석 줄무늬)
+      const a = vfxRand() * Math.PI * 2, d = c * (0.15 + vfxRand() * 0.8), x0 = c + Math.cos(a) * d, y0 = c + Math.sin(a) * d;
+      const L = c * (0.25 + vfxRand() * 0.6), b = a + Math.PI / 2 + (vfxRand() - 0.5) * 1.6;
+      g.beginPath(); g.moveTo(x0, y0);
+      g.bezierCurveTo(x0 + Math.cos(b) * L * 0.4 + (vfxRand() - 0.5) * 30, y0 + Math.sin(b) * L * 0.4 + (vfxRand() - 0.5) * 30,
+        x0 + Math.cos(b) * L * 0.8 + (vfxRand() - 0.5) * 30, y0 + Math.sin(b) * L * 0.8 + (vfxRand() - 0.5) * 30, x0 + Math.cos(b) * L, y0 + Math.sin(b) * L);
+      const light = vfxRand() < 0.55;
+      g.strokeStyle = light ? `rgba(240,240,255,${0.35 + vfxRand() * 0.35})` : `rgba(60,50,175,${0.25 + vfxRand() * 0.25})`;
+      g.lineWidth = 3 + vfxRand() * (light ? 8 : 10); g.stroke();
+    }
+    if ('filter' in g) g.filter = 'none';
+    const fall = g.createRadialGradient(c, c, 0, c, c, c); // 가운데 무늬는 옅게(왕녀가 잘 보이게)
+    fall.addColorStop(0, 'rgba(0,0,0,0.55)'); fall.addColorStop(0.55, 'rgba(0,0,0,0.2)'); fall.addColorStop(1, 'rgba(0,0,0,0)');
+    g.globalCompositeOperation = 'destination-out'; g.fillStyle = fall; g.fillRect(0, 0, S, S);
+    g.restore();
+    return cv;
+  } catch (e) { return null; }
+}
 function shatterGloryBubble(c) {
   const g = c._glory; if (!g || g.state === 'off') return;
   const geo = gloryGeom(c), now = performance.now();
   g.state = 'off'; c._glory = null;
   gloryBubbles.push({ start: now, ...geo });
   if (replayFast) return;
-  const cols = ['#d8f0ff', '#9fd3ff', '#6fb6ff'];
-  for (let i = 0; i < 34; i++) { // 구 표면에서 바깥으로 튀는 유리 조각
+  const cols = ['#f0ecff', '#bdb4ff', '#7f72e6'];
+  for (let i = 0; i < 34; i++) { // 구 표면에서 바깥으로 튀는 얼음 조각
     const a = vfxRand() * Math.PI * 2, rr = geo.r * (0.8 + vfxRand() * 0.25), sp = TILE * (0.9 + vfxRand() * 1.6);
     pushShard({ x: geo.cx + Math.cos(a) * rr, y: geo.cy + Math.sin(a) * rr, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - TILE * 0.3, gravity: TILE * (2.5 + vfxRand() * 3),
-      size: 2 + vfxRand() * 3, vr: (vfxRand() - 0.5) * 0.06, color: cols[i % 3], glow: '#bfe4ff', duration: 380 + vfxRand() * 300, start: now + vfxRand() * 30 });
+      size: 2 + vfxRand() * 3, vr: (vfxRand() - 0.5) * 0.06, color: cols[i % 3], glow: '#d4ceff', duration: 380 + vfxRand() * 300, start: now + vfxRand() * 30 });
   }
   ensureVfxLoop();
 }
@@ -10665,6 +10734,53 @@ registerHitPresentOverride((t, opts) => {
   shatterGloryBubble(t);
   return !(opts.hpBefore !== undefined && opts.hpAfter < opts.hpBefore);
 });
+// 형성 전: 차가운 기운 두 줄기가 X자(±45° 기운 타원 궤도)로 교차하며 돎 - 점점 빨라지며 안쪽으로 조여듦, 꼬리에 서리
+function drawGlorySwirl(geo, t, now) { // t 0~1
+  const e = t * t, R = geo.r * (1.3 - 0.35 * e), ang = (t * 2.2 + e * 2.6) * Math.PI * 2;
+  ctx.save(); ctx.lineCap = 'round';
+  for (let k = 0; k < 2; k++) {
+    const tilt = k ? -Math.PI / 4 : Math.PI / 4, cs = Math.cos(tilt), sn = Math.sin(tilt);
+    const pt = th => { const px = Math.cos(th) * R, py = Math.sin(th) * R * 0.32; return { x: geo.cx + px * cs - py * sn, y: geo.cy + px * sn + py * cs }; };
+    const head = ang + k * Math.PI;
+    for (let i = 14; i >= 1; i--) { // 꼬리
+      const a0 = pt(head - i * 0.11), a1 = pt(head - (i - 1) * 0.11), f = 1 - i / 15;
+      ctx.strokeStyle = `rgba(${200 + 40 * f},${205 + 40 * f},255,${0.75 * f * Math.min(1, t * 4)})`; ctx.lineWidth = 1 + 4 * f;
+      ctx.beginPath(); ctx.moveTo(a0.x, a0.y); ctx.lineTo(a1.x, a1.y); ctx.stroke();
+    }
+    const h = pt(head);
+    ctx.fillStyle = `rgba(245,245,255,${0.9 * Math.min(1, t * 4)})`; ctx.shadowColor = '#c8c0ff'; ctx.shadowBlur = TILE * 0.3;
+    ctx.beginPath(); ctx.arc(h.x, h.y, 3.2, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+    if (vfxRand() < 0.5) statusParticles.push({ kind: 'frost', x: h.x, y: h.y, start: now, duration: 320 + vfxRand() * 220, vx: (vfxRand() - 0.5) * TILE * 0.3, vy: (vfxRand() - 0.5) * TILE * 0.3, size: 1 + vfxRand() * 1.2, rgb: [215, 215, 255] });
+  }
+  ctx.restore();
+}
+// 구체: 얼음 대리석 무늬(천천히 돎) + 하얗게 빛나는 두꺼운 테두리 + 안쪽 가는 흰 선 + 반사광. gl = 맞은 반짝임(0~1)
+function drawGlorySphere(x, y, r, a, gl, now) {
+  ctx.save();
+  if (gloryTexture === undefined) gloryTexture = makeGloryTexture();
+  const fill = ctx.createRadialGradient ? ctx.createRadialGradient(x, y, r * 0.15, x, y, r) : null; // 바탕(텍스처가 없어도 보이게)
+  if (fill && fill.addColorStop) { fill.addColorStop(0, `rgba(130,120,235,${0.06 * a})`); fill.addColorStop(0.75, `rgba(120,110,230,${(0.16 + 0.15 * gl) * a})`); fill.addColorStop(1, `rgba(150,140,245,${(0.35 + 0.3 * gl) * a})`); ctx.fillStyle = fill; }
+  else ctx.fillStyle = `rgba(130,120,235,${0.15 * a})`;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  if (gloryTexture && ctx.drawImage) { // 무늬(원 안으로 잘라 천천히 회전)
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); if (ctx.clip) ctx.clip();
+    ctx.translate(x, y); ctx.rotate(now / 7000); ctx.globalAlpha = Math.min(1, a);
+    ctx.drawImage(gloryTexture, -r, -r, r * 2, r * 2); ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+  ctx.shadowColor = `rgba(205,195,255,${0.95 * a})`; ctx.shadowBlur = r * (0.22 + 0.15 * gl); // 바깥 빛 번짐
+  ctx.strokeStyle = `rgba(238,234,255,${(0.85 + 0.15 * gl) * a})`; ctx.lineWidth = r * (0.075 + 0.03 * gl);
+  ctx.beginPath(); ctx.arc(x, y, r * 0.97, 0, Math.PI * 2); ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = `rgba(255,255,255,${0.55 * a})`; ctx.lineWidth = 1.2; // 안쪽 가는 흰 선
+  ctx.beginPath(); ctx.arc(x, y, r * 0.88, 0, Math.PI * 2); ctx.stroke();
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = `rgba(255,255,255,${(0.6 + 0.3 * gl) * a})`; ctx.lineWidth = r * 0.05; // 반사광: 왼쪽 위 밝게
+  ctx.beginPath(); ctx.arc(x, y, r * 0.8, Math.PI * 1.1, Math.PI * 1.42); ctx.stroke();
+  ctx.strokeStyle = `rgba(235,235,255,${0.25 * a})`; ctx.lineWidth = r * 0.035; // 오른쪽 아래 옅게
+  ctx.beginPath(); ctx.arc(x, y, r * 0.82, Math.PI * 0.12, Math.PI * 0.38); ctx.stroke();
+  ctx.restore();
+}
 function drawGloryBubbles() {
   const now = performance.now();
   for (const c of characters) {
@@ -10673,43 +10789,43 @@ function drawGloryBubbles() {
     if (g.state === 'on' && !(c.shield > 0) && now >= (c._hitVisUntil || 0)) { shatterGloryBubble(c); continue; } // 안전장치: 피격 연출을 거치지 않고 방어막이 사라짐
     if (g.state === 'fading' && now >= g.fadeAt + GLORY_FADE_MS) { c._glory = null; continue; }
     if (c.inReserve || c.stealthed || !isVisibleTo(viewSide(), c)) continue;
-    const geo = gloryGeom(c);
-    const grow = Math.min(1, (now - g.start) / GLORY_GROW_MS), eg = 1 - Math.pow(1 - grow, 3);
+    const geo = gloryGeom(c), el = now - g.start;
+    if (el < GLORY_SWIRL_MS) { drawGlorySwirl(geo, el / GLORY_SWIRL_MS, now); continue; }
+    if (!g.burst && el >= GLORY_FORMED_MS) { // 형성 끝: 기운이 둘레로 퍼지며 흩어짐
+      g.burst = true; gloryBursts.push({ start: now, ...geo });
+      for (let i = 0; i < 30; i++) { const a = vfxRand() * Math.PI * 2, sp = TILE * (0.8 + vfxRand() * 1.4);
+        statusParticles.push({ kind: 'frost', x: geo.cx + Math.cos(a) * geo.r, y: geo.cy + Math.sin(a) * geo.r, start: now, duration: 420 + vfxRand() * 300, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, size: 1.2 + vfxRand() * 1.4, rgb: [220, 218, 255] }); }
+    }
+    const fp = Math.min(1, (el - GLORY_SWIRL_MS) / GLORY_FORM_MS), ef = 1 + 2.2 * Math.pow(fp - 1, 3) + 1.2 * Math.pow(fp - 1, 2); // 형성: 살짝 넘쳤다 자리 잡음
     const fade = g.state === 'fading' ? Math.max(0, 1 - (now - g.fadeAt) / GLORY_FADE_MS) : 1;
     const gl = Math.max(0, 1 - (now - g.glintAt) / GLORY_GLINT_MS); // 맞은 순간 1 → 0
     const sh = gl > 0 ? (vfxRand() - 0.5) * 3 * gl : 0;          // 1~2px 흔들림
-    const r = geo.r * (0.6 + 0.4 * eg) * (1 + 0.05 * (1 - fade)) * (1 + 0.012 * Math.sin(now / 420));
-    const a = Math.min(1, grow * 1.5) * fade;
-    if (a <= 0.003) continue;
-    const x = geo.cx + sh, y = geo.cy + sh * 0.5;
-    ctx.save();
-    const grd = ctx.createRadialGradient ? ctx.createRadialGradient(x, y, r * 0.2, x, y, r) : null;
-    if (grd && grd.addColorStop) {
-      grd.addColorStop(0, `rgba(${GLORY_RGB},${0.03 * a})`); grd.addColorStop(0.7, `rgba(${GLORY_RGB},${(0.08 + 0.12 * gl) * a})`); grd.addColorStop(1, `rgba(${GLORY_RGB},${(0.28 + 0.35 * gl) * a})`);
-      ctx.fillStyle = grd;
-    } else ctx.fillStyle = `rgba(${GLORY_RGB},${0.1 * a})`;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = `rgba(200,232,255,${(0.55 + 0.4 * gl) * a})`; ctx.lineWidth = 1.6 + 1.4 * gl; ctx.stroke(); // 밝은 테두리
-    const sw = now / 900; // 천천히 도는 반사광
-    ctx.strokeStyle = `rgba(255,255,255,${(0.35 + 0.4 * gl) * a})`; ctx.lineWidth = 2.2;
-    ctx.beginPath(); ctx.arc(x, y, r * 0.86, Math.PI * 1.08 + Math.sin(sw) * 0.15, Math.PI * 1.42 + Math.sin(sw) * 0.15); ctx.stroke();
-    ctx.restore();
+    const r = geo.r * (0.3 + 0.7 * ef) * (1 + 0.05 * (1 - fade)) * (1 + 0.01 * Math.sin(now / 420));
+    const a = Math.min(1, fp * 1.4) * fade;
+    if (a <= 0.003 || r <= 0) continue;
+    drawGlorySphere(geo.cx + sh, geo.cy + sh * 0.5, r, a, Math.max(gl, fp < 1 ? (1 - fp) * 0.8 : 0), now); // 형성 중엔 밝게 차오름
+  }
+  gloryBursts = gloryBursts.filter(b => now - b.start < GLORY_BURST_MS);
+  for (const b of gloryBursts) { // 퍼지는 기운: 밝은 고리가 바깥으로
+    const t = (now - b.start) / GLORY_BURST_MS;
+    ctx.save(); ctx.strokeStyle = `rgba(225,222,255,${0.8 * (1 - t)})`; ctx.lineWidth = 4 * (1 - t) + 0.5; ctx.shadowColor = '#cfc8ff'; ctx.shadowBlur = TILE * 0.3;
+    ctx.beginPath(); ctx.arc(b.cx, b.cy, b.r * (1 + 0.6 * t), 0, Math.PI * 2); ctx.stroke(); ctx.restore();
   }
   gloryBubbles = gloryBubbles.filter(b => now - b.start < GLORY_SHATTER_MS);
   for (const b of gloryBubbles) { // 깨지는 순간: 테두리가 번쩍 퍼지며 사라짐
     const t = (now - b.start) / GLORY_SHATTER_MS;
-    ctx.save(); ctx.strokeStyle = `rgba(210,238,255,${0.9 * (1 - t)})`; ctx.lineWidth = 3 * (1 - t) + 0.5;
+    ctx.save(); ctx.strokeStyle = `rgba(228,224,255,${0.9 * (1 - t)})`; ctx.lineWidth = 3 * (1 - t) + 0.5;
     ctx.beginPath(); ctx.arc(b.cx, b.cy, b.r * (1 + 0.35 * t), 0, Math.PI * 2); ctx.stroke(); ctx.restore();
   }
 }
 registerRenderLayer('overTokensFx', drawGloryBubbles);
-registerVfxActive(() => gloryBubbles.length > 0 || characters.some(c => c._glory && c._glory.state !== 'on'));
+registerVfxActive(() => gloryBubbles.length > 0 || gloryBursts.length > 0 || characters.some(c => c._glory && (c._glory.state !== 'on' || performance.now() - c._glory.start < GLORY_FORMED_MS + 50)));
 registerVfxActive(() => characters.some(c => c._glory), { ambient: true }); // 떠 있는 구체는 계속(v12.41)
 // 자기 턴 시작(방어막 소멸 직후)에 깨지지 않은 구체는 스르륵 사라짐(이 뒤 '피할 수 없던 운명'은 사라짐이 끝날 때까지 대기 - actionWaitMs)
 registerSystem('onEnemyTurnStart', side => {
   for (const c of characters) if (c._glory && c._glory.state === 'on' && teamOf(c) === side) { c._glory.state = 'fading'; c._glory.fadeAt = performance.now(); ensureVfxLoop(); }
 });
-registerSystem('onStageLoad', () => { gloryBubbles = []; for (const c of characters) c._glory = null; });
+registerSystem('onStageLoad', () => { gloryBubbles = []; gloryBursts = []; for (const c of characters) c._glory = null; });
 
 // ================= 복수의 왕녀: 피할 수 없던 운명 - 눈보라 + 공중 캐스팅 + 거대 고드름 (v12.38, BOSSES.md) =================
 // 0초: 전장 전체 눈보라 시작(끝날 때까지 계속) + 두 팔을 든 캐스팅 SD(cast1)로 0.8초에 걸쳐 반 칸 떠오름 → 0.8초 둥둥 떠 있음
@@ -11010,21 +11126,54 @@ function speechTopY(c) { // 머리(그림 맨 위) 위. 영광 구체가 있으�
   if (c._glory && !c.isGhost) { const g = gloryGeom(c); top = Math.min(top, g.cy - g.r - 6); }
   return { cx: rx * TILE + TILE / 2, top };
 }
+// (v12.52) 말풍선은 안개 잘라내기 밖(screenFx)에서 그림 - 위쪽 줄 유닛의 말풍선이 위 여백에서 잘리던 문제. 대신 말하는 유닛이 화면 진영에 보일 때만
+function speechVisible(c) {
+  if (!fogEnabled) return true;
+  return c.isGhost ? isTileVisibleTo(viewSide(), c.x, c.y) : isVisibleTo(viewSide(), c);
+}
+// (v12.57) 스타일: 짙은 회색 상자(살짝 비침) + 1px 옅은 회색 테두리 + 모서리 3px, 밝은 회색 보통 굵기 13px(한글 글꼴), 여백 12·9px, 줄 간격 1.5배, 폭 최대 240px 자동 줄바꿈.
+// 보드의 세로 압축·확대 배율 밖(캔버스 픽셀 기준)에서 그려 글씨가 눌리거나 뭉개지지 않게 - 위치만 머리 위 논리 좌표를 캔버스 좌표로 바꿔 씀(화면 흔들림 포함)
+const SPEECH_FONT = '13px "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';
+const SPEECH_BG = 'rgba(26,26,28,0.92)', SPEECH_BORDER = 'rgba(165,165,170,0.85)', SPEECH_TEXT = '#f0f0f2';
+const SPEECH_PAD_X = 12, SPEECH_PAD_Y = 9, SPEECH_LINE_H = 20, SPEECH_MAX_W = 240, SPEECH_RADIUS = 3;
+function speechWrap(text, maxW) { // 띄어쓰기 단위로 줄바꿈(한 단어가 너무 길면 글자 단위)
+  const mw = t => { const m = ctx.measureText && ctx.measureText(t); return (m && m.width) || t.length * 13; };
+  const lines = []; let cur = '';
+  for (const word of text.split(/(?<= )/)) {
+    if (mw(cur + word) <= maxW || !cur) { cur += word; if (mw(cur) > maxW) { let k = ''; for (const ch of cur) { if (mw(k + ch) > maxW && k) { lines.push(k); k = ''; } k += ch; } cur = k; } }
+    else { lines.push(cur); cur = word; }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
 function drawSpeechBubble(b, now) {
+  if (!speechVisible(b.c)) return;
   let seg = b.segs[0]; for (const sg of b.segs) if (now >= sg.start) seg = sg;
   if (now < seg.start) return;
-  const n = Math.min(seg.text.length, Math.floor((now - seg.start) / SPEECH_TYPE_MS) + 1), shown = seg.text.slice(0, n);
+  const n = Math.min(seg.text.length, Math.floor((now - seg.start) / SPEECH_TYPE_MS) + 1);
   const a = Math.min(1, (now - b.start) / 150) * (now > b.fadeFrom ? Math.max(0, 1 - (now - b.fadeFrom) / (b.end - b.fadeFrom)) : 1);
   if (a <= 0) return;
   const { cx, top } = speechTopY(b.c);
+  const shk = screenShakeOffset(), z = boardZoom;
+  const sx = (cx + shk.x) * z, sTop = (top * TILE_COMPRESS + topMarginLogical() + shk.y) * z; // 논리 좌표 → 캔버스 픽셀
   ctx.save();
-  ctx.globalAlpha = a; ctx.font = 'bold 10px sans-serif'; // (v12.47) 12 → 10px
-  const mt = ctx.measureText && ctx.measureText(seg.text), w = ((mt && mt.width) || seg.text.length * 10) + 12, h = 18;
-  const x = Math.max(2, Math.min(COLS * TILE - w - 2, cx - w / 2)), y = top - h; // 판 밖으로 나가지 않게
-  ctx.fillStyle = 'rgba(0,0,0,0.88)'; ctx.fillRect(x, y, w, h);
-  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.8; ctx.strokeRect(x + 0.4, y + 0.4, w - 0.8, h - 0.8); // (v12.47) 테두리 1.5 → 0.8px
-  ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillText(shown, x + 6, y + h / 2 + 1);
+  if (ctx.setTransform) ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = a; ctx.font = SPEECH_FONT;
+  const lines = speechWrap(seg.text, SPEECH_MAX_W); // 크기는 그 줄 전체 문장 기준(글자가 늘어도 흔들리지 않게)
+  const tw = Math.max(...lines.map(l => { const m = ctx.measureText && ctx.measureText(l); return (m && m.width) || l.length * 13; }));
+  const w = Math.ceil(tw) + SPEECH_PAD_X * 2, h = lines.length * SPEECH_LINE_H + SPEECH_PAD_Y * 2 - 4;
+  const cw = (canvas && canvas.width) || COLS * TILE * z;
+  const x = Math.round(Math.max(2, Math.min(cw - w - 2, sx - w / 2))), y = Math.round(Math.max(2, sTop - h - 6)); // 캔버스 밖으로 나가지 않게
+  b._rect = { x, y, w, h };
+  const r = SPEECH_RADIUS;
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r); ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r); ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+  ctx.fillStyle = SPEECH_BG; ctx.fill();
+  ctx.strokeStyle = SPEECH_BORDER; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = SPEECH_TEXT; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  let left = n;
+  lines.forEach((l, i) => { if (left <= 0) return; const part = l.slice(0, left); left -= l.length; ctx.fillText(part, x + SPEECH_PAD_X, y + SPEECH_PAD_Y - 2 + SPEECH_LINE_H * (i + 0.5)); });
   ctx.restore();
 }
 function drawSpeechBubbles() {
@@ -11057,8 +11206,8 @@ function drawRetreatGhosts() {
     drawCharacterToken(g);
   }
   retreatGhosts = retreatGhosts.filter(g => !g.retreat.done);
-  drawSpeechBubbles();
 }
+registerRenderLayer('screenFx', drawSpeechBubbles); // 안개 잘라내기 밖(v12.52)
 registerRenderLayer('overTokensFx', drawRetreatGhosts);
 registerVfxActive(() => retreatGhosts.length > 0 || speechBubbles.length > 0);
 registerSystem('onStageLoad', () => { retreatGhosts = []; speechBubbles = []; });
@@ -12116,7 +12265,7 @@ const REGION_STAGES = {
        { id:'1-8', name:'1-8' },
        { id:'1-9', name:'1-9 복수의 왕녀 (보스)' },
        { id:'2-0', name:'2지역 시험 (임시)' } ], // 2지역 맵을 받기 전 시험용(REGION2.md)
-  2: [ { id:'2-1', name:'2-1 거주지 습격' }, { id:'2-2', name:'2-2 공포의 숲' }, { id:'2-3', name:'2-3 근원지를 찾아서' }, { id:'2-4', name:'2-4 동굴입구' } ],
+  2: [ { id:'2-1', name:'2-1 거주지 습격' }, { id:'2-2', name:'2-2 공포의 숲' }, { id:'2-3', name:'2-3 근원지를 찾아서' }, { id:'2-4', name:'2-4 동굴입구' }, { id:'2-5', name:'2-5 환영인사' } ],
 };
 function renderRegionCards() {
   const box = document.getElementById('regionCardList');

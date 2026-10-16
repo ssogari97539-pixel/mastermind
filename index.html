@@ -337,6 +337,168 @@
 .twistBtns { display: flex; gap: 8px; }
 .twistBtn { padding: 5px 16px; border-radius: 6px; border: 1px solid #c9a868; background: #3a2e1e; color: #f2dfb4; cursor: pointer; font-size: 13px; }
 .twistBtn:hover { background: #4d3d26; }
+
+/* ================= 밴픽 (v12.81, MULTIPLAYER.md 2-6) ================= */
+#banPickScreen { justify-content: flex-start; padding: 14px 16px 16px; box-sizing: border-box; gap: 10px; overflow-y: auto;
+  background: radial-gradient(ellipse at 50% 0%, #1d2234 0%, #111216 60%); --bpP: #4a7ae0; --bpE: #d0544f; --bpGold: #e0c23c; }
+#bpTop { display: flex; align-items: flex-start; justify-content: space-between; width: 100%; max-width: 1180px; gap: 12px; }
+.bpTeamName { flex: 1 1 0; font-size: 18px; font-weight: bold; padding-top: 30px; letter-spacing: 1px; }
+.bpTeamName.player { color: var(--bpP); text-align: left; padding-left: 96px; }
+.bpTeamName.enemy { color: var(--bpE); text-align: right; }
+#bpTopCenter { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.bpPhase { font-size: 17px; font-weight: bold; color: #eee; min-height: 22px; transition: color .3s; }
+.bpPhase.player { color: var(--bpP); } .bpPhase.enemy { color: var(--bpE); }
+#bpTimer { font-size: 22px; font-weight: bold; color: #9fd3ff; min-height: 28px; font-variant-numeric: tabular-nums; }
+#bpTimer.urgent { color: #ff6a5a; animation: bpUrgent 1s ease-in-out infinite; }
+@keyframes bpUrgent { 50% { transform: scale(1.08); } }
+#bpBans { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.bpBanLabel { color: #e04c4c; font-weight: bold; font-size: 13px; letter-spacing: 2px; }
+#bpBody { display: flex; gap: 14px; width: 100%; max-width: 1180px; flex: 1 1 auto; min-height: 0; align-items: stretch; }
+.bpTeam { flex: 0 0 190px; display: flex; flex-direction: column; gap: 7px; }
+#bpCenter { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+#bpGrid { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; align-content: flex-start; padding: 10px; border-radius: 8px; background: rgba(20,20,26,0.85); border: 1px solid #2c2c36; overflow-y: auto; max-height: 62vh; }
+#bpConfirmBtn { margin: 0; min-width: 180px; }
+
+/* 카드: 뒷면 기본, .shown이면 앞면(뒤집힘) */
+.bpCard { position: relative; width: 54px; height: 72px; perspective: 600px; flex: 0 0 auto; }
+.bpCardInner { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateY(180deg); transition: transform .5s cubic-bezier(.3,1.35,.5,1); }
+.bpCard.shown .bpCardInner { transform: rotateY(0deg); }
+.bpFace { position: absolute; inset: 0; border-radius: 5px; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.bpFace img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bpFront { background: #222; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #ccc; }
+.bpBack { transform: rotateY(180deg); background: repeating-linear-gradient(45deg, #23283a 0 6px, #1b1f2d 6px 12px); border: 1px solid #3a4260; display: flex; align-items: center; justify-content: center; color: #4c5680; font-size: 16px; }
+.bpGhost { position: absolute; inset: 0; border-radius: 5px; overflow: hidden; opacity: .5; animation: bpGhost 1.6s ease-in-out infinite; pointer-events: none; }
+.bpGhost img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@keyframes bpGhost { 50% { opacity: .32; } }
+
+/* 픽 칸 */
+.bpSlot { position: relative; display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 7px; background: rgba(28,30,40,0.9); border: 1px solid #2c2f3c; overflow: hidden; }
+.bpTeam.enemy .bpSlot { flex-direction: row-reverse; text-align: right; }
+.bpSlotName { font-size: 14px; font-weight: bold; color: #ddd; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bpSlot.active { border-color: var(--side); box-shadow: 0 0 0 1px var(--side), 0 0 14px -2px var(--side); animation: bpPulse 1.3s ease-in-out infinite; }
+.bpTeam.player .bpSlot { --side: var(--bpP); } .bpTeam.enemy .bpSlot { --side: var(--bpE); }
+.bpSlot.active .bpSlotName { color: #aaa; font-weight: normal; }
+.bpSlot.active::after { content: ''; position: absolute; top: 0; bottom: 0; width: 40%; left: -40%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.10), transparent); animation: bpFlow 1.8s linear infinite; pointer-events: none; }
+@keyframes bpPulse { 50% { box-shadow: 0 0 0 1px var(--side), 0 0 22px 1px var(--side); } }
+@keyframes bpFlow { to { left: 110%; } }
+/* 픽 확정: 확 펴지며 빛이 쓸고 지나감 */
+.bpSlot.lockFx { animation: bpLock .6s cubic-bezier(.2,1.4,.4,1); }
+.bpSlot.lockFx::before { content: ''; position: absolute; top: -20%; bottom: -20%; width: 45%; left: -50%; transform: skewX(-20deg);
+  background: linear-gradient(90deg, transparent, rgba(255,240,200,0.55), transparent); animation: bpSweep .6s ease-out forwards; pointer-events: none; }
+@keyframes bpLock { 0% { transform: scale(.94); filter: brightness(1); } 35% { transform: scale(1.05); filter: brightness(1.7); } 100% { transform: scale(1); filter: brightness(1); } }
+@keyframes bpSweep { to { left: 120%; } }
+.bpSlot.finalPop { animation: bpFinal .55s cubic-bezier(.2,1.5,.4,1); }
+@keyframes bpFinal { 40% { transform: translateY(-6px); box-shadow: 0 6px 16px -4px var(--side); } }
+
+/* 밴 칸: 붉은 테두리, 뒷면이 내려앉음 → 뒤집힘 → 사선 + 흑백 */
+.bpBanSlot { width: 60px; height: 80px; border-radius: 6px; box-shadow: 0 0 0 2px #7a2a2a; background: rgba(40,16,16,0.6); }
+.bpBanSlot.placed { box-shadow: 0 0 0 2px #e04c4c, 0 0 12px -2px #e04c4c; }
+.bpBanSlot.dropFx { animation: bpDrop .45s cubic-bezier(.3,1.5,.5,1); }
+@keyframes bpDrop { 0% { transform: translateY(-26px) scale(1.15); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.bpBanSlot::after { content: ''; position: absolute; left: 50%; top: 50%; width: 96px; height: 4px; margin: -2px 0 0 -48px; background: #ff3b30; box-shadow: 0 0 8px #ff3b30;
+  transform: rotate(-53deg); clip-path: inset(0 100% 0 0); pointer-events: none; z-index: 2; }
+.bpBanSlot.slashed::after { animation: bpSlash .4s cubic-bezier(.5,0,.2,1) forwards; }
+@keyframes bpSlash { to { clip-path: inset(0 0 0 0); } }
+.bpBanSlot .bpFront img { transition: filter .5s .25s; }
+.bpBanSlot.slashed .bpFront img { filter: grayscale(1) brightness(.6); }
+.bpBanName { position: absolute; left: 50%; bottom: -17px; transform: translateX(-50%); font-size: 11px; color: #e07070; white-space: nowrap; }
+
+/* 격자 칸 */
+.bpCell { position: relative; width: 66px; padding: 0; border: 0; background: none; cursor: default; color: #ccc; display: flex; flex-direction: column; align-items: center; gap: 2px; transition: transform .15s; }
+.bpCellImg { position: relative; width: 66px; height: 88px; border-radius: 5px; overflow: hidden; box-shadow: 0 0 0 1px #3a3a46; background: #222; transition: box-shadow .2s; }
+.bpCellImg img { width: 100%; height: 100%; object-fit: cover; display: block; transition: filter .45s; }
+.bpCellName { font-size: 11px; white-space: nowrap; max-width: 66px; overflow: hidden; text-overflow: ellipsis; }
+.bpCell.selectable { cursor: pointer; }
+.bpCell.selectable:hover { transform: translateY(-3px); }
+.bpCell.selectable:hover .bpCellImg { box-shadow: 0 0 0 2px #9fb8ff; }
+.bpCell.pending .bpCellImg, .bpCell.pending:hover .bpCellImg { box-shadow: 0 0 0 2px var(--bpGold), 0 0 12px var(--bpGold); }
+.bpCell.pending { transform: translateY(-3px); }
+.bpCell.picked .bpCellImg img { filter: grayscale(1) brightness(.32); }          /* 픽: 진한 회색 */
+.bpCell.picked .bpCellName { color: #555; }
+.bpCell.banned .bpCellImg { box-shadow: 0 0 0 2px #b03030; }
+.bpCell.banned .bpCellImg img { filter: grayscale(1) brightness(.45); }
+.bpCell.banned .bpCellImg::after { content: '✕'; position: absolute; top: 0; left: 0; width: 66px; height: 88px; display: flex; align-items: center; justify-content: center; font-size: 42px; color: #ff4a3d; text-shadow: 0 0 8px #000; animation: bpX .35s ease-out; }
+.bpCell.banned .bpCellName { color: #a04a4a; text-decoration: line-through; }
+@keyframes bpX { from { transform: scale(1.8); opacity: 0; } }
+
+/* 가운데 큰 글씨(선공 발표·전투 준비) */
+#bpAnnounce { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); font-size: 40px; font-weight: bold; color: #fff; letter-spacing: 4px; text-shadow: 0 0 18px rgba(80,120,255,0.8), 0 2px 4px #000; pointer-events: none; opacity: 0; white-space: nowrap; z-index: 5; }
+#bpAnnounce.go { animation: bpAnn 1.9s ease-out forwards; }
+@keyframes bpAnn { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.4); } 18% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -60%); } }
+
+@media (max-width: 760px) {
+  #bpBody { flex-direction: column; }
+  .bpTeam { flex: 0 0 auto; flex-direction: row; gap: 4px; justify-content: center; }
+  .bpTeam.enemy { order: 3; }
+  .bpSlot, .bpTeam.enemy .bpSlot { flex-direction: column; padding: 3px; gap: 2px; }
+  .bpSlotName { font-size: 10px; max-width: 54px; }
+  .bpTeamName { font-size: 14px; padding-top: 34px; } .bpTeamName.player { padding-left: 0; }
+  #bpGrid { max-height: none; }
+  #bpAnnounce { font-size: 26px; }
+}
+@media (prefers-reduced-motion: reduce) { #banPickScreen *, #banPickScreen *::before, #banPickScreen *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* ================= 드래프트 (v12.83, MULTIPLAYER.md 2-7) - 카드·칸은 밴픽 스타일 재사용 ================= */
+#draftScreen { justify-content: flex-start; padding: 14px 16px 16px; box-sizing: border-box; gap: 10px; overflow-y: auto; overflow-x: hidden;
+  background: radial-gradient(ellipse at 50% 0%, #241d34 0%, #111216 60%); --bpP: #4a7ae0; --bpE: #d0544f; --bpGold: #e0c23c; }
+#drTop { display: flex; align-items: flex-start; justify-content: space-between; width: 100%; max-width: 1180px; gap: 12px; }
+#drTopCenter { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.drTitle { font-size: 13px; letter-spacing: 6px; color: #b9a6e8; font-weight: bold; }
+#drTimer { font-size: 22px; font-weight: bold; color: #9fd3ff; min-height: 28px; font-variant-numeric: tabular-nums; }
+#drTimer.urgent { color: #ff6a5a; animation: bpUrgent 1s ease-in-out infinite; }
+#drBody { display: flex; gap: 14px; width: 100%; max-width: 1180px; flex: 1 1 auto; min-height: 0; align-items: stretch; }
+#drCenter { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+.drHint { font-size: 13px; color: #888; }
+#drCands { display: flex; gap: 28px; justify-content: center; min-height: 210px; }
+#drConfirmBtn { margin: 0; min-width: 180px; }
+.drSlot.drRecvFirst { margin-top: 12px; }
+.drSlot.drRecvFirst::before { content: '받은 캐릭터'; position: absolute; top: -1px; font-size: 10px; color: #777; letter-spacing: 1px; }
+.bpTeam.player .drSlot.drRecvFirst::before { left: 74px; } .bpTeam.enemy .drSlot.drRecvFirst::before { right: 74px; }
+.bpCard.drEmpty .bpCardInner { opacity: 0; }
+.bpCard.drEmpty { border-radius: 5px; box-shadow: inset 0 0 0 1px #34374a; }
+.drSlot.giveFx { animation: drGive .7s ease-out; }
+@keyframes drGive { 30% { box-shadow: 0 0 0 1px #ff4a3d, 0 0 18px #ff4a3d; } }
+.bpCard.dropFx { animation: bpDrop .45s cubic-bezier(.3,1.5,.5,1); }
+/* 후보 카드 */
+.drCandWrap { display: flex; flex-direction: column; align-items: center; gap: 8px; transition: opacity .3s, transform .2s; }
+.drCandWrap.gone { opacity: 0; pointer-events: none; }
+.bpCard.drCand { width: 132px; height: 176px; padding: 0; border: 0; background: none; cursor: default; border-radius: 8px; }
+.bpCard.drCand .bpFace { border-radius: 8px; }
+.drCandWrap.selectable .drCand { cursor: pointer; }
+.drCandWrap.selectable:hover { transform: translateY(-5px); }
+.drCandWrap.selectable:hover .drCand { box-shadow: 0 0 0 2px #9fb8ff, 0 8px 18px -6px #000; }
+.drCandWrap.pending { transform: translateY(-8px); }
+.drCandWrap.pending .drCand { box-shadow: 0 0 0 3px var(--bpGold), 0 0 22px var(--bpGold); }
+.drCandName { font-size: 15px; font-weight: bold; color: #eee; min-height: 20px; }
+.drCandWrap.dealFx { animation: drDeal .4s cubic-bezier(.2,1.2,.4,1); }
+@keyframes drDeal { from { opacity: 0; transform: translateY(-60px) rotate(-10deg) scale(.85); } }
+/* 날아가는 카드 */
+.drFly { position: absolute; z-index: 20; transform-origin: 0 0; transition: transform .56s cubic-bezier(.5,0,.2,1), opacity .56s; pointer-events: none; }
+.drFly.flyMine { filter: drop-shadow(0 0 10px #ffe7a0); }
+.drFly.flyGive { filter: drop-shadow(0 0 10px #ff3b30) saturate(.8); }
+.bpAnnounceEl { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); font-size: 40px; font-weight: bold; color: #fff; letter-spacing: 4px; text-shadow: 0 0 18px rgba(160,110,255,0.8), 0 2px 4px #000; pointer-events: none; opacity: 0; white-space: nowrap; z-index: 25; }
+.bpAnnounceEl.go { animation: bpAnn 1.9s ease-out forwards; }
+@media (max-width: 760px) {
+  #drBody { flex-direction: column; }
+  #drCands { min-height: 0; gap: 16px; }
+  .bpCard.drCand { width: 104px; height: 139px; }
+  .drSlot.drRecvFirst { margin-top: 0; margin-left: 8px; }
+  .drSlot.drRecvFirst::before { display: none; }
+  .bpAnnounceEl { font-size: 26px; }
+}
+@media (prefers-reduced-motion: reduce) { #draftScreen *, #draftScreen *::before, #draftScreen *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* ================= 관전 (v12.84, MULTIPLAYER.md 2-8) ================= */
+#mpSpecBox { margin-top: 14px; width: calc(100% - 32px); max-width: 920px; padding: 10px 14px; border-radius: 8px; background: #1a1a20; border: 1px solid #333; box-sizing: border-box; }
+.mpSpecHead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#mpSpecTitle { font-size: 14px; font-weight: bold; color: #b9a6e8; margin-right: auto; }
+.mpSpecBtn { padding: 6px 12px; border-radius: 5px; border: 1px solid #5a4c86; background: #2a2440; color: #ddd; cursor: pointer; font-size: 13px; }
+.mpSpecBtn:hover { background: #352c55; }
+#mpSpecList { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; min-height: 22px; }
+.mpSpecName { padding: 3px 10px; border-radius: 12px; background: #2a2a34; color: #ccc; font-size: 13px; }
+.mpSpecName.me { background: #3a3060; color: #fff; }
+.mpSpecEmpty { color: #666; font-size: 12px; }
+#spectatorBadge { position: fixed; top: 14px; left: 14px; z-index: 400; padding: 5px 12px; border-radius: 6px; background: #2a2440; border: 1px solid #7a63c0; color: #d8c8ff; font-size: 13px; font-weight: bold; letter-spacing: 1px; }
 </style>
 
 
@@ -530,8 +692,62 @@
       <div id="mpP2Row" style="display:none;"><input id="mpP2NameInput" maxlength="12" value="2P" aria-label="2P 닉네임"></div>
     </div>
   </div>
+  <!-- (v12.84) 관전석(MULTIPLAYER.md 2-8): 최대 4명 -->
+  <div id="mpSpecBox" style="display:none;">
+    <div class="mpSpecHead"><span id="mpSpecTitle">관전자 0/4</span>
+      <button id="btnMpToSpec" class="mpSpecBtn" style="display:none;">관전석으로</button>
+      <button id="btnMpToSeat" class="mpSpecBtn" style="display:none;">참가자로 앉기</button></div>
+    <div id="mpSpecList"></div>
+  </div>
   <button class="menuBtn" id="btnMpLobbyStart" style="margin-top:18px;">시작</button>
   <div id="mpLobbyNotice" style="display:none; color:#e0c23c; font-size:13px; margin-top:8px;"></div>
+</div>
+
+<!-- (v12.81) 밴픽전 화면(MULTIPLAYER.md 2-6): 왼쪽 1P 픽 / 가운데 밴·격자 / 오른쪽 2P 픽 -->
+<div id="banPickScreen" class="menuScreen" style="display:none;">
+  <button class="backBtn" id="bpBackBtn">← 나가기</button>
+  <div id="bpTop">
+    <div id="bpTeamNameP" class="bpTeamName player"></div>
+    <div id="bpTopCenter">
+      <div id="bpPhase" class="bpPhase"></div>
+      <div id="bpTimer"></div>
+      <div id="bpBans"><div id="bpBanP" class="bpBanSlot bpCard"></div><div class="bpBanLabel">밴</div><div id="bpBanE" class="bpBanSlot bpCard"></div></div>
+    </div>
+    <div id="bpTeamNameE" class="bpTeamName enemy"></div>
+  </div>
+  <div id="bpBody">
+    <div id="bpSlotsP" class="bpTeam player"></div>
+    <div id="bpCenter">
+      <div id="bpGrid"></div>
+      <button id="bpConfirmBtn" class="menuBtn" disabled>대기</button>
+    </div>
+    <div id="bpSlotsE" class="bpTeam enemy"></div>
+  </div>
+  <div id="bpAnnounce"></div>
+</div>
+
+<!-- (v12.83) 드래프트전 화면(MULTIPLAYER.md 2-7): 왼쪽 1P 덱 / 가운데 후보 2장 / 오른쪽 2P 덱 -->
+<div id="draftScreen" class="menuScreen" style="display:none;">
+  <button class="backBtn" id="drBackBtn">← 나가기</button>
+  <div id="drTop">
+    <div id="drTeamNameP" class="bpTeamName player"></div>
+    <div id="drTopCenter">
+      <div class="drTitle">드래프트</div>
+      <div id="drPhase" class="bpPhase"></div>
+      <div id="drTimer"></div>
+    </div>
+    <div id="drTeamNameE" class="bpTeamName enemy"></div>
+  </div>
+  <div id="drBody">
+    <div id="drSlotsP" class="bpTeam player"></div>
+    <div id="drCenter">
+      <div class="drHint">고른 캐릭터는 내 덱, 남은 캐릭터는 상대 덱으로</div>
+      <div id="drCands"></div>
+      <button id="drConfirmBtn" class="menuBtn" disabled>대기</button>
+    </div>
+    <div id="drSlotsE" class="bpTeam enemy"></div>
+  </div>
+  <div id="drAnnounce" class="bpAnnounceEl"></div>
 </div>
 
 <div id="screenModeSelect" class="menuScreen" style="display:none;">
@@ -588,6 +804,7 @@
 <button id="surrenderBtn" title="항복">항복</button>
 <div id="pheromoneBar" style="display:none;"></div>
 <div id="pvpTimer" style="display:none;"></div>
+<div id="spectatorBadge" style="display:none;">관전 중</div>
 <div id="bossHpBars" style="display:none;"></div>
 <div id="bossSkillToasts"></div>
 <div id="netStatusBar" style="display:none;"></div>
@@ -642,8 +859,8 @@
 </div>
 
 <script>
-const GAME_BUILD = 'ec665fe6c3'; // 빌드 식별값(자동 생성)
-const GAME_VERSION = '12.80'; // 버전 번호(VERSION 파일)
+const GAME_BUILD = 'a57be07b47'; // 빌드 식별값(자동 생성)
+const GAME_VERSION = '12.84'; // 버전 번호(VERSION 파일)
 // ================= 기본 설정 =================
 // 판 크기는 스테이지마다 다를 수 있음 - loadStage가 setBoardSize로 바꿈(모든 사용처가 함수 안이라 바뀐 값이 바로 반영됨)
 let COLS = 20;
@@ -1308,6 +1525,9 @@ let sideTurnOpen = true;   // 지금 진영이 입력을 받는 차례인가: �
 let reactionLocks = 0;      // 아군 턴 중 적의 반응 행동(크리살리드 기습 이동·공격 - REGION2.md 6장)이 진행 중이면 명령을 받지 않음
 let netBusyFn = null;        // 온라인: 연출/재생/진영 전환이 끝나지 않았는지(끝나야 다음 명령 - 양쪽 실행 순서를 같게)
 function viewSide() { return fixedViewSide || mySide; }
+// (v12.84) 관전 화면(MULTIPLAYER.md 2-8): 판정용 시야는 그대로 두고 '그리기'만 전부 보이게. 그리기·연출의 시야 확인은 viewSide() 대신 이 값('all' = 전부 보임)
+let spectatorView = false;
+function viewSeeSide() { return spectatorView ? 'all' : viewSide(); }
 // 지금 화면의 사람이 조작할 수 있는가(내 차례 + 온라인 잠금 아님). 싱글·핫시트는 항상 참
 function screenCanAct() { return viewSide() === mySide && !(netCanActFn && !netCanActFn()); }
 // 화면 진영 자원 읽기(전역값은 차례 진영 것): sharedCost / emergencyDropsLeft / dropZoneTiles / dropZoneCooldown
@@ -2111,12 +2331,12 @@ function visionProviders(side) {
 }
 // side 진영 공동 시야에 칸 (x,y)가 들어오는가
 function isTileVisibleTo(side, x, y) {
-  if (!fogEnabled) return true;
+  if (!fogEnabled || side === 'all') return true; // 'all' = 관전 화면(그리기 전용, viewSeeSide)
   return visionProviders(side).some(u => Math.max(Math.abs(u.x - x), Math.abs(u.y - y)) <= visionRadius(u));
 }
 // 진영 시야 안 칸 전체("x,y" Set). 안개가 꺼져 있으면 null(전부 보임). 그리기 1회에 한 번만 계산해서 씀
 function visibleTileSet(side) {
-  if (!fogEnabled) return null;
+  if (!fogEnabled || side === 'all') return null;
   const ps = visionProviders(side), set = new Set();
   for (const u of ps) {
     const r = visionRadius(u);
@@ -2141,9 +2361,10 @@ function updateExploredTiles() {
 }
 // 아군이 이 칸의 지형을 아는가(안개 꺼짐이면 항상)
 // (탐사 기록은 화면 진영 기준)
-function isTerrainKnown(x, y) { return !fogEnabled || exploredSetOf(viewSide()).has(x + ',' + y); }
+function isTerrainKnown(x, y) { return !fogEnabled || spectatorView || exploredSetOf(viewSide()).has(x + ',' + y); }
 // side 진영이 유닛 c를 볼 수 있는가(같은 진영은 항상, 은신한 상대는 안 보임)
 function isVisibleTo(side, c) {
+  if (side === 'all') return !(c.inReserve || c.notInBattle); // 관전 화면: 은신·안개 상관없이 전장 유닛은 다 보임(그리기 전용)
   if (teamOf(c) === side) return true; // 같은 편(조종 지혁은 아군 편)
   if (c.inReserve || c.notInBattle) return false; // 전장 밖(대기 인원, 도약 중 등)은 보이지 않음 -> 대상 지정 불가
   if (c.alwaysVisible) return true; // 파괴 목표물 등
@@ -3164,7 +3385,7 @@ const DREAM_WAVE_EVERY_MS = 1500, DREAM_WAVE_LIFE_MS = 2600, DREAM_RING_GAP_MS =
 function riobeDreamUnits() {
   if (replayFast) return [];
   return characters.filter(c => baseIdOf(c) === 'riobe' && !c.dead && !c.inReserve && !c.notInBattle && !c.isGhost
-    && (c.tempStatMods || []).some(m => m.id === 'riobe_s1') && isVisibleTo(viewSide(), c));
+    && (c.tempStatMods || []).some(m => m.id === 'riobe_s1') && isVisibleTo(viewSeeSide(), c));
 }
 // 물결 고리 하나: 중심 (cx, cy), 기본 반지름 r, 진행도 t(0~1), 출렁임 위상 ph
 function drawDreamRing(cx, cy, r, t, ph, now) {
@@ -5648,7 +5869,7 @@ function princessFieldAllies() { return characters.filter(c => c.side === 'playe
 
 // ---- 은신 (패시브3 작별의 바람 / 패시브1 복수자의 한) ----
 function princessEnterStealth(c) {
-  if (!c.inReserve && !c.stealthed && isVisibleTo(viewSide(), c)) startWindDissolve(c); // 바람에 흩어지며 사라지는 연출(v12.32) - 은신 직전 보였을 때만
+  if (!c.inReserve && !c.stealthed && isVisibleTo(viewSeeSide(), c)) startWindDissolve(c); // 바람에 흩어지며 사라지는 연출(v12.32) - 은신 직전 보였을 때만
   c.stealthed = true;
   addLog(`${c.name}: 은신`, 'logSkill');
   // 복수자의 한: 은신에 들어갈 때마다 현재 체력이 가장 높은 아군 1명에게 표식
@@ -6661,7 +6882,7 @@ registerRenderLayer('underTokens', () => { // 실명 중: 아군에게 보이는
   if (!zhBlindActive()) return;
   const tiles = new Set();
   for (const e of characters) {
-    if (!e.zh || e.dead || e.inReserve || e.isStructure || e.aiState !== 'alert' || !isVisibleTo(viewSide(), e)) continue; // 경계 상태만 표시(효과는 모든 지혁)
+    if (!e.zh || e.dead || e.inReserve || e.isStructure || e.aiState !== 'alert' || !isVisibleTo(viewSeeSide(), e)) continue; // 경계 상태만 표시(효과는 모든 지혁)
     const r = visionRadius(e);
     for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
       const x = e.x + dx, y = e.y + dy;
@@ -6981,7 +7202,7 @@ function updatePanel() {
     return;
   }
   // 안개 속 적(도깨비불): 정체·스탯을 숨김 (FOG_VISION.md 2장)
-  if (selected.side !== viewSide() && !isVisibleTo(viewSide(), selected)) {
+  if (selected.side !== viewSide() && !isVisibleTo(viewSeeSide(), selected)) {
     panel.innerHTML = '<div id="noSelect">알 수 없는 적<br><span style="color:#888;font-size:12px;">안개 속에 있어 정체를 알 수 없습니다</span></div>';
     attackBtn.disabled = true;
     skill1Btn.disabled = true; skill1Btn.textContent = '스킬1';
@@ -7121,7 +7342,7 @@ function exitActionMode() {
 // 🔍 버튼은 스킬 버튼과 따로(스킬 버튼이 잠겨 있어도 볼 수 있게). 대상: 내 유닛 + 보이는 상대 유닛(안개 속 상대는 정체를 숨김).
 // 창은 연 순간의 정보를 보여주고, 선택이 바뀌면 닫힘. 내용은 순수 함수(skillDetailHtml/passiveDetailHtml)로 만듦
 let skillDetailFor = null; // 열려 있는 창의 유닛 id
-const detailTarget = () => (selected && !selected.dead && (selected.side === viewSide() || isVisibleTo(viewSide(), selected))) ? selected : null;
+const detailTarget = () => (selected && !selected.dead && (selected.side === viewSide() || isVisibleTo(viewSeeSide(), selected))) ? selected : null;
 function skillStatusChip(s) {
   if (s.disabled) return '<span class="sdChip wait">사용 불가</span>';
   if (s.oncePerDeploy) return s.usedThisDeploy ? '<span class="sdChip wait">이번 배치에서 사용함</span>' : '<span class="sdChip ready">사용 가능</span>';
@@ -9301,7 +9522,7 @@ function lightenColor(hex, factor) {
 function drawCoverBox(x, y, type) {
   const height = TILE * COVER_HEIGHT_SCALE * (type === 'full' ? 1.0 : 0.5);
   // 시야 밖(탐사한 칸)의 엄폐물은 상자째 어둡게 - 바닥 안개만으로는 위로 솟은 부분이 밝게 남음
-  const dim = fogEnabled && !isTileVisibleTo(viewSide(), x, y) ? FOG_DIM_FACTOR : 1;
+  const dim = fogEnabled && !isTileVisibleTo(viewSeeSide(), x, y) ? FOG_DIM_FACTOR : 1;
   const base = type === 'full' ? '#3a3a40' : '#4a3a28';
   const color = lightenColor(base, dim);
   const boxLeft = x * TILE;
@@ -9373,7 +9594,7 @@ function draw() {
   drawDropZoneOverlays();
   drawZoneControlAndSelection();
   drawAttackSkillRangeOverlay();
-  const fogClip = visibleTileSet(viewSide()); // 화면 진영 시야(안개 꺼짐 = null) - 연출은 이 칸들 위에서만 그림(FOG_VISION.md 4장)
+  const fogClip = visibleTileSet(viewSeeSide()); // 화면 진영 시야(안개 꺼짐 = null) - 연출은 이 칸들 위에서만 그림(FOG_VISION.md 4장)
   beginFogClip(fogClip);
   runRenderLayers('underTokens'); // 캐릭터 파일이 등록한 바닥 효과 레이어(수정 구역 등)
   drawGoldenWaves();              // 황금 물결(빅토리아 변신)
@@ -9540,7 +9761,7 @@ function drawZoneControlAndSelection() {
   ctx.fillStyle = 'rgba(255,80,80,0.14)';
   for (const c of characters) {
     if (c.dead || c.inReserve || !c.zoneControlArmed) continue;
-    if (c.side !== viewSide() && !isVisibleTo(viewSide(), c)) continue; // 안개 속 적의 지역장악은 드러내지 않음
+    if (c.side !== viewSide() && !isVisibleTo(viewSeeSide(), c)) continue; // 안개 속 적의 지역장악은 드러내지 않음
     if (c.zoneTileHiddenUntil > performance.now()) continue; // 무장 연출(교차 검)이 끝나기 전엔 범위 타일을 아직 안 보여줌
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
       if (dx === 0 && dy === 0) continue;
@@ -9591,7 +9812,7 @@ function drawDepthSortedTokens() {
   }
   for (const c of characters) {
     if ((c.dead && !(c.deathPendingUntil > performance.now())) || c.inReserve) continue; // 연출 도착 전(hitDelay)이면 죽었어도 잠깐 더 그림
-    if (c.side !== viewSide() && !isVisibleTo(viewSide(), c)) continue; // 안개 속/은신 적은 토큰 대신 도깨비불(drawWisps)
+    if (c.side !== viewSide() && !isVisibleTo(viewSeeSide(), c)) continue; // 안개 속/은신 적은 토큰 대신 도깨비불(drawWisps)
     const ry = c.renderY !== undefined ? c.renderY : c.y;
     depthObjects.push({ y: ry, draw: () => drawCharacterToken(c) });
   }
@@ -9872,9 +10093,10 @@ function drawWisp(c) {
 function drawFogFloor() {
   if (!fogEnabled) return;
   updateExploredTiles(); // 지금 시야를 탐사 기록에 반영
+  if (spectatorView) return; // 관전: 안개를 그리지 않음(탐사 기록은 위에서 그대로 갱신)
   const viewExplored = exploredSetOf(viewSide()); // 화면 진영의 탐사 기록
   for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
-    if (isTileVisibleTo(viewSide(), x, y)) continue;
+    if (isTileVisibleTo(viewSeeSide(), x, y)) continue;
     ctx.fillStyle = viewExplored.has(x + ',' + y) ? FOG_COLOR : FOG_UNEXPLORED_COLOR;
     ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
   }
@@ -9883,7 +10105,7 @@ function drawWisps() {
   if (!fogEnabled || pvpMode) return; // 대전: 안개 속 상대는 완전히 안 보임(도깨비불 없음)
   for (const c of characters) {
     if (c.side === viewSide() || c.dead || c.inReserve || c.stealthed || c.isStructure) continue; // 은신한 적·구조물은 도깨비불도 없음
-    if (!isVisibleTo(viewSide(), c)) drawWisp(c);
+    if (!isVisibleTo(viewSeeSide(), c)) drawWisp(c);
   }
 }
 // 도깨비불 일렁임: 안개 속 도깨비불이 하나라도 있으면 화면을 계속 다시 그림(전에는 다른 연출이 돌 때만 일렁였음 - v11.94).
@@ -9892,7 +10114,7 @@ function wispsAnimating() {
   if (!fogEnabled || pvpMode || battleEnded || (typeof __mmNoIdleAnim !== 'undefined' && __mmNoIdleAnim)) return false;
   const gc = document.getElementById('gameContainer');
   if (gc && gc.style && gc.style.display === 'none') return false; // 메뉴 화면
-  return characters.some(c => c.side !== viewSide() && !c.dead && !c.inReserve && !c.stealthed && !c.isStructure && !isVisibleTo(viewSide(), c));
+  return characters.some(c => c.side !== viewSide() && !c.dead && !c.inReserve && !c.stealthed && !c.isStructure && !isVisibleTo(viewSeeSide(), c));
 }
 registerVfxActive(wispsAnimating, { ambient: true });
 
@@ -9947,7 +10169,7 @@ function showTurnBanner(title, sub) {
 function turnBannerForSide(side) {
   if (!pvpMode) { if (side === 'player') showTurnBanner('내 턴', `${allyTurnNumber}턴`); return; }
   const n = (typeof pvpSideTurnNo !== 'undefined' && pvpSideTurnNo[side]) || 1;
-  if (pvpSetup && pvpSetup.kind === 'online') { if (side === viewSide()) showTurnBanner('내 턴', `${n}턴`); return; }
+  if (pvpSetup && pvpSetup.kind === 'online' && !spectatorView) { if (side === viewSide()) showTurnBanner('내 턴', `${n}턴`); return; } // (관전은 핫시트처럼 진영 이름)
   showTurnBanner(`${pvpSideName(side)}의 턴`, `${n}턴`); // 핫시트
 }
 registerSystem('onStageLoad', () => { lastTurnBanner = null; if (turnBannerEl) turnBannerEl.style.display = 'none'; });
@@ -10037,7 +10259,7 @@ function snapshotForGhost(c) {
     ghostSdKey: sdKeyOf(c), // 그 순간의 SD(적=템플릿 키, 변신 중이면 바뀐 SD) 그대로 쓰러지게
     deathParticleMult: c.deathParticleMult || 1, // 사망 파티클 배수(v12.48 - 왕녀 등장 씬 희생자 2배)
     vfxStyle: vfxStyleOf(c), // 피격·사망 연출 종류(지혁 터짐 / 상자 파편 - v12.12)
-    ghostHidden: c.side !== viewSide() && !isVisibleTo(viewSide(), c), // 안개 속에서 죽은 적은 정체를 드러내지 않음
+    ghostHidden: c.side !== viewSide() && !isVisibleTo(viewSeeSide(), c), // 안개 속에서 죽은 적은 정체를 드러내지 않음
   };
 }
 // opts.style(v12.40): 'leap' = 웅크렸다가 아주 높이·빠르게 솟구침(왕녀 처형 도약, LEAP_ANIM_MS) - 기본은 퇴각(낙하 곡선 거꾸로)
@@ -10412,7 +10634,7 @@ function emitStatusParticles(now) {
   lastStatusEmit = now;
   for (const c of characters) {
     // 화면 진영이 볼 수 없는 유닛(은신·전장 밖·시야 밖)은 상태 입자를 만들지 않음(v12.43 - 은신한 왕녀의 복수 표식 연기 등이 위치를 드러내던 문제). 효과 자체는 그대로
-    if (c.dead || c.inReserve || !isVisibleTo(viewSide(), c)) { c._frostAcc = 0; c._emberAcc = 0; c._vengAcc = 0; c._lineAcc = 0; c._smokeAccs = null; c._smokeAcc = 0; c._burstAcc = 0; continue; }
+    if (c.dead || c.inReserve || !isVisibleTo(viewSeeSide(), c)) { c._frostAcc = 0; c._emberAcc = 0; c._vengAcc = 0; c._lineAcc = 0; c._smokeAccs = null; c._smokeAcc = 0; c._burstAcc = 0; continue; }
     const multi = fadeAlphaOf(c) > 0.5 ? smokeAuraMulti(c) : null; // 여러 색 연기(페로몬 등 - v12.17): 색마다 따로 누적
     if (multi && multi.length) {
       c._smokeAccs = c._smokeAccs || {};
@@ -10565,7 +10787,7 @@ function drawIconPops() {
   const now = performance.now();
   iconPops = iconPops.filter(p => now - p.start < (p.dur || ICON_POP_MS) && !p.c.dead && !p.c.inReserve);
   for (const p of iconPops) {
-    if (p.c.side !== viewSide() && !isVisibleTo(viewSide(), p.c)) continue; // 안개 속/은신 적의 아이콘 연출(지역장악 검 등)은 위치를 드러내지 않게 숨김
+    if (p.c.side !== viewSide() && !isVisibleTo(viewSeeSide(), p.c)) continue; // 안개 속/은신 적의 아이콘 연출(지역장악 검 등)은 위치를 드러내지 않게 숨김
     const { scale, alpha } = iconPopTransform((now - p.start) / (p.dur || ICON_POP_MS));
     const b = tokenBounds(p.c);
     ctx.save();
@@ -11947,6 +12169,59 @@ registerRenderLayer('overTokensFx', drawCasings);
 registerVfxActive(() => casings.length > 0 || characters.some(monicaAmmoAnimating));
 registerSystem('onStageLoad', () => { casings = []; });
 
+// ================= 밴픽 연출 (v12.81, MULTIPLAYER.md 2-6) =================
+// 움직임은 CSS(style.css '밴픽' 묶음), 여기서는 클래스를 다시 붙여 애니메이션을 처음부터 재생만 함.
+// 뒤집기 약 0.5초, 밴 사선 약 0.4초, 픽 확정 약 0.6초(사용자 결정)
+const BP_FLIP_MS = 500;
+function bpRetrigger(el, cls) {
+  if (!el) return;
+  el.classList.remove(cls);
+  void el.offsetWidth; // 다시 그리기 강제 → 같은 애니메이션을 처음부터
+  el.classList.add(cls);
+}
+// 카드 뒤집기(뒷면 → 앞면). delay 뒤 시작, 끝나면 after
+function bpVfxFlip(el, delay, after) {
+  if (!el) return;
+  el.classList.remove('shown');
+  void el.offsetWidth;
+  setTimeout(() => { el.classList.add('shown'); if (after) setTimeout(after, BP_FLIP_MS - 40); }, (delay || 0) + 30);
+}
+function bpVfxBanSlash(el) { bpRetrigger(el, 'slashed'); }      // 붉은 사선이 그어지고 흑백으로
+function bpVfxLockSweep(row) { bpRetrigger(row, 'lockFx'); }    // 확 펴지며 빛이 한 번 쓸고 지나감
+function bpVfxDrop(el) { bpRetrigger(el, 'dropFx'); }           // 뒷면 카드가 위에서 내려앉음
+function bpVfxAnnounce(text, elId) {                             // 화면 가운데 큰 글씨(선공 발표·전투 준비). 드래프트는 'drAnnounce'
+  const el = document.getElementById(elId || 'bpAnnounce'); if (!el) return;
+  el.textContent = text;
+  bpRetrigger(el, 'go');
+}
+function bpVfxFinal() {                                          // 최종 라인업: 양쪽 카드가 위에서부터 차례로 살짝 튀어 오름
+  if (!bpEls) return;
+  for (const side of ['player', 'enemy']) bpEls.slots[side].forEach((row, i) => setTimeout(() => bpRetrigger(row, 'finalPop'), 120 + i * 90));
+  bpVfxAnnounce('전투 준비');
+}
+
+// ---- 드래프트 (v12.83, MULTIPLAYER.md 2-7) ----
+// 카드 날아가기: from 카드 자리에서 to 카드 자리로 복제 카드가 날아가 겹쳐짐(크기도 맞춰 줄어듦), 끝나면 after. 복제는 #draftScreen 안에(화면 기준 좌표)
+const DR_FLY_MS = 560;
+function drVfxFly(fromEl, toEl, id, cls, after, delay) {
+  const scr = document.getElementById('draftScreen');
+  const done = () => { if (after) after(); };
+  if (!scr || !fromEl || !toEl || typeof fromEl.getBoundingClientRect !== 'function' || typeof toEl.getBoundingClientRect !== 'function') { setTimeout(done, (delay || 0) + DR_FLY_MS); return; }
+  setTimeout(() => {
+    const a = fromEl.getBoundingClientRect(), b = toEl.getBoundingClientRect(), s = scr.getBoundingClientRect();
+    const fl = document.createElement('div');
+    fl.className = 'bpCard shown drFly ' + (cls || '');
+    fl.innerHTML = bpCardHtml(id);
+    const ox = a.left - s.left + (scr.scrollLeft || 0), oy = a.top - s.top + (scr.scrollTop || 0);
+    Object.assign(fl.style, { left: ox + 'px', top: oy + 'px', width: a.width + 'px', height: a.height + 'px' });
+    scr.appendChild(fl);
+    void fl.offsetWidth;
+    const sx = a.width ? b.width / a.width : 1, sy = a.height ? b.height / a.height : 1;
+    requestAnimationFrame(() => { fl.style.transform = `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${sx}, ${sy})`; fl.style.opacity = '0.92'; });
+    setTimeout(() => { if (typeof fl.remove === 'function') fl.remove(); done(); }, DR_FLY_MS);
+  }, delay || 0);
+}
+
 // ================= 스테이지 등장 씬 (v12.48, BOSSES.md) =================
 // 스테이지 설정 intro: '이름' → 첫 배치(applyInitialDeploy) 직후 runStageIntro(이름, 끝나면) - 편성 화면 '등장 씬 건너뛰기'(introSkip, 16_menu)로 생략.
 // 씬 동안: 입력 막힘(sideTurnOpen·턴 종료 버튼 "적 턴 진행 중"·붉은 테두리) + 안개 전부 걷힘. 끝나면 원래대로 + "내 턴" 배너.
@@ -12246,7 +12521,7 @@ function drawGloryBubbles() {
     if (c.dead) { c._glory = null; continue; }
     if (g.state === 'on' && !(c.shield > 0) && now >= (c._hitVisUntil || 0)) { shatterGloryBubble(c); continue; } // 안전장치: 피격 연출을 거치지 않고 방어막이 사라짐
     if (g.state === 'fading' && now >= g.fadeAt + GLORY_FADE_MS) { c._glory = null; continue; }
-    if (c.inReserve || c.stealthed || !isVisibleTo(viewSide(), c)) continue;
+    if (c.inReserve || c.stealthed || !isVisibleTo(viewSeeSide(), c)) continue;
     const geo = gloryGeom(c), el = now - g.start;
     if (el < GLORY_SWIRL_MS) { drawGlorySwirl(geo, el / GLORY_SWIRL_MS, now); continue; }
     if (!g.burst && el >= GLORY_FORMED_MS) { // 형성 끝: 기운이 둘레로 퍼지며 흩어짐
@@ -12564,7 +12839,7 @@ let speechBubbles = [];
 function speechTypeEndMs(text) { return text.length * SPEECH_TYPE_MS; }
 // onlyIfVisible(v12.46): 화면 진영이 그 유닛을 볼 수 없으면 말풍선 없이 로그만, 대기 0(위치를 드러내지 않음)
 function speakLines(c, lines, { delay = 0, gap = SPEECH_GAP_MS, lastHold = 1000, fade = 200, onlyIfVisible = false } = {}) {
-  if (onlyIfVisible && !replayFast && !isVisibleTo(viewSide(), c)) { for (const t of lines) addLog(`${c.name}: "${t}"`, 'logSkill'); return 0; }
+  if (onlyIfVisible && !replayFast && !isVisibleTo(viewSeeSide(), c)) { for (const t of lines) addLog(`${c.name}: "${t}"`, 'logSkill'); return 0; }
   const now = performance.now(), segs = [];
   let t = now + delay;
   lines.forEach((text, i) => { segs.push({ text, start: t }); t += speechTypeEndMs(text) + (i < lines.length - 1 ? gap : lastHold); });
@@ -12587,7 +12862,7 @@ function speechTopY(c) { // 머리(그림 맨 위) 위. 영광 구체가 있으�
 // (v12.52) 말풍선은 안개 잘라내기 밖(screenFx)에서 그림 - 위쪽 줄 유닛의 말풍선이 위 여백에서 잘리던 문제. 대신 말하는 유닛이 화면 진영에 보일 때만
 function speechVisible(c) {
   if (!fogEnabled) return true;
-  return c.isGhost ? isTileVisibleTo(viewSide(), c.x, c.y) : isVisibleTo(viewSide(), c);
+  return c.isGhost ? isTileVisibleTo(viewSeeSide(), c.x, c.y) : isVisibleTo(viewSeeSide(), c);
 }
 // (v12.57) 스타일: 짙은 회색 상자(살짝 비침) + 1px 옅은 회색 테두리 + 모서리 3px, 밝은 회색 보통 굵기 13px(한글 글꼴), 여백 12·9px, 줄 간격 1.5배, 폭 최대 240px 자동 줄바꿈.
 // 보드의 세로 압축·확대 배율 밖(캔버스 픽셀 기준)에서 그려 글씨가 눌리거나 뭉개지지 않게 - 위치만 머리 위 논리 좌표를 캔버스 좌표로 바꿔 씀(화면 흔들림 포함)
@@ -12719,7 +12994,7 @@ function twistResultText(p) {
 }
 function renderTwistDiceBox() {
   const u = typeof twistPendingUnit === 'function' ? twistPendingUnit() : null;
-  const show = u && (u.side === viewSide() || isVisibleTo(viewSide(), u));
+  const show = u && (u.side === viewSide() || isVisibleTo(viewSeeSide(), u));
   if (!show && !twistBox) return;
   const b = ensureTwistBox();
   if (!b) return;
@@ -12943,7 +13218,7 @@ function drawIceAll() {
   for (const c of characters) {
     if (!c._ice) continue;
     if (c.dead || c.inReserve) { delete c._ice; continue; }
-    if (c.side !== viewSide() && !isVisibleTo(viewSide(), c)) continue;
+    if (c.side !== viewSide() && !isVisibleTo(viewSeeSide(), c)) continue;
     drawIceEncase(c, now);
   }
 }
@@ -13349,7 +13624,7 @@ const JET_BORN_MS = 450;
 function jetBeetlesBorn(c, n) { if (replayFast) return; c._jetBorn = { at: performance.now(), n }; ensureVfxLoop(); }
 function jetUnitsShown() {
   return characters.filter(c => baseIdOf(c) === 'jet' && !c.dead && !c.inReserve && !c.notInBattle && !c.isGhost && (c.jetBeetles || 0) > 0
-    && (c.side === viewSide() || isVisibleTo(viewSide(), c)));
+    && (c.side === viewSide() || isVisibleTo(viewSeeSide(), c)));
 }
 function drawJetOrbits() {
   const now = performance.now();
@@ -13789,9 +14064,9 @@ function shatterSpecialShield(c) { // '퐁' 터짐: 물방울 + 무지갯빛 막
 function spBubbleState(c, now) {
   if (c._spBreakAt && now >= c._spBreakAt && c._spShattered !== c._spBreakAt) { // 터지는 순간(한 번만)
     c._spShattered = c._spBreakAt;
-    if (!c.dead && isVisibleTo(viewSide(), c)) shatterSpecialShield(c);
+    if (!c.dead && isVisibleTo(viewSeeSide(), c)) shatterSpecialShield(c);
   }
-  if (c.dead || c.isGhost || c.inReserve || c.notInBattle || !isVisibleTo(viewSide(), c)) return null;
+  if (c.dead || c.isGhost || c.inReserve || c.notInBattle || !isVisibleTo(viewSeeSide(), c)) return null;
   if (c._spBreakAt && now < c._spBreakAt) return { alpha: 1, scale: 1, flash: 0 };  // 터질 타격이 아직 안 보임
   if (c._spBreakAt && now - c._spBreakAt < SP_POP_MS && !(c.specialShield > 0)) { const t = (now - c._spBreakAt) / SP_POP_MS; return { alpha: 1 - t, scale: 1 + 0.14 * t, flash: 0.6 * (1 - t), pop: true }; }
   if (c._spFadeAt && now - c._spFadeAt < SP_FADE_MS && !(c.specialShield > 0)) return { alpha: 1 - (now - c._spFadeAt) / SP_FADE_MS, scale: 1, flash: 0 }; // 만료: 서서히
@@ -13890,7 +14165,7 @@ registerVfxActive(() => {
     || characters.some(c => c._spBreakPending || (c._spBreakAt && (c._spShattered !== c._spBreakAt || now - c._spBreakAt < SP_POP_MS)) || (c._spFormAt && now - c._spFormAt < SP_FORM_MS) || (c._spFadeAt && now - c._spFadeAt < SP_FADE_MS));
 });
 // 계속 도는 효과(막이 일렁임 - 결과 화면 안 기다림)
-registerVfxActive(() => !(typeof __mmNoIdleAnim !== 'undefined' && __mmNoIdleAnim) && !battleEnded && characters.some(c => c.specialShield > 0 && !c.dead && !c.inReserve && isVisibleTo(viewSide(), c)), { ambient: true });
+registerVfxActive(() => !(typeof __mmNoIdleAnim !== 'undefined' && __mmNoIdleAnim) && !battleEnded && characters.some(c => c.specialShield > 0 && !c.dead && !c.inReserve && isVisibleTo(viewSeeSide(), c)), { ambient: true });
 registerSystem('onStageLoad', () => { medicDrones = []; medicDrops = []; spShards = []; });
 
 // ================= 2지역 페로몬 보관함 화면 (REGION2.md 1-2) =================
@@ -14012,7 +14287,7 @@ function pheromoneHoverPreview(tile) {
   const kind = uiMode.kind, r = ZH_PHEROMONE_RADIUS[kind];
   if (!tile || !zhPheromoneTileOk(kind, tile.x, tile.y)) return null;
   const tiles = squareAreaTiles(tile.x, tile.y, r || 0);
-  const hit = c => !c.dead && !c.inReserve && isVisibleTo(viewSide(), c) && tiles.has(c.x + ',' + c.y) &&
+  const hit = c => !c.dead && !c.inReserve && isVisibleTo(viewSeeSide(), c) && tiles.has(c.x + ',' + c.y) &&
     (kind === 'sonic' ? !!c.zhEgg : kind === 'control' ? (c.zh && c.grade === 'elite') : zhIsNormalZh(c));
   return { tiles, targets: characters.filter(hit), color: ZH_PHEROMONE_PREVIEW_COLOR[kind], _tile: tile.x + ',' + tile.y };
 }
@@ -15169,12 +15444,15 @@ function initPvpBattle({ squad1, squad2, firstSide, names, seed }) {
   mySide = firstSide;
   loadSideState(firstSide);
   enemyDamageDealtThisTurn = {};
-  addLog(`--- 일반전 시작: 선공 ${pvpSideName(firstSide)} ---`, 'logInfo');
+  addLog(`--- ${pvpModeName(pvpSetup && pvpSetup.mode)} 시작: 선공 ${pvpSideName(firstSide)} ---`, 'logInfo');
 }
 
 // ================= 멀티플레이 메뉴 / 핫시트 진행 (MULTIPLAYER.md 1장) =================
-const PVP_MODES = [{ id: 'normal', name: '일반전 (1 vs 1)' }];          // 이후 드래프트 등 추가
-const PVP_MAPS = { normal: [{ id: 'pvp-1', name: '중앙 경쟁' }, { id: 'pvp-2', name: '외나무다리에서' }, { id: 'pvp-3', name: '내려올 곳은 없다' }] };
+// (v12.81) 밴픽전(MULTIPLAYER.md 2-6), v12.82 온라인 연결. online: false인 모드는 온라인 대기실 목록에서 빠짐
+const PVP_MODES = [{ id: 'normal', name: '일반전 (1 vs 1)' }, { id: 'banpick', name: '밴픽전 (1 vs 1)' }, { id: 'draft', name: '드래프트전 (1 vs 1)' }]; // 드래프트전 v12.83(2-7)
+const PVP_MAP_LIST = [{ id: 'pvp-1', name: '중앙 경쟁' }, { id: 'pvp-2', name: '외나무다리에서' }, { id: 'pvp-3', name: '내려올 곳은 없다' }];
+const PVP_MAPS = { normal: PVP_MAP_LIST, banpick: PVP_MAP_LIST, draft: PVP_MAP_LIST };
+const pvpModeName = id => { const m = PVP_MODES.find(x => x.id === id); return m ? m.name.replace(/ \(.*\)$/, '') : '일반전'; };
 const PVP_TURN_MS = 3 * 60 * 1000; // 매 턴 3분
 let pvpSetup = null;        // { kind: 'hotseat', mode, map, names: { player, enemy }, squad1 }
 let pvpFormationStep = 0;   // 0: 대전 편성 아님 / 1: 1P 편성 중 / 2: 2P 편성 중 / 3: 온라인 편성 중(내 진영)
@@ -15254,22 +15532,25 @@ function renderMpLobby() {
   } else $('mpP2Role').textContent = '닉네임 입력';
   // 시작 버튼 / 안내
   const startBtn = $('btnMpLobbyStart'), n = $('mpLobbyNotice');
+  renderMpSpectators(online);
   if (online) {
     startBtn.style.display = net.isHost ? 'inline-block' : 'none';
     startBtn.disabled = !pvpSetup.names.enemy;
-    if (!net.isHost) { n.textContent = '방장이 모드와 맵을 고르고 시작합니다'; n.style.display = 'block'; }
+    if (net.spectator) { n.textContent = '관전 중 - 방장이 모드와 맵을 고르고 시작합니다'; n.style.display = 'block'; }
+    else if (!net.isHost) { n.textContent = '방장이 모드와 맵을 고르고 시작합니다'; n.style.display = 'block'; }
     else if (!pvpSetup.names.enemy) { n.textContent = '상대가 들어오면 시작할 수 있습니다'; n.style.display = 'block'; }
     else n.style.display = 'none';
   } else { startBtn.style.display = 'inline-block'; startBtn.disabled = false; n.style.display = 'none'; }
   const choose = (mode, map) => { if (online) netSetLobbyChoice(mode, map); else { pvpSetup.mode = mode; pvpSetup.map = map; renderMpLobby(); } };
   // 모드(큰 표시 + ◀ ▶)
-  const mi = Math.max(0, PVP_MODES.findIndex(m => m.id === pvpSetup.mode));
-  $('mpModeName').textContent = PVP_MODES[mi].name;
-  const canCycle = canEdit && PVP_MODES.length > 1;
+  const modes = PVP_MODES.filter(m => !online || m.online !== false);
+  const mi = Math.max(0, modes.findIndex(m => m.id === pvpSetup.mode));
+  $('mpModeName').textContent = modes[mi].name;
+  const canCycle = canEdit && modes.length > 1;
   for (const [id, d] of [['btnMpModePrev', -1], ['btnMpModeNext', 1]]) {
     const b = $(id);
     b.disabled = !canCycle;
-    b.onclick = () => { if (!canCycle) return; const m = PVP_MODES[(mi + d + PVP_MODES.length) % PVP_MODES.length]; choose(m.id, PVP_MAPS[m.id][0].id); };
+    b.onclick = () => { if (!canCycle) return; const m = modes[(mi + d + modes.length) % modes.length]; choose(m.id, PVP_MAPS[m.id][0].id); };
   }
   // 맵 목록
   const mapBox = $('mpMapList');
@@ -15285,6 +15566,22 @@ function renderMpLobby() {
   drawMapPreview($('mpMapPreview'), pvpSetup.map);
 }
 
+// (v12.84) 관전석 목록 + 자리 옮기기 버튼(MULTIPLAYER.md 2-8). 온라인 대기실만
+function renderMpSpectators(online) {
+  const $ = id => document.getElementById(id), box = $('mpSpecBox');
+  if (!box) return;
+  box.style.display = online ? 'block' : 'none';
+  if (!online) return;
+  const room = net.room || {}, specs = netSpecList(room), lobby = room.status === 'lobby';
+  $('mpSpecTitle').textContent = `관전자 ${specs.length}/${NET_SPEC_SLOTS}`;
+  const list = $('mpSpecList'); list.innerHTML = '';
+  if (!specs.length) { const e = document.createElement('span'); e.className = 'mpSpecEmpty'; e.textContent = '관전자 없음 - 참가자 자리가 차 있을 때 방 코드로 들어오면 관전석에 앉습니다'; list.appendChild(e); }
+  for (const v of specs) { const e = document.createElement('span'); e.className = 'mpSpecName' + (v.uid === net.uid ? ' me' : ''); e.textContent = v.name + (v.uid === net.uid ? ' (나)' : ''); list.appendChild(e); }
+  const isGuest = !!(room.guest && room.guest.uid === net.uid);
+  const someoneElse = !!room.guest || specs.length > 0; // 방장 혼자면 관전석으로 가도 바로 다시 방장이 되므로 버튼 숨김
+  $('btnMpToSpec').style.display = lobby && specs.length < NET_SPEC_SLOTS && (isGuest || (net.isHost && someoneElse)) ? 'inline-block' : 'none';
+  $('btnMpToSeat').style.display = lobby && net.spectator && !room.guest ? 'inline-block' : 'none';
+}
 // 맵 미리보기: 지형만(엄폐물 + 양쪽 시작 구역). 맵 문자열을 게임과 같은 해석(parseStageMap)으로 읽어 별도 작은 캔버스에 그림
 // (loadStage는 게임 상태를 초기화하므로 쓰지 않음)
 const MAP_PREVIEW_COLORS = { floor: '#2a2a31', grid: '#202026', full: '#77778a', half: '#9a7444', pit: '#0a0a0d', deploy: '#3f6fc0', deploy2: '#b84a4a' };
@@ -15309,10 +15606,15 @@ function drawMapPreview(canvasEl, mapId) {
   mapPreviewLastDrawn = mapId;
 }
 document.getElementById('btnMpLobbyStart').addEventListener('click', () => {
-  if (pvpSetup.kind === 'online') { if (net.isHost && net.room && net.room.guest) net.roomRef.update({ status: 'formation' }); return; } // 온라인(N3에서 편성/전투 연결)
+  if (pvpSetup.kind === 'online') { // 온라인: 방장만 시작(편성/밴픽은 18_net이 방 상태로 진행)
+    if (net.isHost && net.room && net.room.guest) { if (pvpSetup.mode === 'banpick' || pvpSetup.mode === 'draft') netStartSetup(pvpSetup.mode); else net.roomRef.update({ status: 'formation' }); }
+    return;
+  }
   pvpSetup.names.enemy = (document.getElementById('mpP2NameInput').value.trim() || '2P').slice(0, 12);
   if (pvpSetup.names.enemy === pvpSetup.names.player) pvpSetup.names.enemy += '(2)';
   loadStage(pvpSetup.map); // 대전 맵(안개 기본 켜짐, 총력전 없음)
+  if (pvpSetup.mode === 'banpick') { bpStartHotseat(); return; } // (v12.81) 밴픽전: 편성 대신 밴픽
+  if (pvpSetup.mode === 'draft') { drStartHotseat(); return; }   // (v12.83) 드래프트전
   pvpFormationBegin(1);
 });
 
@@ -15346,8 +15648,11 @@ function pvpFormationConfirm() {
   }
   const squad2 = formationSlots.slice();
   pvpFormationStep = 0;
-  const firstSide = Math.random() < 0.5 ? 'player' : 'enemy'; // 선공 무작위
-  initPvpBattle({ squad1: pvpSetup.squad1, squad2, firstSide, names: pvpSetup.names });
+  pvpStartHotseatBattle(pvpSetup.squad1, squad2, Math.random() < 0.5 ? 'player' : 'enemy'); // 선공 무작위
+}
+// 핫시트 전투 시작(일반전 편성 끝 / 밴픽 끝 - v12.81 분리)
+function pvpStartHotseatBattle(squad1, squad2, firstSide) {
+  initPvpBattle({ squad1, squad2, firstSide, names: pvpSetup.names });
   document.querySelectorAll('.menuScreen').forEach(el => el.style.display = 'none');
   document.getElementById('gameContainer').style.display = 'flex';
   renderReserveList(); updatePanel(); draw();
@@ -15417,6 +15722,720 @@ function pvpTimerTick() {
   issueCommand({ t: 'endTurn' }); // 명령 경로
 }
 
+// ================= 밴픽전 (v12.81, MULTIPLAYER.md 2-6) =================
+// 순서: 선공 발표 → 밴(양쪽 동시 각 1명, 비밀 → 동시 공개) → 픽 선공1 → 후공2 → 선공3 → 후공3 → 선공2 → 후공1(각 6명) → 최종 라인업 → 전투
+// 밴·픽된 캐릭터는 양쪽 모두 못 고름(같은 캐릭터 밴 가능 - 그러면 1명만 빠짐). 단계당 2분(여러 명 고르는 차례도 한 번에 2분), 넘으면 남은 칸 무작위.
+// 아래 '상태' 함수는 화면과 무관(핫시트·온라인 공용). 화면/연출은 bpUi*, 15_banpick_vfx.js
+// 온라인(v12.82, 4-B): 방 bp/ 기록이 정답. 내 확정은 서버에 쓰기만 하고, 화면은 서버 기록을 순서대로 받아 연출(bpOnlinePump)
+const BP_PHASE_MS = 2 * 60 * 1000;
+const BP_PICK_ORDER = [['F', 1], ['S', 2], ['F', 3], ['S', 3], ['F', 2], ['S', 1]]; // F = 선공, S = 후공
+const BP_FINAL_MS = 2600;  // 최종 라인업 보여주는 시간(사용자 결정 (가): 확인 없이 전투로)
+const BP_REVEAL_MS = 1500; // 밴 공개 연출 뒤 첫 픽까지
+const BP_LOCK_MS = 1500;   // (온라인) 픽 확정 연출 시간 - 다음 차례 마감 기준에 더함
+const BP_PROXY_MS = 5000;  // (온라인) 차례인 쪽이 마감을 넘기고 이만큼 지나도 기록이 없으면 상대 화면이 대신 기록(사용자 결정)
+
+// ---- 상태 ----
+function bpNew(firstSide, pool) { return { firstSide, pool: pool.slice(), bans: { player: null, enemy: null }, picks: { player: [], enemy: [] }, step: 0 }; } // step 0 = 밴, 1~6 = 픽, 7 = 끝
+function bpStepInfo(bp) {
+  if (bp.step === 0) return { kind: 'ban' };
+  if (bp.step > BP_PICK_ORDER.length) return { kind: 'done' };
+  const [w, n] = BP_PICK_ORDER[bp.step - 1];
+  return { kind: 'pick', side: w === 'F' ? bp.firstSide : otherSide(bp.firstSide), n };
+}
+function bpTaken(bp) { return new Set([bp.bans.player, bp.bans.enemy, ...bp.picks.player, ...bp.picks.enemy].filter(Boolean)); }
+// 밴 단계에는 밴이 공개 전이라 모두 고를 수 있음(같은 캐릭터 밴 허용)
+function bpAvailable(bp) { if (bp.step === 0) return bp.pool.slice(); const t = bpTaken(bp); return bp.pool.filter(id => !t.has(id)); }
+// 밴 기록. 양쪽 다 모이면 픽 단계로(true 반환 = 공개)
+function bpSetBan(bp, side, id) {
+  if (bp.step !== 0 || bp.bans[side] || !bp.pool.includes(id)) return false;
+  bp.bans[side] = id;
+  if (bp.bans.player && bp.bans.enemy) { bp.step = 1; return true; }
+  return false;
+}
+// 픽 기록(그 차례 인원수 그대로, 서로 다르고 남아 있는 캐릭터만)
+function bpSetPicks(bp, side, ids) {
+  const s = bpStepInfo(bp);
+  if (s.kind !== 'pick' || s.side !== side || !Array.isArray(ids) || ids.length !== s.n || new Set(ids).size !== ids.length) return false;
+  const avail = new Set(bpAvailable(bp));
+  if (!ids.every(id => avail.has(id))) return false;
+  bp.picks[side].push(...ids);
+  bp.step++;
+  return true;
+}
+// 시간 초과: 고르던 것(chosen)은 살리고 남은 칸만 무작위(rnd: 0~1). 핫시트는 Math.random, 온라인은 방 씨앗값(4-B)
+function bpRandomFill(available, chosen, n, rnd) {
+  const out = chosen.filter(id => available.includes(id)).slice(0, n);
+  const rest = available.filter(id => !out.includes(id));
+  while (out.length < n && rest.length) out.push(rest.splice(Math.floor(rnd() * rest.length), 1)[0]);
+  return out;
+}
+// 씨앗값 무작위(온라인 시간 초과·대신 기록): 같은 씨앗값·단계·진영이면 어느 화면이든 같은 값 → 누가 먼저 써도 결과 같음
+function bpSeedRand(seed, step, side) {
+  let a = ((seed >>> 0) ^ Math.imul(step + 1, 0x9E3779B1) ^ (side === 'enemy' ? 0x85EBCA6B : 0x27D4EB2F)) >>> 0;
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function bpPool() { return characters.filter(c => c.side === 'player' && !c.isSummon && !c.isGhost).map(c => c.id); }
+
+// ---- 진행(핫시트) ----
+// bpRun: { kind, bp, acting(지금 고르는 진영), pending(고르는 중), deadline, timerId, busy(연출 중 입력 막음), seq(취소 확인용) }
+let bpRun = null;
+function bpStartHotseat() {
+  const firstSide = Math.random() < 0.5 ? 'player' : 'enemy'; // 사용자 결정 (가): 밴 전에 선공 무작위 발표
+  bpRun = { kind: 'hotseat', bp: bpNew(firstSide, bpPool()), acting: null, pending: [], deadline: 0, timerId: null, busy: false, seq: 0 };
+  bpUiBuild();
+  showMenuScreen('banPickScreen');
+  bpUiPhase(`선공: ${pvpSetup.names[firstSide]}`, '');
+  bpVfxAnnounce(`선공 ${pvpSetup.names[firstSide]}`);
+  bpHotseatBanTurn('player');
+}
+// 핫시트 밴: 비밀 - 가림막으로 넘겨받고 각자 고름, 둘 다 고르면 동시 공개
+function bpHotseatBanTurn(side) {
+  const run = bpRun, name = pvpSetup.names[side];
+  showPvpCover(`${name} 밴 차례`, `선공: ${pvpSetup.names[run.bp.firstSide]} · 상대가 보지 않게 화면을 넘겨받으세요`, () => { if (bpRun === run) bpOpenTurn(side, 1); });
+}
+// 차례 열기: side가 n명을 고름(밴은 1)
+// opts(온라인): canInput = 내 차례인가, deadline = 서버 기록 기준 마감(내 시계)
+function bpOpenTurn(side, n, opts = {}) {
+  const run = bpRun; if (!run) return;
+  run.acting = side; run.need = n; run.pending = []; run.busy = false;
+  run.canInput = opts.canInput !== false;
+  run.deadline = opts.deadline || Date.now() + BP_PHASE_MS;
+  const ban = run.bp.step === 0;
+  const spec = run.kind === 'online' && !run.mySide;
+  bpUiPhase(ban ? (spec ? '밴 진행 중 (관전)' : run.kind === 'online' ? '밴 - 1명 (동시에)' : `${pvpSetup.names[side]} 밴 - 1명`) : `${pvpSetup.names[side]} 픽 - ${n}명${run.canInput || spec ? '' : ' (상대 차례)'}`, ban && spec ? '' : side);
+  bpTimerRestart();
+  bpUiRefresh();
+}
+function bpTimerRestart() {
+  const run = bpRun; if (!run) return;
+  clearInterval(run.timerId);
+  run.timerId = setInterval(bpTick, 250);
+  bpTick();
+}
+function bpTick() {
+  const run = bpRun; if (!run) return;
+  const left = Math.max(0, run.deadline - Date.now()), s = Math.ceil(left / 1000);
+  const el = document.getElementById('bpTimer');
+  if (el) { el.textContent = run.acting && !run.busy ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : ''; el.className = s <= 20 && run.acting ? 'urgent' : ''; }
+  if (run.kind === 'online' && !run.busy && Date.now() >= run.deadline + BP_PROXY_MS) bpOnlineProxy(); // 상대가 응답 없음 → 대신 기록
+  if (left > 0 || !run.acting || run.busy || !run.canInput) return;
+  // 시간 초과: 남은 칸 무작위(사용자 결정 (가)). 온라인은 씨앗값 무작위(대신 기록과 같은 규칙)
+  const rnd = run.kind === 'online' ? bpSeedRand(run.seed, run.bp.step, run.acting) : Math.random;
+  const ids = bpRandomFill(bpAvailable(run.bp), run.pending, run.need, rnd);
+  run.pending = ids;
+  bpConfirm(true);
+}
+// 칸 누르기: 고르는 중 목록에 넣고 빼기. 가득 찬 상태에서 새로 누르면 마지막 것을 바꿈
+function bpToggle(id) {
+  const run = bpRun; if (!run || !run.acting || run.busy || !run.canInput) return;
+  if (!bpAvailable(run.bp).includes(id)) return;
+  const i = run.pending.indexOf(id);
+  if (i >= 0) run.pending.splice(i, 1);
+  else if (run.pending.length < run.need) run.pending.push(id);
+  else run.pending[run.need - 1] = id;
+  bpUiRefresh();
+}
+// 확정(auto = 시간 초과)
+function bpConfirm(auto) {
+  const run = bpRun; if (!run || !run.acting || run.busy || !run.canInput || run.pending.length !== run.need) return false;
+  const side = run.acting, ids = run.pending.slice(), bp = run.bp;
+  if (run.kind === 'online') return bpOnlineSubmit(ids, auto); // 서버에 쓰기만 - 화면은 서버 기록이 오면(bpOnlinePump)
+  run.acting = null; run.pending = [];
+  clearInterval(run.timerId); run.timerId = null;
+  { const t = document.getElementById('bpTimer'); if (t) { t.textContent = ''; t.className = ''; } }
+  if (bp.step === 0) {
+    const revealed = bpSetBan(bp, side, ids[0]);
+    bpUiBanPlaced(side);           // 뒷면 카드가 밴 칸에 내려앉음(공개 전)
+    if (auto) addLog(`${pvpSideName(side)}: 밴 시간 초과 - 무작위`, 'logInfo');
+    if (!revealed) { bpUiRefresh(); bpHotseatBanTurn(otherSide(side)); return true; }
+    hidePvpCover();
+    run.busy = true;
+    bpUiPhase('밴 공개', '');
+    bpUiRevealBans();              // 동시에 뒤집힘 → 붉은 사선 → 흑백
+    const my = ++run.seq;
+    setTimeout(() => { if (bpRun === run && run.seq === my) bpNextStep(); }, BP_REVEAL_MS);
+    return true;
+  }
+  if (!bpSetPicks(bp, side, ids)) { run.acting = side; run.pending = []; bpTimerRestart(); return false; } // (일어나면 안 됨) 다시 고르게
+  if (auto) addLog(`${pvpSideName(side)}: 픽 시간 초과 - 무작위`, 'logInfo');
+  run.busy = true;
+  const dur = bpUiLockPicks(side, ids); // 카드가 펴지며 빛이 쓸고 지나감, 격자 칸은 진한 회색
+  const my = ++run.seq;
+  setTimeout(() => { if (bpRun === run && run.seq === my) bpNextStep(); }, dur);
+  return true;
+}
+function bpNextStep() {
+  const run = bpRun; if (!run) return;
+  const s = bpStepInfo(run.bp);
+  if (s.kind === 'pick') { bpOpenTurn(s.side, s.n); return; }
+  // 끝: 최종 라인업 → 전투(사용자 결정 (가))
+  run.busy = true;
+  bpUiPhase('밴픽 완료', '');
+  bpUiRefresh();
+  bpVfxFinal();
+  const my = ++run.seq;
+  setTimeout(() => { if (bpRun === run && run.seq === my) bpFinish(); }, BP_FINAL_MS);
+}
+function bpFinish() {
+  const run = bpRun; if (!run) return;
+  if (run.kind === 'online') { // 각자 자기 픽을 편성으로 기록 → 양쪽이 모이면 방장이 전투 시작(18_net)
+    bpUiPhase('전투 준비 중...', '');
+    if (run.mySide) netSubmitSquad(run.bp.picks[run.mySide].slice());
+    return;
+  }
+  bpStop();
+  document.getElementById('banPickScreen').style.display = 'none';
+  pvpStartHotseatBattle(run.bp.picks.player.slice(), run.bp.picks.enemy.slice(), run.bp.firstSide);
+}
+function bpStop() { if (bpRun) { clearInterval(bpRun.timerId); bpRun.seq++; } bpRun = null; }
+
+// ---- 진행(온라인, v12.82 - 4-B) ----
+// run 추가 필드: mySide, seed, base(지금 단계 마감 기준 서버 시각), banSeen, open(이번 단계 차례를 열었나), proxyAt(대신 기록 시도 시각)
+function bpStartOnline(room) {
+  const st = room.start, mySide = net.spectator ? null : net.isHost ? 'player' : 'enemy'; // (v12.84) 관전자 = null(입력·기록 없음)
+  bpRun = { kind: 'online', bp: bpNew(st.firstSide, bpPool()), mySide, seed: st.seed >>> 0, base: st.at, banSeen: {}, open: false, proxyAt: 0,
+    acting: null, pending: [], need: 1, deadline: 0, timerId: null, busy: false, canInput: false, seq: 0 };
+  bpUiBuild();
+  showMenuScreen('banPickScreen');
+  bpVfxAnnounce(`선공 ${pvpSetup.names[st.firstSide]}`);
+  bpOnlinePump();
+}
+const bpLocalTime = serverMs => serverMs - (net.serverOffset || 0);
+// 서버 기록(net.room.bp)을 내 상태에 차례대로 반영. 연출 중이면 끝난 뒤 다시 불림
+function bpOnlinePump() {
+  const run = bpRun; if (!run || run.kind !== 'online' || run.busy || !net.room) return;
+  const d = net.room.bp || {}, bp = run.bp;
+  if (bp.step === 0) {
+    const ban = d.ban || {};
+    for (const side of ['player', 'enemy']) {
+      if (!ban[side] || run.banSeen[side]) continue;
+      run.banSeen[side] = ban[side].id;
+      bpUiBanPlaced(side, ban[side].id); // 뒷면 카드(공개 전)
+    }
+    if (ban.player && ban.enemy) { // 둘 다 모임 → 동시 공개
+      bpSetBan(bp, 'player', ban.player.id); bpSetBan(bp, 'enemy', ban.enemy.id);
+      run.base = Math.max(ban.player.at, ban.enemy.at) + BP_REVEAL_MS; run.open = false;
+      bpStopTurnUi(run);
+      run.busy = true;
+      bpUiPhase('밴 공개', '');
+      bpUiRevealBans();
+      const my = ++run.seq;
+      setTimeout(() => { if (bpRun === run && run.seq === my) { run.busy = false; bpOnlinePump(); } }, BP_REVEAL_MS);
+      return;
+    }
+    if (!run.open) { run.open = true; bpOpenTurn(run.mySide || 'player', 1, { canInput: !!run.mySide && !ban[run.mySide], deadline: bpLocalTime(run.base) + BP_PHASE_MS }); }
+    if (run.mySide && ban[run.mySide] && run.canInput) { run.canInput = false; run.pending = []; }
+    if (run.mySide && ban[run.mySide]) bpUiPhase('상대 밴을 기다리는 중', run.mySide);
+    bpUiRefresh();
+    return;
+  }
+  const s = bpStepInfo(bp);
+  if (s.kind === 'pick') {
+    const e = d.picks && d.picks[bp.step];
+    if (e) {
+      const ids = Array.isArray(e.ids) ? e.ids : Object.values(e.ids || {});
+      bpStopTurnUi(run);
+      if (!bpSetPicks(bp, s.side, ids)) { addLog(`밴픽 기록 오류 (단계 ${bp.step}): ${ids.join(',')}`, 'logMiss'); return; } // (일어나면 안 됨)
+      run.base = e.at + BP_LOCK_MS; run.open = false;
+      if (e.proxy) addLog(`${pvpSideName(s.side)}: 픽 시간 초과 - 무작위`, 'logInfo');
+      run.busy = true;
+      const dur = bpUiLockPicks(s.side, ids);
+      const my = ++run.seq;
+      setTimeout(() => { if (bpRun === run && run.seq === my) { run.busy = false; bpOnlinePump(); } }, dur);
+      return;
+    }
+    if (!run.open) { run.open = true; bpOpenTurn(s.side, s.n, { canInput: s.side === run.mySide, deadline: bpLocalTime(run.base) + BP_PHASE_MS }); }
+    return;
+  }
+  if (!run.finished) { run.finished = true; bpNextStep(); } // 끝 → 최종 라인업 → bpFinish
+}
+function bpStopTurnUi(run) {
+  run.acting = null; run.pending = []; run.canInput = false;
+  clearInterval(run.timerId); run.timerId = null;
+  const t = document.getElementById('bpTimer'); if (t) { t.textContent = ''; t.className = ''; }
+}
+// 서버에 한 번만 쓰기(이미 있으면 그대로 - 먼저 쓴 쪽이 정답). at = 서버 시각 추정값(규칙: 서버 시각 ±10분)
+function bpOnlineWrite(path, val) {
+  if (!net.roomRef) return;
+  // applyLocally = false: 서버가 받아들인 값만 화면에 옴(대신 기록과 겹쳐 진 쪽 값이 잠깐 보였다 바뀌는 일 없게)
+  net.roomRef.child('bp/' + path).transaction(cur => (cur == null ? val : undefined), undefined, false).catch(() => {});
+}
+function bpOnlineSubmit(ids, auto) {
+  const run = bpRun, bp = run.bp, at = Date.now() + (net.serverOffset || 0);
+  run.canInput = false;
+  bpUiRefresh();
+  const btn = document.getElementById('bpConfirmBtn'); if (btn) { btn.disabled = true; btn.textContent = '확정 중...'; }
+  if (bp.step === 0) { bpOnlineWrite('ban/' + run.mySide, { id: ids[0], at }); if (auto) addLog(`${pvpSideName(run.mySide)}: 밴 시간 초과 - 무작위`, 'logInfo'); }
+  else bpOnlineWrite('picks/' + bp.step, Object.assign({ ids, at, by: run.mySide }, auto ? { proxy: true } : {}));
+  return true;
+}
+// 상대가 마감 + 5초가 지나도 기록이 없음 → 씨앗값 무작위로 대신 기록(3초마다 재시도). 차례인 쪽이 늦게 써도 먼저 쓴 쪽만 반영
+function bpOnlineProxy() {
+  const run = bpRun, now = Date.now();
+  if (!run || !run.mySide || now - run.proxyAt < 3000 || !net.room) return; // 관전자는 대신 기록하지 않음
+  run.proxyAt = now;
+  const bp = run.bp, d = net.room.bp || {}, at = now + (net.serverOffset || 0);
+  if (bp.step === 0) {
+    for (const side of ['player', 'enemy']) if (!(d.ban && d.ban[side])) bpOnlineWrite('ban/' + side, { id: bpRandomFill(bp.pool, [], 1, bpSeedRand(run.seed, 0, side))[0], at });
+    return;
+  }
+  const s = bpStepInfo(bp);
+  if (s.kind === 'pick' && !(d.picks && d.picks[bp.step])) bpOnlineWrite('picks/' + bp.step, { ids: bpRandomFill(bpAvailable(bp), [], s.n, bpSeedRand(run.seed, bp.step, s.side)), at, by: s.side, proxy: true });
+}
+// 나가기(온라인): 방을 나감 - 상대는 대기실로(방장이 나가면 참가자가 방장, 사용자 결정)
+function bpLeaveOnline() {
+  bpStop(); hidePvpCover();
+  document.getElementById('banPickScreen').style.display = 'none';
+  netLeaveRoom(); loadStage('test'); pvpSetup = null;
+  showMenuScreen('screenMpRoom');
+}
+
+// ---- 화면 ----
+// 카드: 앞면(일러스트) / 뒷면(무늬) 두 면, 'shown' 클래스면 앞면(뒤집힘 연출은 CSS)
+function bpImg(id) { const c = id && characters.find(x => x.id === id); return c && CHARACTER_IMAGES[baseIdOf(c)] && CHARACTER_IMAGES[baseIdOf(c)].card; }
+function bpCardHtml(id) {
+  const c = id && characters.find(x => x.id === id), img = bpImg(id);
+  return `<div class="bpCardInner"><div class="bpFace bpFront">${img ? `<img src="${img}" alt="">` : `<span>${c ? c.name : ''}</span>`}</div><div class="bpFace bpBack"><span>◆</span></div></div>`;
+}
+const bpName = id => { const c = id && characters.find(x => x.id === id); return c ? c.name : ''; };
+let bpEls = null; // { cells: {id: el}, slots: {player: [6], enemy: [6]}, bans: {player, enemy} }
+function bpUiBuild() {
+  const run = bpRun, $ = id => document.getElementById(id);
+  bpEls = { cells: {}, slots: { player: [], enemy: [] }, slotNames: { player: [], enemy: [] }, bans: {} };
+  for (const side of ['player', 'enemy']) {
+    $(side === 'player' ? 'bpTeamNameP' : 'bpTeamNameE').textContent = `${pvpSetup.names[side]}${side === run.bp.firstSide ? ' (선공)' : ' (후공)'}`;
+    const box = $(side === 'player' ? 'bpSlotsP' : 'bpSlotsE');
+    box.innerHTML = '';
+    for (let i = 0; i < 6; i++) {
+      const row = document.createElement('div'); row.className = 'bpSlot';
+      const card = document.createElement('div'); card.className = 'bpCard'; card.innerHTML = bpCardHtml(null);
+      const nm = document.createElement('div'); nm.className = 'bpSlotName';
+      row.appendChild(card); row.appendChild(nm); box.appendChild(row);
+      bpEls.slots[side].push(row); bpEls.slotNames[side].push(nm);
+    }
+    const ban = $(side === 'player' ? 'bpBanP' : 'bpBanE');
+    ban.className = 'bpBanSlot bpCard'; ban.innerHTML = bpCardHtml(null);
+    bpEls.bans[side] = ban;
+  }
+  const grid = $('bpGrid'); grid.innerHTML = '';
+  for (const id of run.bp.pool) {
+    const cell = document.createElement('button'); cell.className = 'bpCell'; cell.type = 'button';
+    const c = characters.find(x => x.id === id), img = bpImg(id);
+    cell.innerHTML = `<div class="bpCellImg">${img ? `<img src="${img}" alt="">` : ''}</div><div class="bpCellName">${c.name}</div>`;
+    cell.addEventListener('click', () => bpToggle(id));
+    grid.appendChild(cell); bpEls.cells[id] = cell;
+  }
+}
+function bpUiPhase(text, side) {
+  const el = document.getElementById('bpPhase');
+  if (el) { el.textContent = text; el.className = side ? 'bpPhase ' + side : 'bpPhase'; }
+}
+function bpSetCls(el, cls, on) { if (el) el.classList[on ? 'add' : 'remove'](cls); }
+// 현재 상태대로 격자·픽 칸·확정 버튼 갱신(연출 클래스는 건드리지 않음)
+function bpUiRefresh() {
+  const run = bpRun; if (!run || !bpEls) return;
+  const bp = run.bp, revealed = bp.step > 0;
+  const bans = revealed ? new Set([bp.bans.player, bp.bans.enemy]) : new Set();
+  const picked = new Set([...bp.picks.player, ...bp.picks.enemy]);
+  for (const id of bp.pool) {
+    const el = bpEls.cells[id];
+    el.className = 'bpCell' + (bans.has(id) ? ' banned' : '') + (picked.has(id) ? ' picked' : '') + (run.pending.includes(id) ? ' pending' : '')
+      + (run.acting && run.canInput && !run.busy && !bans.has(id) && !picked.has(id) ? ' selectable' : '');
+  }
+  // 픽 칸: 확정된 칸 / 지금 차례 칸(빛 + 고르는 중 미리보기)
+  for (const side of ['player', 'enemy']) {
+    const done = bp.picks[side].length;
+    for (let i = 0; i < 6; i++) {
+      const row = bpEls.slots[side][i], k = i - done;
+      const active = run.acting === side && bp.step > 0 && k >= 0 && k < run.need;
+      const pv = active ? run.pending[k] : null;
+      bpSetCls(row, 'active', active);
+      if (i >= done) { // 확정 전 칸: 미리보기 그림(내 화면에서만 - 핫시트는 차례인 사람 화면)
+        const want = pv || '';
+        if (row.dataset ? row.dataset.pv !== want : true) {
+          if (row.dataset) row.dataset.pv = want;
+          const card = row.children && row.children[0];
+          if (card) { const img = pv && bpImg(pv); card.innerHTML = bpCardHtml(null) + (pv ? `<div class="bpGhost">${img ? `<img src="${img}" alt="">` : ''}</div>` : ''); }
+        }
+        bpEls.slotNames[side][i].textContent = pv ? bpName(pv) : (active ? '선택 중...' : '');
+      }
+    }
+  }
+  const btn = document.getElementById('bpConfirmBtn');
+  if (btn) {
+    btn.disabled = !(run.acting && run.canInput && !run.busy && run.pending.length === run.need);
+    btn.textContent = !run.acting || run.busy || !run.canInput ? '대기' : bp.step === 0 ? '밴 확정' : `픽 확정 (${run.pending.length}/${run.need})`;
+  }
+}
+// 밴 칸에 뒷면 카드(공개 전)
+function bpUiBanPlaced(side, id) {
+  const el = bpEls && bpEls.bans[side]; if (!el) return;
+  el.innerHTML = bpCardHtml(id || bpRun.bp.bans[side]);
+  bpSetCls(el, 'placed', true);
+  bpVfxDrop(el);
+}
+function bpUiRevealBans() {
+  for (const side of ['player', 'enemy']) {
+    const el = bpEls && bpEls.bans[side]; if (!el) continue;
+    el.innerHTML = bpCardHtml(bpRun.bp.bans[side]) + `<div class="bpBanName">${bpName(bpRun.bp.bans[side])}</div>`;
+    bpVfxFlip(el, side === 'player' ? 0 : 90, () => bpVfxBanSlash(el));
+  }
+  setTimeout(bpUiRefresh, 700); // 격자의 붉은 X는 사선 뒤에
+}
+// 픽 확정: 칸마다 차례로 펴짐. 연출 길이(ms) 반환
+function bpUiLockPicks(side, ids) {
+  const bp = bpRun.bp, start = bp.picks[side].length - ids.length;
+  ids.forEach((id, k) => {
+    const row = bpEls.slots[side][start + k]; if (!row) return;
+    bpSetCls(row, 'active', false);
+    if (row.dataset) row.dataset.pv = 'locked';
+    const card = row.children && row.children[0];
+    if (card) card.innerHTML = bpCardHtml(id);
+    bpEls.slotNames[side][start + k].textContent = bpName(id);
+    bpVfxFlip(card || row, k * 170, () => bpVfxLockSweep(row));
+  });
+  bpUiRefresh();
+  return 600 + ids.length * 170 + 250;
+}
+document.getElementById('bpConfirmBtn').addEventListener('click', () => bpConfirm(false));
+document.getElementById('bpBackBtn').addEventListener('click', () => { // 나가기: 핫시트는 대기실로, 온라인은 방 나가기
+  if (bpRun && bpRun.kind === 'online') { bpLeaveOnline(); return; }
+  bpStop(); hidePvpCover();
+  document.getElementById('banPickScreen').style.display = 'none';
+  loadStage('test');
+  renderMpLobby(); showMenuScreen('screenMpLobby');
+});
+
+// ================= 드래프트전 (v12.83, MULTIPLAYER.md 2-7) =================
+// 3라운드. 라운드마다 양쪽 동시에 무작위 후보 2명 중 1명 선택 → 고른 쪽은 내 덱, 남은 쪽은 상대 덱(각 6명).
+// 후보 12명은 모두 다름(26명에서 겹치지 않게 - 사용자 결정 (가)), 방 씨앗값으로 양쪽 화면이 같게 계산(서버에는 선택만 기록).
+// 받은 캐릭터·상대가 고른 캐릭터는 드래프트가 끝날 때 최종 라인업에서 함께 공개(사용자 결정 4·5 (가)). 선공은 전투 시작 때 발표(2 (가)).
+// 단계(라운드)당 2분, 넘으면 후보 2명 중 무작위. 온라인 무응답은 상대 화면이 마감 5초 뒤 대신 기록(밴픽과 같음). 화면·연출은 밴픽 것 재사용
+const DR_ROUNDS = 3;
+const DR_ANIM_MS = 1500; // (온라인) 선택 연출 시간 - 다음 라운드 마감 기준에 더함
+
+// ---- 상태 ----
+// cands[side][r] = [후보 2명], choice[side][r] = 고른 id, round = 지금 라운드(양쪽 다 고르면 +1, 3이면 끝)
+function drNew(seed, pool) {
+  const rnd = bpSeedRand(seed, 99, 'player'), s = pool.slice();
+  for (let i = s.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [s[i], s[j]] = [s[j], s[i]]; }
+  const cands = { player: [], enemy: [] };
+  for (let r = 0; r < DR_ROUNDS; r++) { cands.player.push([s[r * 4], s[r * 4 + 1]]); cands.enemy.push([s[r * 4 + 2], s[r * 4 + 3]]); }
+  return { seed: seed >>> 0, cands, choice: { player: [], enemy: [] }, round: 0 };
+}
+const drLeftover = (dr, side, r) => { const c = dr.choice[side][r]; return c ? dr.cands[side][r].find(id => id !== c) : null; };
+// 선택 기록. 그 라운드 양쪽이 다 고르면 다음 라운드로(true 반환)
+function drSetChoice(dr, side, id) {
+  const r = dr.round;
+  if (r >= DR_ROUNDS || dr.choice[side].length !== r || !dr.cands[side][r].includes(id)) return false;
+  dr.choice[side].push(id);
+  if (dr.choice.player.length > r && dr.choice.enemy.length > r) { dr.round++; return true; }
+  return false;
+}
+// 덱: 내가 고른 3명(라운드 순) + 상대에게서 받은 3명(라운드 순)
+function drDecks(dr) {
+  const deck = side => [...dr.choice[side], ...dr.choice[otherSide(side)].map((_, r) => drLeftover(dr, otherSide(side), r))];
+  return { player: deck('player'), enemy: deck('enemy') };
+}
+function drRandomChoice(dr, side, r) { return dr.cands[side][r][Math.floor(bpSeedRand(dr.seed, 10 + r, side)() * 2)]; }
+
+// ---- 진행 공통 ----
+// drRun: { kind, dr, viewer(화면 시점 진영), pending, deadline, timerId, busy, seq, canInput, recvSeen{side: 본 받은 카드 수} } (+온라인: mySide, base, open, proxyAt, done)
+let drRun = null;
+function drStop() { if (drRun) { clearInterval(drRun.timerId); drRun.seq++; } drRun = null; }
+function drTimerRestart() {
+  const run = drRun; if (!run) return;
+  clearInterval(run.timerId);
+  run.timerId = setInterval(drTick, 250);
+  drTick();
+}
+function drTimerClear(run) {
+  clearInterval(run.timerId); run.timerId = null;
+  const t = document.getElementById('drTimer'); if (t) { t.textContent = ''; t.className = ''; }
+}
+function drTick() {
+  const run = drRun; if (!run) return;
+  const left = Math.max(0, run.deadline - Date.now()), s = Math.ceil(left / 1000);
+  const el = document.getElementById('drTimer');
+  if (el) { el.textContent = run.deadline && !run.busy ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : ''; el.className = s <= 20 ? 'urgent' : ''; }
+  if (run.kind === 'online' && run.mySide && !run.busy && run.deadline && Date.now() >= run.deadline + BP_PROXY_MS) drOnlineProxy(); // 관전자는 대신 기록하지 않음
+  if (left > 0 || !run.canInput || run.busy) return;
+  // 시간 초과: 고르던 것이 있으면 그것, 없으면 후보 2명 중 무작위(사용자 결정)
+  if (!run.pending) run.pending = run.kind === 'online' ? drRandomChoice(run.dr, run.viewer, run.dr.round) : run.dr.cands[run.viewer][run.dr.round][Math.floor(Math.random() * 2)];
+  drConfirm(true);
+}
+function drToggle(id) {
+  const run = drRun; if (!run || !run.canInput || run.busy) return;
+  if (!run.dr.cands[run.viewer][run.dr.round].includes(id)) return;
+  run.pending = run.pending === id ? null : id;
+  drUiCands();
+}
+function drConfirm(auto) {
+  const run = drRun; if (!run || !run.canInput || run.busy || !run.pending) return false;
+  const side = run.viewer, id = run.pending, dr = run.dr;
+  run.canInput = false;
+  if (auto) addLog(`${pvpSideName(side)}: 드래프트 시간 초과 - 무작위`, 'logInfo');
+  if (run.kind === 'online') { // 서버에 쓰기만 - 화면은 서버 기록이 오면(drOnlinePump)
+    drUiCands();
+    const btn = document.getElementById('drConfirmBtn'); if (btn) { btn.disabled = true; btn.textContent = '확정 중...'; }
+    drOnlineWrite(dr.round, side, Object.assign({ id, at: Date.now() + (net.serverOffset || 0) }, auto ? { proxy: true } : {}));
+    return true;
+  }
+  drTimerClear(run);
+  const r = dr.round;
+  drSetChoice(dr, side, id);
+  run.busy = true;
+  const dur = drUiChosen(side, r);
+  const my = ++run.seq;
+  setTimeout(() => {
+    if (drRun !== run || run.seq !== my) return;
+    run.busy = false;
+    if (dr.round >= DR_ROUNDS) drFinal();
+    else drHotseatTurn(dr.choice.player.length > dr.round ? 'enemy' : 'player'); // 이번 라운드 1P → 2P, 다 고르면 다음 라운드 1P
+  }, dur + 350);
+  return true;
+}
+// 끝: 모든 카드 공개(받은 카드·상대가 고른 카드) → 최종 라인업 → 전투(선공은 전투 시작 때 발표)
+function drFinal() {
+  const run = drRun; if (!run) return;
+  const go = () => {
+    if (drRun !== run) return;
+    run.busy = true; run.viewer = run.kind === 'online' ? run.mySide : null;
+    drTimerClear(run);
+    drUiPhase('드래프트 완료 - 공개', '');
+    drUiCands();
+    drUiRevealAll();
+    const my = ++run.seq;
+    setTimeout(() => { if (drRun === run && run.seq === my) drFinish(); }, BP_FINAL_MS + 900);
+  };
+  if (run.kind === 'hotseat') showPvpCover('드래프트 완료', '두 사람 모두 화면을 보세요 - 받은 캐릭터가 공개됩니다', go);
+  else go();
+}
+function drFinish() {
+  const run = drRun; if (!run) return;
+  const decks = drDecks(run.dr);
+  if (run.kind === 'online') { drUiPhase('전투 준비 중...', ''); if (run.mySide) netSubmitSquad(decks[run.mySide].slice()); return; } // 양쪽이 모이면 방장이 전투 시작(18_net)
+  drStop();
+  document.getElementById('draftScreen').style.display = 'none';
+  pvpStartHotseatBattle(decks.player, decks.enemy, Math.random() < 0.5 ? 'player' : 'enemy');
+}
+
+// ---- 핫시트 ----
+function drStartHotseat() {
+  drRun = { kind: 'hotseat', dr: drNew(Math.floor(Math.random() * 4294967296), bpPool()), viewer: null, pending: null, deadline: 0, timerId: null, busy: false, seq: 0, canInput: false, recvSeen: { player: 0, enemy: 0 } };
+  drUiBuild();
+  showMenuScreen('draftScreen');
+  drHotseatTurn('player');
+}
+// 차례: 가림막으로 넘겨받음 → 그 사람 시점(내 덱·내가 준 카드만 앞면)으로 다시 그림 → 후보 2장 → 선택
+function drHotseatTurn(side) {
+  const run = drRun;
+  run.viewer = null; drUiSlots(); drUiCands(); drUiPhase('', '');
+  showPvpCover(`${pvpSetup.names[side]} 선택 차례 (라운드 ${run.dr.round + 1}/${DR_ROUNDS})`, '상대가 보지 않게 화면을 넘겨받으세요', () => {
+    if (drRun !== run) return;
+    run.viewer = side;
+    drUiSlots();
+    drOpenRound(Date.now() + BP_PHASE_MS);
+  });
+}
+// 라운드 열기(시점 = run.viewer): 후보 2장 나눠 주기 → 선택 가능
+function drOpenRound(deadline) {
+  const run = drRun; if (!run) return;
+  run.pending = null; run.busy = true; run.deadline = deadline;
+  drUiPhase(`라운드 ${run.dr.round + 1}/${DR_ROUNDS} - 1명 선택`, run.viewer);
+  const dur = drUiDeal();
+  const my = ++run.seq;
+  setTimeout(() => {
+    if (drRun !== run || run.seq !== my) return;
+    run.busy = false; run.canInput = true; drUiCands(); drTimerRestart();
+    if (run.kind === 'online') drOnlinePump(); // 나눠 주는 동안 온 기록 반영
+  }, dur);
+}
+
+// ---- 온라인 (방 draft/<라운드>/<진영> = {id, at, proxy?}) ----
+function drStartOnline(room) {
+  const st = room.start, mySide = net.spectator ? null : net.isHost ? 'player' : 'enemy'; // (v12.84) 관전자 = null(시점 없음 - 카드는 끝날 때 공개)
+  drRun = { kind: 'online', dr: drNew(st.seed, bpPool()), mySide, viewer: mySide, base: st.at, open: -1, proxyAt: 0, done: false,
+    pending: null, deadline: 0, timerId: null, busy: false, seq: 0, canInput: false, recvSeen: { player: 0, enemy: 0 } };
+  drUiBuild();
+  showMenuScreen('draftScreen');
+  drUiSlots();
+  drOnlinePump();
+}
+function drOnlinePump() {
+  const run = drRun; if (!run || run.kind !== 'online' || run.busy || !net.room) return;
+  const dr = run.dr, d = net.room.draft || {}, r = dr.round, me = run.mySide, opp = me ? otherSide(me) : null;
+  if (r >= DR_ROUNDS) { if (!run.done) { run.done = true; drFinal(); } return; }
+  if (run.open !== r) { // 새 라운드: 후보 나눠 주기(마감 = 앞 라운드 마지막 기록 + 연출 + 2분)
+    run.open = r;
+    if (me) { drOpenRound(bpLocalTime(run.base) + BP_PHASE_MS); return; }
+    run.deadline = bpLocalTime(run.base) + BP_PHASE_MS; // 관전: 후보는 보이지 않음, 진행만
+    drUiPhase(`라운드 ${r + 1}/${DR_ROUNDS} 진행 중 (관전)`, ''); drUiCands(); drTimerRestart();
+  }
+  const e = d[r] || {};
+  for (const side of (me ? [me, opp] : ['player', 'enemy'])) {
+    if (!e[side] || dr.choice[side].length !== r) continue;
+    const advanced = drSetChoice(dr, side, e[side].id);
+    if (dr.choice[side][r] !== e[side].id) { addLog(`드래프트 기록 오류 (라운드 ${r + 1})`, 'logMiss'); return; } // (일어나면 안 됨)
+    if (side === me) { run.canInput = false; run.pending = null; }
+    run.lastAt = Math.max(run.lastAt || 0, Number(e[side].at) || 0); // 이 라운드 기록 시각(받은 순서와 상관없이 - 앞서 받은 것은 지금 스냅샷에 없을 수 있음)
+    if (advanced) { run.base = run.lastAt + DR_ANIM_MS; run.lastAt = 0; drTimerClear(run); }
+    run.busy = true;
+    const dur = side === me ? drUiChosen(me, r) : drUiReceived(r);
+    if (side === me && !advanced) drUiPhase('상대 선택을 기다리는 중', me);
+    const my = ++run.seq;
+    setTimeout(() => {
+      if (drRun !== run || run.seq !== my) return;
+      run.busy = false;
+      if (!advanced) drTimerRestart(); // 상대를 기다리는 동안도 마감 표시 + 무응답 대신 기록 감시
+      drOnlinePump();
+    }, dur + 150);
+    return;
+  }
+  if (me && dr.choice[me].length > r && !run.busy) drUiPhase('상대 선택을 기다리는 중', me);
+}
+function drOnlineWrite(r, side, val) {
+  if (!net.roomRef) return;
+  net.roomRef.child('draft/' + r + '/' + side).transaction(cur => (cur == null ? val : undefined), undefined, false).catch(() => {}); // 비어 있을 때만, 서버가 받은 값만 화면에(밴픽과 같음)
+}
+// 마감 + 5초가 지나도 기록이 없는 쪽 → 씨앗값 무작위로 대신 기록(3초마다 재시도)
+function drOnlineProxy() {
+  const run = drRun, now = Date.now();
+  if (!run || now - run.proxyAt < 3000 || !net.room || run.dr.round >= DR_ROUNDS) return;
+  run.proxyAt = now;
+  const r = run.dr.round, e = (net.room.draft || {})[r] || {};
+  for (const side of ['player', 'enemy']) if (!e[side]) drOnlineWrite(r, side, { id: drRandomChoice(run.dr, side, r), at: now + (net.serverOffset || 0), proxy: true });
+}
+function drLeaveOnline() {
+  drStop(); hidePvpCover();
+  document.getElementById('draftScreen').style.display = 'none';
+  netLeaveRoom(); loadStage('test'); pvpSetup = null;
+  showMenuScreen('screenMpRoom');
+}
+
+// ---- 화면 ----
+// 덱 칸: 0~2 = 그 진영이 고른 카드(라운드 순), 3~5 = 상대에게서 받은 카드. 시점(viewer)에 따라 앞면/뒷면:
+//   내 칸의 고른 카드·상대 칸의 받은 카드(내가 준 것) = 앞면, 그 밖(받은 카드·상대가 고른 카드) = 뒷면. 공개(revealAll)면 모두 앞면
+let drEls = null;
+function drSlotState(dr, side, i, viewer, revealAll) {
+  const r = i % 3, own = i < 3;
+  const id = own ? dr.choice[side][r] : drLeftover(dr, otherSide(side), r);
+  if (!id) return { id: null, shown: false };
+  return { id, shown: revealAll || (own ? viewer === side : viewer === otherSide(side)) };
+}
+function drUiBuild() {
+  const $ = id => document.getElementById(id);
+  drEls = { slots: { player: [], enemy: [] }, names: { player: [], enemy: [] }, cands: [] };
+  for (const side of ['player', 'enemy']) {
+    $(side === 'player' ? 'drTeamNameP' : 'drTeamNameE').textContent = pvpSetup.names[side];
+    const box = $(side === 'player' ? 'drSlotsP' : 'drSlotsE');
+    box.innerHTML = '';
+    for (let i = 0; i < 6; i++) {
+      const row = document.createElement('div'); row.className = 'bpSlot drSlot' + (i === 3 ? ' drRecvFirst' : '');
+      const card = document.createElement('div'); card.className = 'bpCard drEmpty'; card.innerHTML = bpCardHtml(null);
+      const nm = document.createElement('div'); nm.className = 'bpSlotName';
+      row.appendChild(card); row.appendChild(nm); box.appendChild(row);
+      drEls.slots[side].push(row); drEls.names[side].push(nm);
+    }
+  }
+  const cb = $('drCands'); cb.innerHTML = '';
+  for (let k = 0; k < 2; k++) {
+    const c = document.createElement('button'); c.type = 'button'; c.className = 'bpCard drCand'; c.innerHTML = bpCardHtml(null);
+    const nm = document.createElement('div'); nm.className = 'drCandName';
+    const wrap = document.createElement('div'); wrap.className = 'drCandWrap';
+    wrap.appendChild(c); wrap.appendChild(nm); cb.appendChild(wrap);
+    c.addEventListener('click', () => { const run = drRun; if (run && run.viewer) drToggle(run.dr.cands[run.viewer][run.dr.round][k]); });
+    drEls.cands.push({ wrap, card: c, name: nm });
+  }
+}
+function drUiPhase(text, side) {
+  const el = document.getElementById('drPhase');
+  if (el) { el.textContent = text; el.className = side ? 'bpPhase ' + side : 'bpPhase'; }
+}
+const drSlotCard = row => row && row.children && row.children[0];
+// 덱 칸을 지금 시점대로 다시 그림(연출 없이). 상태가 바뀐 칸만
+function drUiSlots(revealAll) {
+  const run = drRun; if (!run || !drEls) return;
+  for (const side of ['player', 'enemy']) for (let i = 0; i < 6; i++) {
+    const st = drSlotState(run.dr, side, i, run.viewer, revealAll), row = drEls.slots[side][i], card = drSlotCard(row);
+    const key = (st.id || '') + (st.shown ? '+' : '-');
+    if (row.dataset && row.dataset.k === key) continue;
+    if (row.dataset) row.dataset.k = key;
+    if (card) {
+      card.innerHTML = bpCardHtml(st.shown ? st.id : null); // 뒷면 카드에는 정체를 넣지 않음(핫시트 엿보기 방지)
+      card.className = 'bpCard' + (st.id ? '' : ' drEmpty') + (st.shown ? ' shown' : '');
+    }
+    drEls.names[side][i].textContent = st.shown ? bpName(st.id) : st.id ? '?' : (i < 3 ? '' : '');
+  }
+  // 새로 받은 카드(뒷면)는 내려앉는 연출
+  for (const side of ['player', 'enemy']) {
+    const n = run.dr.choice[otherSide(side)].length;
+    if (run.viewer === side && n > run.recvSeen[side]) { for (let r = run.recvSeen[side]; r < n; r++) bpVfxDrop(drSlotCard(drEls.slots[side][3 + r])); run.recvSeen[side] = n; }
+  }
+}
+// 후보 카드 2장: 시점의 이번 라운드 후보(고르는 중 = 금색)
+function drUiCands() {
+  const run = drRun; if (!run || !drEls) return;
+  const r = run.dr.round, list = run.viewer && r < DR_ROUNDS && run.dr.choice[run.viewer].length === r ? run.dr.cands[run.viewer][r] : null;
+  drEls.cands.forEach((c, k) => {
+    const id = list ? list[k] : null;
+    c.wrap.className = 'drCandWrap' + (id ? '' : ' gone') + (id && run.pending === id ? ' pending' : '') + (id && run.canInput && !run.busy ? ' selectable' : '');
+    c.name.textContent = id && c.card.classList.contains && c.card.classList.contains('shown') ? bpName(id) : '';
+  });
+  const btn = document.getElementById('drConfirmBtn');
+  if (btn) { btn.disabled = !(run.canInput && !run.busy && run.pending); btn.textContent = run.canInput && !run.busy ? '선택 확정' : '대기'; }
+}
+// 후보 2장 나눠 주기: 뒷면이 날아와 놓임 → 동시에 뒤집힘. 연출 길이 반환
+function drUiDeal() {
+  const run = drRun, list = run.dr.cands[run.viewer][run.dr.round];
+  drEls.cands.forEach((c, k) => {
+    c.card.innerHTML = bpCardHtml(list[k]);
+    c.card.classList.remove('shown');
+    c.wrap.className = 'drCandWrap';
+    c.name.textContent = '';
+    bpRetrigger(c.wrap, 'dealFx');
+    bpVfxFlip(c.card, 380 + k * 120, () => { c.name.textContent = bpName(list[k]); });
+  });
+  return 380 + 120 + BP_FLIP_MS + 60;
+}
+// 내가 고름: 고른 카드는 빛나며 내 덱 칸으로, 남은 카드는 붉게 상대 덱 칸(받은 칸)으로 날아감. 연출 길이 반환
+function drUiChosen(side, r) {
+  const run = drRun, dr = run.dr, mine = dr.choice[side][r], left = drLeftover(dr, side, r);
+  const ci = dr.cands[side][r].indexOf(mine), li = 1 - ci;
+  const toMine = drSlotCard(drEls.slots[side][r]), toOpp = drSlotCard(drEls.slots[otherSide(side)][3 + r]);
+  drVfxFly(drEls.cands[ci].card, toMine, mine, 'flyMine', () => { drUiSlots(); bpVfxLockSweep(drEls.slots[side][r]); });
+  drVfxFly(drEls.cands[li].card, toOpp, left, 'flyGive', () => { drUiSlots(); bpRetrigger(drEls.slots[otherSide(side)][3 + r], 'giveFx'); }, 140);
+  drEls.cands.forEach(c => { c.wrap.className = 'drCandWrap gone'; c.name.textContent = ''; });
+  drTimerClear(run);
+  const btn = document.getElementById('drConfirmBtn'); if (btn) { btn.disabled = true; btn.textContent = '대기'; }
+  return DR_FLY_MS + 140 + 600;
+}
+// (온라인) 상대가 고름: 내 받은 칸에 뒷면 카드가 내려앉음
+function drUiReceived() { drUiSlots(); return 450; }
+// 최종 공개: 뒷면이던 카드가 차례로 뒤집힘 → 라인업 튀어 오름
+function drUiRevealAll() {
+  const run = drRun; let k = 0;
+  for (const side of ['player', 'enemy']) for (let i = 0; i < 6; i++) {
+    const st = drSlotState(run.dr, side, i, run.viewer, false), all = drSlotState(run.dr, side, i, run.viewer, true), row = drEls.slots[side][i], card = drSlotCard(row);
+    if (!all.id) continue;
+    if (row.dataset) row.dataset.k = all.id + '+';
+    if (st.shown) { if (card) { card.innerHTML = bpCardHtml(all.id); card.className = 'bpCard shown'; } drEls.names[side][i].textContent = bpName(all.id); continue; }
+    if (card) { card.innerHTML = bpCardHtml(all.id); card.className = 'bpCard'; }
+    const name = drEls.names[side][i];
+    name.textContent = '?';
+    bpVfxFlip(card, 200 + (k++) * 140, () => { name.textContent = bpName(all.id); bpVfxLockSweep(row); });
+  }
+  setTimeout(() => { if (drRun === run) { for (const side of ['player', 'enemy']) drEls.slots[side].forEach((row, i) => setTimeout(() => bpRetrigger(row, 'finalPop'), i * 90)); bpVfxAnnounce('전투 준비', 'drAnnounce'); } }, 200 + k * 140 + BP_FLIP_MS);
+}
+document.getElementById('drConfirmBtn').addEventListener('click', () => drConfirm(false));
+document.getElementById('drBackBtn').addEventListener('click', () => { // 나가기: 핫시트는 대기실로, 온라인은 방 나가기
+  if (drRun && drRun.kind === 'online') { drLeaveOnline(); return; }
+  drStop(); hidePvpCover();
+  document.getElementById('draftScreen').style.display = 'none';
+  loadStage('test');
+  renderMpLobby(); showMenuScreen('screenMpLobby');
+});
+
 // ================= 온라인 대전 통신 (Firebase) - MULTIPLAYER.md 2장 =================
 // 라이브러리는 멀티플레이에서 방 만들기/참가를 누를 때만 인터넷(구글 CDN)에서 불러옴 -> 싱글/오프라인 영향 없음.
 // 로그인은 익명(게스트). 방장 = 1P('player'), 참가자 = 2P('enemy').
@@ -15437,7 +16456,8 @@ let net = { ready: false, db: null, uid: null, roomCode: null, isHost: false, ro
   queue: [], pending: {}, nextSeq: 0, awaitTurnStart: false, pumpTimer: null, // 명령 재생 대기열(2-3-2)
   turnNo: 0, turn: null, serverOffset: 0, desyncWarned: {}, oppDiscTimer: null, oppDiscAt: 0, status: {},
   replaying: false, replayTarget: 0,          // 재연결 복원(명령 다시 재생) 중 - 부수 효과 금지(2-4-1)
-  unacked: {}, lastProgressAt: 0, lastFetchAt: 0, fetching: false, watchId: null }; // 전송 확인 대기 / 누락 복구(2-4-2)
+  unacked: {}, lastProgressAt: 0, lastFetchAt: 0, fetching: false, watchId: null, // 전송 확인 대기 / 누락 복구(2-4-2)
+  spectator: false, specSlot: -1, specHash: {}, lastHashes: {} }; // (v12.84) 관전자(MULTIPLAYER.md 2-8): 관전석 번호, 내 화면 요약값(읽기 전용 동기화 확인)
 let NET_DISCONNECT_MS = 2 * 60 * 1000; // 상대가 끊긴 뒤 이 시간 안에 안 돌아오면 남은 쪽 승리(2-4)
 
 function netLoadScript(src) {
@@ -15518,8 +16538,13 @@ async function netJoinRoom(code, name) {
   const cur0 = snap.val();
   if (!cur0) throw new Error('방이 없습니다');
   if (cur0.ver !== GAME_BUILD) throw new Error('게임 버전이 다릅니다 (두 사람 모두 새로고침 후 다시 시도하세요)'); // 빌드가 다르면 동기화가 깨짐
-  if (cur0.status !== 'lobby') throw new Error('이미 시작한 방입니다');
-  if (cur0.guest && cur0.guest.uid !== net.uid) throw new Error('방이 가득 찼습니다');
+  if (cur0.status !== 'lobby') throw new Error('이미 시작한 방입니다 (대전 도중에는 관전으로도 들어갈 수 없습니다)');
+  if (cur0.guest && cur0.guest.uid !== net.uid) { // (v12.84) 참가자 자리가 차 있으면 관전석으로(사용자 결정 1 (가))
+    const slot = netMySpecSlot(cur0) >= 0 ? netMySpecSlot(cur0) : await netTakeSpecSlot(ref, name);
+    if (slot < 0) throw new Error('방이 가득 찼습니다 (관전석 4명까지)');
+    netEnterRoom(code, false);
+    return code;
+  }
   // 참가는 guest 칸만 트랜잭션(방 전체를 쓰면 규칙상 참가자가 방 전체를 쓸 수 있어야 해서 안 됨 - MULTIPLAYER.md 2-5).
   // '대기실일 때만'은 규칙이 원자적으로 확인(거부되면 아래 catch)
   let reason = null, r;
@@ -15534,28 +16559,55 @@ async function netJoinRoom(code, name) {
   netEnterRoom(code, false);
   return code;
 }
+// ---- (v12.84) 관전석(MULTIPLAYER.md 2-8): spectators/0~3 = {uid, name, at}. 대기실일 때만 앉음, 전투 도중 입장 불가 ----
+const NET_SPEC_SLOTS = 4;
+function netSpecList(room) {
+  const s = (room && room.spectators) || {}, out = [];
+  for (let i = 0; i < NET_SPEC_SLOTS; i++) { const v = s[i]; if (v && v.uid) out.push(Object.assign({ slot: i }, v)); }
+  return out;
+}
+function netMySpecSlot(room) { const m = netSpecList(room).find(v => v.uid === net.uid); return m ? m.slot : -1; }
+// 빈 관전석에 앉기(트랜잭션 - 동시에 둘이 같은 칸을 잡지 않게). 앉은 칸 번호, 못 앉으면 -1
+async function netTakeSpecSlot(ref, name) {
+  const at = await netServerNow();
+  for (let i = 0; i < NET_SPEC_SLOTS; i++) {
+    let r;
+    try { r = await ref.child('spectators/' + i).transaction(cur => (cur && cur.uid !== net.uid ? undefined : { uid: net.uid, name, at })); } catch (e) { continue; }
+    if (r && r.committed) return i;
+  }
+  return -1;
+}
+// 방장 자리가 비었을 때 넘겨받을 사람: 참가자 우선, 없으면 먼저 들어온 관전자(사용자 결정 4 (나))
+function netNextHostUid(room) {
+  if (room.guest && room.guest.uid) return room.guest.uid;
+  const specs = netSpecList(room).sort((a, b) => (a.at || 0) - (b.at || 0) || a.slot - b.slot);
+  return specs.length ? specs[0].uid : null;
+}
 function netEnterRoom(code, isHost) {
   net.roomCode = code; net.isHost = isHost; net.phase = 'lobby'; net.armedAlone = null;
   net.roomRef = net.db.ref('rooms/' + code);
   net.roomRef.on('value', snap => { net.room = snap.val(); netOnRoomUpdate(); });
 }
 // (v12.80) 대기실·편성 단계 끊김 예약(MULTIPLAYER.md 2-4): 방장 혼자면 방·색인 삭제, 참가자가 있으면 방장 자리만 비움(참가자가 방장이 됨), 참가자는 자기 자리 비움
+// (v12.84) 관전석: 자기 칸 비움. 방장은 참가자·관전자가 하나라도 있으면 방장 자리만 비움(넘겨받음)
 function netArmLobbyDisconnect() {
-  if (!net.roomRef || net.phase === 'battle') return;
-  if (!net.isHost) { if (net.armedAlone !== 'guest') { net.armedAlone = 'guest'; net.roomRef.child('guest').onDisconnect().remove(); } return; }
-  const alone = !(net.room && net.room.guest);
-  if (net.armedAlone === alone) return;
-  net.armedAlone = alone;
+  if (!net.roomRef || (net.phase === 'battle' && !net.spectator)) return;
+  const room = net.room || {};
+  const key = net.isHost ? ((room.guest || netSpecList(room).length) ? 'host' : 'alone') : net.spectator ? 'spec' + net.specSlot : 'guest';
+  if (net.armedAlone === key) return;
+  net.armedAlone = key;
   const idx = net.db.ref('roomIndex/' + net.roomCode);
   net.roomRef.onDisconnect().cancel(); idx.onDisconnect().cancel();
-  if (alone) { net.roomRef.onDisconnect().remove(); idx.onDisconnect().remove(); }
-  else net.roomRef.child('host').onDisconnect().remove();
+  if (key === 'alone') { net.roomRef.onDisconnect().remove(); idx.onDisconnect().remove(); }
+  else if (key === 'host') net.roomRef.child('host').onDisconnect().remove();
+  else if (key === 'guest') net.roomRef.child('guest').onDisconnect().remove();
+  else net.roomRef.child('spectators/' + net.specSlot).onDisconnect().remove();
 }
 function netLeaveRoom() {
-  const ref = net.roomRef, code = net.roomCode, wasHost = net.isHost, room = net.room;
+  const ref = net.roomRef, code = net.roomCode, wasHost = net.isHost, room = net.room, wasSpec = net.spectator, slot = net.specSlot;
   netTeardownBattle();
   netClearActive(); // 재연결 기록 지움(나가면 더 이상 돌아갈 대전 없음)
-  net.roomRef = null; net.roomCode = null; net.room = null; net.isHost = false; net.phase = 'lobby'; net.armedAlone = null;
+  net.roomRef = null; net.roomCode = null; net.room = null; net.isHost = false; net.phase = 'lobby'; net.armedAlone = null; net.spectator = false; net.specSlot = -1; spectatorView = false;
   if (!ref) return;
   ref.off();
   const idx = net.db.ref('roomIndex/' + code);
@@ -15563,10 +16615,11 @@ function netLeaveRoom() {
     ref.onDisconnect().cancel(); idx.onDisconnect().cancel();
     ref.once('value').then(snap => { // 지금 참가자가 있으면 방장 자리만 비움(참가자가 방장이 됨), 없으면 방·색인 삭제
       const cur = snap.val();
-      if (cur && cur.guest) ref.child('host').remove().catch(() => {});
+      if (cur && (cur.guest || netSpecList(cur).length)) ref.child('host').remove().catch(() => {}); // (v12.84) 관전자만 있어도 넘김
       else { ref.remove().catch(() => {}); idx.remove().catch(() => {}); }
     }).catch(() => {});
-  } else { ref.child('guest').onDisconnect().cancel(); ref.child('guest').remove().catch(() => {}); } // 방이 이미 없으면 규칙상 거부될 수 있음 - 무시
+  } else if (wasSpec) { ref.child('spectators/' + slot).onDisconnect().cancel(); ref.child('spectators/' + slot).remove().catch(() => {}); }
+  else { ref.child('guest').onDisconnect().cancel(); ref.child('guest').remove().catch(() => {}); } // 방이 이미 없으면 규칙상 거부될 수 있음 - 무시
   void room;
 }
 // (v12.80) 방장이 없고 내가 참가자면 방장 자리로 옮겨 앉음(방장 나감·끊김). 대기실로 되돌림
@@ -15584,11 +16637,54 @@ async function netPromoteSelf() {
   } catch (e) { /* 이미 다른 처리가 됨 - 다음 갱신에서 다시 판단 */ }
   net.promoting = false;
 }
+// (v12.84) 참가자 없이 방장 자리가 비었고 내가 가장 먼저 들어온 관전자면 방장이 됨(사용자 결정 4 (나))
+async function netPromoteSpectator() {
+  if (net.promoting || !net.roomRef) return;
+  const me = netSpecList(net.room).find(v => v.uid === net.uid); if (!me) return;
+  net.promoting = true;
+  try {
+    await net.roomRef.child('host').set({ uid: net.uid, name: me.name });
+    net.roomRef.child('spectators/' + me.slot).onDisconnect().cancel();
+    await net.roomRef.child('spectators/' + me.slot).remove();
+    net.isHost = true; net.spectator = false; net.specSlot = -1; net.armedAlone = null; netArmLobbyDisconnect();
+    await netResetRoomToLobby();
+    mpLobbyNoticeText('방장이 나가서 방장이 되었습니다');
+  } catch (e) { /* 다음 갱신에서 다시 판단 */ }
+  net.promoting = false;
+}
+// (v12.84) 대기실: 방장·참가자 → 관전석(사용자 결정 1). 관전석에 먼저 앉고 자리를 비움(방장이면 참가자 또는 먼저 온 관전자가 넘겨받음)
+async function netMoveToSpectator() {
+  if (!net.roomRef || net.spectator || net.moving || !net.room || net.room.status !== 'lobby') return;
+  net.moving = true;
+  try {
+    const seat = net.isHost ? 'host' : 'guest', name = net.room[seat] && net.room[seat].name;
+    const slot = await netTakeSpecSlot(net.roomRef, name || '관전자');
+    if (slot < 0) { mpLobbyNoticeText('관전석이 가득 찼습니다'); return; }
+    net.roomRef.onDisconnect().cancel(); net.db.ref('roomIndex/' + net.roomCode).onDisconnect().cancel();
+    await net.roomRef.child(seat).remove();
+    net.isHost = false; net.spectator = true; net.specSlot = slot; net.armedAlone = null; netArmLobbyDisconnect();
+  } catch (e) { mpLobbyNoticeText('자리를 옮기지 못했습니다'); }
+  finally { net.moving = false; }
+}
+// (v12.84) 대기실: 관전자 → 빈 참가자 자리(전 결정 '빈 자리로 옮겨 앉기')
+async function netMoveToSeat() {
+  if (!net.roomRef || !net.spectator || net.moving || !net.room || net.room.status !== 'lobby') return;
+  const me = netSpecList(net.room).find(v => v.uid === net.uid); if (!me) return;
+  net.moving = true;
+  try {
+    const r = await net.roomRef.child('guest').transaction(cur => (cur && cur.uid !== net.uid ? undefined : { uid: net.uid, name: me.name }));
+    if (!r.committed) { mpLobbyNoticeText('참가자 자리가 이미 찼습니다'); return; }
+    net.roomRef.child('spectators/' + me.slot).onDisconnect().cancel();
+    await net.roomRef.child('spectators/' + me.slot).remove();
+    net.spectator = false; net.specSlot = -1; net.armedAlone = null; netArmLobbyDisconnect();
+  } catch (e) { mpLobbyNoticeText('자리를 옮기지 못했습니다'); }
+  finally { net.moving = false; }
+}
 // (v12.80) 전투 데이터 정리 + 대기실 상태로(방장만). 모드·맵·닉네임은 유지, 오래된 방 정리 기준 시각 새로 기록
 async function netResetRoomToLobby() {
   if (!net.isHost || !net.roomRef) return;
   const now = await netServerNow();
-  await net.roomRef.update({ squads: null, start: null, cmds: null, turn: null, hashes: null, presence: null, result: null, status: 'lobby', createdAt: now });
+  await net.roomRef.update({ squads: null, start: null, bp: null, draft: null, cmds: null, turn: null, hashes: null, presence: null, result: null, status: 'lobby', createdAt: now });
   net.db.ref('roomIndex/' + net.roomCode).set(now).catch(() => {});
 }
 // (v12.80) 결과 화면 '대기실로'(온라인): 전투 리스너를 끊고 방 리스너로 돌아감. 방장 화면은 전투가 끝나면 이미 방을 되돌림(사용자 결정 (나))
@@ -15602,13 +16698,32 @@ function netBackToLobby() {
   showMenuScreen('screenMpLobby');
   return true;
 }
+// 편성·밴픽·드래프트 단계인가 / 그 화면 → 대기실(상대가 나감·방장 넘김)
+const netInSetup = () => net.phase === 'formation' || net.phase === 'banpick' || net.phase === 'draft';
+function netBackFromSetup() {
+  net.phase = 'lobby'; pvpFormationStep = 0; hidePvpCover();
+  if (bpRun) bpStop();
+  if (drRun) drStop();
+  document.getElementById('squadFormationScreen').style.display = 'none';
+  document.getElementById('banPickScreen').style.display = 'none';
+  document.getElementById('draftScreen').style.display = 'none';
+  loadStage('test');
+  showMenuScreen('screenMpLobby');
+}
+// (v12.82) 방장: 밴픽전·드래프트전 시작 - 선공·씨앗값·시작 시각(서버)을 먼저 기록(밴픽은 밴 전에 선공 발표, 드래프트는 후보 계산. 전투도 같은 값)
+async function netStartSetup(status) {
+  if (!net.isHost || !net.roomRef || !(net.room && net.room.guest)) return;
+  const at = await netServerNow();
+  net.roomRef.update({ start: { firstSide: Math.random() < 0.5 ? 'player' : 'enemy', seed: Math.floor(Math.random() * 4294967296), at }, status });
+}
+const netStartBanpick = () => netStartSetup('banpick');
 function mpLobbyNoticeText(text) { const n = document.getElementById('mpLobbyNotice'); if (n) { n.textContent = text; n.style.display = text ? 'block' : 'none'; } }
 function netSetLobbyChoice(mode, map) { // 방장만
   if (net.isHost && net.roomRef) net.roomRef.update({ mode, map });
 }
 
 // ---- 방 상태가 바뀔 때(대기실·편성 단계만. 전투가 시작되면 방 전체 리스너는 끊음) ----
-// status: lobby(대기실) -> formation(양쪽 동시 편성) -> battle(방장이 선공·씨앗값 기록) - MULTIPLAYER.md 2-3-4
+// status: lobby(대기실) -> formation(양쪽 동시 편성) 또는 banpick(밴픽전, v12.82)·draft(드래프트전, v12.83) -> battle(방장이 선공·씨앗값 기록) - MULTIPLAYER.md 2-3-4
 function netOnRoomUpdate() {
   const room = net.room;
   if (net.phase === 'battle') return;
@@ -15616,15 +16731,26 @@ function netOnRoomUpdate() {
     const wasGuest = !net.isHost;
     if (net.roomRef) net.roomRef.off();
     net.roomRef = null; net.roomCode = null; net.phase = 'lobby';
-    if (wasGuest) { pvpFormationStep = 0; hidePvpCover(); document.getElementById('squadFormationScreen').style.display = 'none'; showMenuScreen('screenMpRoom'); mpRoomNotice('방장이 방을 나갔습니다'); }
+    if (wasGuest) { pvpFormationStep = 0; hidePvpCover(); if (bpRun) bpStop(); if (drRun) drStop(); document.getElementById('squadFormationScreen').style.display = 'none'; document.getElementById('banPickScreen').style.display = 'none'; document.getElementById('draftScreen').style.display = 'none'; showMenuScreen('screenMpRoom'); mpRoomNotice('방장이 방을 나갔습니다'); }
     return;
   }
-  if (!room.host) { // (v12.80) 방장이 나감·끊김: 참가자인 내가 방장이 됨
-    if (!net.isHost && room.guest && room.guest.uid === net.uid) {
-      if (net.phase === 'formation') { net.phase = 'lobby'; pvpFormationStep = 0; hidePvpCover(); document.getElementById('squadFormationScreen').style.display = 'none'; showMenuScreen('screenMpLobby'); }
-      netPromoteSelf();
+  if (!room.host) { // (v12.80) 방장이 나감·끊김: 참가자가 방장이 됨 / (v12.84) 참가자가 없으면 먼저 들어온 관전자
+    if (netNextHostUid(room) === net.uid) {
+      if (netInSetup()) netBackFromSetup();
+      if (room.guest && room.guest.uid === net.uid) netPromoteSelf(); else netPromoteSpectator();
     }
     return;
+  }
+  { // (v12.84) 내 자리(방장/참가자/관전석)를 방 기록에서 다시 판단 - 자리 옮기기·넘겨받기 뒤에도 맞게
+    const isGuest = !!(room.guest && room.guest.uid === net.uid), slot = netMySpecSlot(room);
+    net.isHost = room.host.uid === net.uid;
+    net.spectator = !net.isHost && !isGuest && slot >= 0; net.specSlot = net.spectator ? slot : -1;
+    if (!net.isHost && !isGuest && slot < 0 && !net.moving && !net.promoting) { // 자리가 없어짐(끊김 처리 등) → 방에서 나간 것으로
+      netTeardownBattle(); if (net.roomRef) net.roomRef.off(); // 쓰지 않고 조용히 나옴(내 자리가 없으니 지울 것도 없음)
+      net.roomRef = null; net.roomCode = null; net.room = null; net.isHost = false; net.spectator = false; net.specSlot = -1; net.armedAlone = null;
+      netBackFromSetup(); pvpSetup = null; showMenuScreen('screenMpRoom'); mpRoomNotice('방에서 자리가 없어졌습니다');
+      return;
+    }
   }
   pvpSetup = { kind: 'online', mode: room.mode, map: room.map, names: { player: room.host.name, enemy: room.guest ? room.guest.name : '' } };
   netArmLobbyDisconnect();
@@ -15633,29 +16759,41 @@ function netOnRoomUpdate() {
     renderMpLobby(); mpLobbyNoticeText('대기실을 정리하는 중...');
     return;
   }
+  if (room.status === 'banpick' || room.status === 'draft') { // (v12.82 밴픽전 2-6 / v12.83 드래프트전 2-7): 방 bp/·draft/ 기록으로 양쪽 화면 진행
+    if (!room.guest) { if (net.isHost) net.roomRef.update({ status: 'lobby', squads: null, start: null, bp: null, draft: null }); return; } // 참가자가 나감 → 대기실로
+    const bp = room.status === 'banpick';
+    if (net.phase === 'lobby' && room.start) {
+      net.phase = room.status; loadStage(room.map);
+      if (bp) bpStartOnline(room); else drStartOnline(room);
+      net.db.ref('.info/serverTimeOffset').once('value').then(s => { net.serverOffset = s.val() || 0; }).catch(() => {}); // 마감 계산용(서버 시각 기준)
+    }
+    else if (net.phase === 'banpick' && bp) bpOnlinePump();
+    else if (net.phase === 'draft' && !bp) drOnlinePump();
+    const sq = room.squads || {};
+    if (net.isHost && sq.player && sq.enemy && room.start) net.roomRef.update({ status: 'battle' }); // 양쪽이 결과를 편성으로 기록 → 전투
+    return;
+  }
   if (room.status === 'formation' || room.status === 'battle') {
     if (!room.guest) { // 편성 중 참가자가 나감 -> 방장은 대기실로
-      if (net.isHost) net.roomRef.update({ status: 'lobby', squads: null, start: null });
+      if (net.isHost) net.roomRef.update({ status: 'lobby', squads: null, start: null, bp: null, draft: null });
       return;
     }
     if (net.phase === 'lobby' && room.status === 'formation') { // 편성 시작: 각자 자기 화면에서
       net.phase = 'formation';
-      loadStage(room.map);
-      pvpFormationBegin(3);
+      if (net.spectator) showPvpCover('양쪽 편성 중...', '편성이 끝나면 관전이 시작됩니다', null); // (v12.84) 관전자는 기다림
+      else { loadStage(room.map); pvpFormationBegin(3); }
     }
     const sq = room.squads || {};
     if (net.isHost && room.status === 'formation' && sq.player && sq.enemy && !room.start) { // 양쪽 편성이 모임 -> 방장이 선공·씨앗값 기록
       net.roomRef.update({ start: { firstSide: Math.random() < 0.5 ? 'player' : 'enemy', seed: Math.floor(Math.random() * 4294967296) }, status: 'battle' });
       return;
     }
-    if (net.phase === 'formation' && room.status === 'battle' && room.start && sq.player && sq.enemy) netStartBattle(room);
+    if (netInSetup() && room.status === 'battle' && room.start && sq.player && sq.enemy) netStartBattle(room);
     return;
   }
   // 대기실
-  if (net.phase === 'formation') { // 편성 중이었는데 대기실로 돌아감(상대가 나감)
-    net.phase = 'lobby'; pvpFormationStep = 0; hidePvpCover();
-    document.getElementById('squadFormationScreen').style.display = 'none';
-    showMenuScreen('screenMpLobby');
+  if (netInSetup()) { // 편성·밴픽·드래프트 중이었는데 대기실로 돌아감(상대가 나감)
+    netBackFromSetup();
     renderMpLobby();
     const n = document.getElementById('mpLobbyNotice'); n.textContent = '상대가 나갔습니다'; n.style.display = 'block';
     return;
@@ -15703,28 +16841,32 @@ function netStartBattle(room, opts = {}) {
   net.roomRef.off(); // 방 전체 리스너 해제(명령이 쌓일 때마다 방 전체를 받지 않게)
   // 끊김 처리 전환: 방 삭제/자리 비움 예약 취소 -> 접속 표시(presence)
   if (net.isHost) { net.roomRef.onDisconnect().cancel(); net.db.ref('roomIndex/' + net.roomCode).onDisconnect().cancel(); } // (색인은 남김 - 끊긴 방은 24시간 뒤 정리)
-  else net.roomRef.child('guest').onDisconnect().cancel();
+  else if (!net.spectator) net.roomRef.child('guest').onDisconnect().cancel(); // (관전자는 관전석 비움 예약 유지 - 전투 중에 나가도 자리가 빔)
+  const spec = net.spectator;
   pvpFormationStep = 0;
   hidePvpCover();
+  if (bpRun) bpStop(); // (v12.82) 밴픽·드래프트 화면 정리(메뉴 화면은 아래에서 모두 숨김)
+  if (drRun) drStop();
   pvpSetup = { kind: 'online', mode: room.mode, map: room.map, names: { player: room.host.name, enemy: room.guest.name } };
   loadStage(room.map);
   initPvpBattle({ squad1: room.squads.player, squad2: room.squads.enemy, firstSide: room.start.firstSide, names: pvpSetup.names, seed: room.start.seed });
-  fixedViewSide = net.isHost ? 'player' : 'enemy'; // 화면 진영 고정(2-3-1)
+  fixedViewSide = spec ? null : net.isHost ? 'player' : 'enemy'; // 화면 진영 고정(2-3-1). 관전자는 차례 진영을 따라감(사용자 결정 2 (가))
+  spectatorView = spec; // 관전: 판정 시야는 그대로, 그리기만 전부 보임(viewSeeSide)
   Object.assign(net, { queue: [], pending: {}, nextSeq: 0, awaitTurnStart: false, turnNo: 0, turn: null, desyncWarned: {}, status: {}, oppDiscAt: 0, resultSeen: false,
-    replaying: !!opts.rejoin, replayTarget: Object.keys(room.cmds || {}).length, unacked: {}, lastProgressAt: Date.now(), lastFetchAt: 0, fetching: false });
+    replaying: !!opts.rejoin, replayTarget: Object.keys(room.cmds || {}).length, unacked: {}, lastProgressAt: Date.now(), lastFetchAt: 0, fetching: false, specHash: {}, lastHashes: {} });
   if (opts.rejoin) { replayFast = true; net.turn = room.turn || null; showPvpCover('대전 복구 중...', `0 / ${net.replayTarget}`, null); }
-  netSaveActive(net.roomCode); // 재연결용 기록(전투 중에만)
-  netCommandSink = netSendCommand;
+  if (!spec) netSaveActive(net.roomCode); // 재연결용 기록(전투 중에만, 관전자는 재입장 없음)
+  netCommandSink = spec ? null : netSendCommand; // 관전자는 아무것도 쓰지 않음(명령·차례·요약값·접속 표시·결과)
   // 턴 종료 대기 표시는 실행 '전'에 켬(v12.09): 연출 없는 턴 종료는 실행 안에서 상대 턴 시작(netOnTurnStart가 끔)까지 끝나므로,
   // 실행 뒤(전송 때) 켜면 다시 켜진 채 남아 상대 명령을 영원히 재생하지 않았음(후반 턴마다 멈추던 원인)
-  netBeforeCommandFn = cmd => { if (cmd.t === 'endTurn') net.awaitTurnStart = true; };
-  netCanActFn = () => mySide === viewSide();
+  netBeforeCommandFn = spec ? null : cmd => { if (cmd.t === 'endTurn') net.awaitTurnStart = true; };
+  netCanActFn = spec ? () => false : () => mySide === viewSide();
   netBusyFn = () => !gameSettled() || net.queue.length > 0 || net.awaitTurnStart;
   const me = viewSide(), opp = otherSide(me);
   // 첫 턴 처리는 명령 수신 등록보다 먼저(v12.14): 방 데이터를 방금 읽어 둬서 child_added가 등록 즉시 불릴 수 있음 → 첫 턴 전에 명령이 재생되던 문제
   netOnTurnStart(room.start.firstSide); // 첫 턴(핫시트와 같이 startSideTurn 없이 시작)
-  // 접속 표시: 연결될 때마다 true 기록 + 끊기면 false 예약
-  netListen('.info/connected', 'value', snap => {
+  // 접속 표시: 연결될 때마다 true 기록 + 끊기면 false 예약(관전자는 안 씀)
+  if (!spec) netListen('.info/connected', 'value', snap => {
     if (snap.val() === true) {
       const p = net.roomRef.child('presence/' + me);
       p.onDisconnect().set(false); p.set(true);
@@ -15733,9 +16875,9 @@ function netStartBattle(room, opts = {}) {
     } else netSetStatus('self', '서버 연결이 끊겼습니다 - 다시 연결하는 중...');
   });
   netListen('.info/serverTimeOffset', 'value', snap => { net.serverOffset = snap.val() || 0; });
-  netListen('presence/' + opp, 'value', snap => netOnOppPresence(snap.val()));
+  if (!spec) netListen('presence/' + opp, 'value', snap => netOnOppPresence(snap.val()));
   netListen('cmds', 'child_added', snap => netOnCommand(Number(snap.key), snap.val()));
-  netListen('turn', 'value', snap => { net.turn = snap.val(); if (net.turn && net.turn.side !== viewSide()) netShowOppTimer(); });
+  netListen('turn', 'value', snap => { net.turn = snap.val(); if (spec) netShowSpecTimer(); else if (net.turn && net.turn.side !== viewSide()) netShowOppTimer(); });
   netListen('hashes', 'value', snap => netCheckHashes(snap.val() || {}));
   netListen('result', 'value', snap => netOnResult(snap.val()));
   clearInterval(net.watchId); net.watchId = setInterval(netWatchdog, 1000); // 누락 복구 감시(2-4-2)
@@ -15744,7 +16886,8 @@ function netStartBattle(room, opts = {}) {
   document.getElementById('gameContainer').style.display = 'flex';
   renderReserveList(); updatePanel(); draw();
   requestAnimationFrame(() => requestAnimationFrame(centerBoardScroll));
-  addLog(`--- 온라인 대전: 나는 ${pvpSideName(me)} (${me === 'player' ? '1P' : '2P'}) ---`, 'logInfo');
+  { const b = document.getElementById('spectatorBadge'); if (b) b.style.display = spec ? 'block' : 'none'; }
+  addLog(spec ? `--- 온라인 대전 관전: ${pvpSideName('player')} vs ${pvpSideName('enemy')} ---` : `--- 온라인 대전: 나는 ${pvpSideName(me)} (${me === 'player' ? '1P' : '2P'}) ---`, 'logInfo');
   if (opts.rejoin) netPump(); // 재생 시작(명령이 하나도 없으면 바로 복구 완료)
 }
 // 재생 완료: 빠른 모드 해제 + 지금 차례의 부수 효과(타이머·최초 투입 창)만 이어서 처리(이번 턴 시작 처리는 재생 중에 이미 됨)
@@ -15776,6 +16919,8 @@ function netTeardownBattle() {
   net.queue = []; net.pending = {}; net.status = {}; net.unacked = {};
   if (net.replaying) { net.replaying = false; hidePvpCover(); }
   replayFast = false;
+  spectatorView = false; // (v12.84) 관전 화면 해제
+  { const b = document.getElementById('spectatorBadge'); if (b) b.style.display = 'none'; }
   const bar = document.getElementById('netStatusBar'); if (bar) bar.style.display = 'none';
 }
 
@@ -15828,7 +16973,7 @@ function netOnCommand(seq, data) {
 // ---- 누락 복구 감시(1초마다, 2-4-2): 상대를 기다리는데 5초 넘게 진행이 없으면 서버 명령을 직접 읽어 빠진 번호부터 채움 ----
 function netWatchdog() {
   if (!netInBattle() || battleEnded || net.replaying) return;
-  const waiting = mySide !== viewSide() || net.queue.length > 0 || Object.keys(net.pending).length > 0;
+  const waiting = net.spectator || mySide !== viewSide() || net.queue.length > 0 || Object.keys(net.pending).length > 0;
   if (!waiting) { netSetStatus('wait', ''); return; }
   const now = Date.now(), idle = now - net.lastProgressAt;
   // 상대 차례 시간(3분)이 30초 넘게 지났는데도 진행이 없음 = 상대 화면이 멈췄을 가능성
@@ -15874,6 +17019,14 @@ function netOnTurnStart(side) {
   net.turnNo++;
   net.lastProgressAt = Date.now();
   const live = !net.replaying; // 재연결 복원 중이면 지난 턴의 부수 효과(기록·창·타이머)는 하지 않음(2-4-1)
+  if (net.spectator) { // (v12.84) 관전: 기록 없음. 내 화면 요약값만 모아 두고 선수들 것과 비교(읽기 전용)
+    net.specHash[net.turnNo] = stateHash(); netCheckHashes(net.lastHashes || {});
+    deselect();
+    const b = document.getElementById('endTurnBtn'); b.disabled = true; b.textContent = '관전 중';
+    if (live) { netShowSpecTimer(); turnBannerForSide(side); renderReserveList(); updatePanel(); draw(); }
+    netPump();
+    return;
+  }
   if (live) net.roomRef.child('hashes/' + net.turnNo + '/' + viewSide()).set(stateHash()); // 동기화 확인(2-3-3)
   const btn = document.getElementById('endTurnBtn');
   deselect();
@@ -15905,10 +17058,30 @@ function netShowOppTimer() {
   pvpTimerStart(t.startedAt - net.serverOffset + PVP_TURN_MS, false);
 }
 
+// (v12.84) 관전자 남은 시간: 차례인 선수가 기록한 시작 시각 기준(표시만)
+function netShowSpecTimer() {
+  if (!netInBattle() || battleEnded || net.replaying) return;
+  const t = net.turn;
+  if (!t || t.n !== net.turnNo || t.side !== mySide) {
+    const el = document.getElementById('pvpTimer');
+    el.textContent = `${pvpSideName(mySide)}의 차례`; el.className = ''; el.style.display = 'block';
+    return;
+  }
+  pvpTimerStart(t.startedAt - net.serverOffset + PVP_TURN_MS, false);
+}
 // ---- 동기화 확인: 같은 턴의 양쪽 요약값이 다르면 경고(전투는 계속) ----
 function netCheckHashes(all) {
+  net.lastHashes = all;
   for (const n in all) {
     const h = all[n];
+    if (net.spectator) { // 관전: 내 화면 요약값 vs 선수 요약값
+      const mine = net.specHash[n], theirs = h && (h.player || h.enemy);
+      if (!mine || !theirs || mine === theirs || net.desyncWarned[n]) continue;
+      net.desyncWarned[n] = true;
+      addLog(`경고: 관전 화면 동기화 어긋남 (턴 ${n})`, 'logMiss');
+      netSetStatus('desync', `관전 화면이 선수 화면과 다를 수 있습니다 (턴 ${n}) - 다시 관전하려면 대기실로 돌아가세요`);
+      continue;
+    }
     if (!h.player || !h.enemy || h.player === h.enemy || net.desyncWarned[n]) continue;
     net.desyncWarned[n] = true;
     addLog(`경고: 동기화 어긋남 (턴 ${n}) - 두 화면의 상태가 다릅니다`, 'logMiss');
@@ -15947,6 +17120,7 @@ registerSystem('onBattleEnd', result => {
   if (!netInBattle()) return;
   netClearActive();
   pvpTimerStop();
+  if (net.spectator) return; // (v12.84) 관전자는 결과를 쓰지 않음
   if (net.resultSeen) return;
   net.resultSeen = true;
   const winner = result === 'victory' ? 'player' : 'enemy';
@@ -15956,7 +17130,7 @@ registerSystem('onBattleEnd', result => {
 // (v12.80) 방 유지: 전투가 끝나면 방장 화면이 잠시 뒤(상대가 결과를 받을 시간) 방을 대기실 상태로 되돌림(사용자 결정 (나))
 const NET_RESET_DELAY_MS = 2500;
 registerSystem('onBattleEnd', () => {
-  if (!netInBattle()) return;
+  if (!netInBattle() || net.spectator) return; // 관전자는 관전석 비움 예약이 이미 있음
   const ref = net.roomRef;
   ref.child(net.isHost ? 'host' : 'guest').onDisconnect().remove(); // 결과 화면에서 창을 닫아도 자리가 비게(방장이면 참가자가 방장이 됨)
   if (!net.isHost) return;
@@ -16005,12 +17179,16 @@ document.getElementById('btnMpJoinOk').addEventListener('click', async () => {
   } catch (e) { notice.textContent = e.message; }
 });
 
+// (v12.84) 대기실 관전석 버튼
+document.getElementById('btnMpToSpec').addEventListener('click', () => { netMoveToSpectator(); });
+document.getElementById('btnMpToSeat').addEventListener('click', () => { netMoveToSeat(); });
+
 // ---- 항복 (v12.79, MULTIPLAYER.md 2-4-4) ----
 // 온라인: 명령 줄(차례 진영만 씀)이 아니라 결과(result)를 바로 기록 - 끊김 승리와 같은 경로. 상대 차례에도 가능.
 //   보안 규칙: 항복은 진 쪽이 상대 진영을 승자로 기록(reason 'surrender'). 핫시트: 지금 차례 진영이 항복. 싱글: 스테이지 포기 = 패배
 function surrenderSide() { return pvpSetup && pvpSetup.kind === 'online' ? viewSide() : (pvpMode ? mySide : 'player'); }
 function doSurrender() {
-  if (battleEnded) return;
+  if (battleEnded || spectatorView) return; // 관전자는 항복 없음
   const loser = surrenderSide(), winner = otherSide(loser);
   pvpTimerStop();
   if (pvpMode) addLog(`${pvpSideName(loser)} 항복 - ${pvpSideName(winner)}의 승리`, 'logMiss');
@@ -16026,7 +17204,7 @@ document.getElementById('surrenderBtn').addEventListener('click', () => {
   if (!canSurrenderNow()) return;
   showChoiceModal('정말 항복하시겠습니까?', [{ label: '항복', onClick: doSurrender }, { label: '취소', onClick() {} }]);
 });
-registerSystem('onPanelUpdate', () => { const b = document.getElementById('surrenderBtn'); if (b) b.disabled = battleEnded; });
+registerSystem('onPanelUpdate', () => { const b = document.getElementById('surrenderBtn'); if (b) { b.disabled = battleEnded; b.style.display = spectatorView ? 'none' : ''; } });
 
 // ================= 명령 경로 (MULTIPLAYER.md 2-3) =================
 // 게임 상태를 바꾸는 조작은 모두 명령: 로컬 입력 -> issueCommand -> runCommand(실행) [-> 온라인이면 상대에게 전송(N3)].
@@ -16069,7 +17247,7 @@ function runCommand(cmd) {
 // 온라인은 연출이 끝나기 전에 다음 명령을 낼 수 없음: 이동의 칸 도착 판정·다단 타격이 연출 중에 처리되므로,
 // 상대 화면(연출이 끝난 뒤 다음 명령 재생)과 실행 순서를 같게 하기 위함 - MULTIPLAYER.md 2-3-2
 function issueCommand(cmd) {
-  if (netCanActFn && !netCanActFn()) { showInvalidAction('상대 차례입니다'); return null; }
+  if (netCanActFn && !netCanActFn()) { showInvalidAction(spectatorView ? '관전 중입니다' : '상대 차례입니다'); return null; }
   if (!sideTurnOpen) { showInvalidAction('지금은 명령할 수 없습니다 (턴 진행 중)'); return null; } // 턴 종료~다음 진영 턴 시작 사이(적 턴 등) - v12.14
   if (cmd.t === 'endTurn' && !gameSettled()) { showInvalidAction('진행 중인 동작이 끝난 뒤 다시 시도하세요'); return null; } // 이동 연출 중 턴 종료 금지(크리살리드 기습이 적 턴과 겹침 - v12.14)
   if ((netBusyFn && netBusyFn()) || reactionLocks > 0) { showInvalidAction('진행 중인 동작이 끝난 뒤 다시 시도하세요'); return null; }

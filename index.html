@@ -499,6 +499,57 @@
 .mpSpecName.me { background: #3a3060; color: #fff; }
 .mpSpecEmpty { color: #666; font-size: 12px; }
 #spectatorBadge { position: fixed; top: 14px; left: 14px; z-index: 400; padding: 5px 12px; border-radius: 6px; background: #2a2440; border: 1px solid #7a63c0; color: #d8c8ff; font-size: 13px; font-weight: bold; letter-spacing: 1px; }
+
+/* ================= 계정·친구 (v12.85, MULTIPLAYER.md 2-9) ================= */
+#accBox { display: flex; align-items: center; gap: 8px; margin-top: 18px; flex-wrap: wrap; justify-content: center; }
+#accStatus { font-size: 13px; color: #aab; padding: 4px 10px; border-radius: 12px; background: #20222c; border: 1px solid #333846; }
+.accBtn { padding: 6px 14px; border-radius: 5px; border: 1px solid #3c5ea8; background: #20263a; color: #dde; cursor: pointer; font-size: 13px; }
+.accBtn:hover { background: #2a3352; }
+.accOverlay { position: fixed; inset: 0; z-index: 2600; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; }
+.accPanel { width: 100%; max-width: 340px; background: #1a1b22; border: 1px solid #3a3d4c; border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 10px; color: #eee; font-family: "Malgun Gothic", sans-serif; box-sizing: border-box; }
+.accTitle { font-size: 18px; font-weight: bold; }
+.accInput { width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 14px; border-radius: 6px; border: 1px solid #555; background: #121318; color: #eee; }
+.accHelp { font-size: 12px; color: #888; line-height: 1.5; }
+.accHelp:empty { display: none; }
+.accNotice { font-size: 13px; color: #e0c23c; }
+.accBtns { display: flex; gap: 8px; justify-content: center; }
+.accBtns .menuBtn { margin: 0; padding: 10px 22px; }
+.frPanel { max-width: 420px; max-height: calc(100vh - 32px); overflow-y: auto; }
+.frHead { display: flex; align-items: center; gap: 8px; }
+.frCount { font-size: 12px; color: #888; margin-right: auto; }
+.frClose { background: none; border: 0; color: #aaa; font-size: 22px; cursor: pointer; line-height: 1; }
+.frAdd { display: flex; gap: 8px; }
+.frSection { font-size: 12px; color: #8a8fa8; letter-spacing: 1px; margin-top: 6px; border-bottom: 1px solid #2c2e3a; padding-bottom: 4px; }
+.frRow { display: flex; align-items: center; gap: 8px; padding: 5px 2px; }
+.frName { flex: 1 1 auto; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.frBtn { padding: 5px 10px; border-radius: 5px; border: 1px solid #4a4a56; background: #2a2a34; color: #ddd; cursor: pointer; font-size: 12px; flex: 0 0 auto; }
+.frBtn.ok { border-color: #3c5ea8; background: #20263a; }
+.frDot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; background: #555; }
+.frDot.on { background: #4dd27a; } .frDot.room { background: #e0c23c; }
+.frState { font-size: 12px; color: #777; flex: 0 0 auto; } .frState.on { color: #4dd27a; } .frState.room { color: #e0c23c; }
+.frEmpty { font-size: 12px; color: #666; padding: 4px 2px; }
+
+/* ================= 채팅·초대 (v12.86, MULTIPLAYER.md 2-10) ================= */
+#chatDock { position: fixed; left: 14px; bottom: 14px; width: 320px; max-width: calc(100vw - 28px); z-index: 1500; flex-direction: column; background: #20222a; border: 1px solid #444; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.5); font-family: "Malgun Gothic", sans-serif; color: #eee; }
+#chatToggle { background: none; border: 0; color: #9fd3ff; font-size: 12px; font-weight: bold; text-align: left; padding: 7px 10px; cursor: pointer; }
+#chatDock.closed #chatBody { display: none; }
+#chatBody { display: flex; flex-direction: column; gap: 6px; padding: 0 10px 8px; }
+.chatLogBox { font-size: 12px; line-height: 1.55; max-height: 170px; min-height: 60px; overflow-y: auto; word-break: break-all; }
+.chatLine { margin-bottom: 2px; }
+.chatName { font-weight: bold; } .chatName.host { color: #7fa6ff; } .chatName.guest { color: #ff8a8a; } .chatName.spec { color: #b9a6e8; }
+.chatText { color: #ddd; }
+.chatInputRow { display: flex; gap: 6px; }
+.chatInputRow .accInput { padding: 6px 9px; font-size: 13px; }
+#dmView { flex-direction: column; gap: 8px; }
+.dmHead { display: flex; align-items: center; gap: 8px; }
+#dmLog { background: #121318; border: 1px solid #2c2e3a; border-radius: 6px; padding: 8px; max-height: 300px; min-height: 160px; }
+#dmLog .chatLine { max-width: 80%; padding: 4px 8px; border-radius: 8px; background: #2a2a34; align-self: flex-start; width: fit-content; }
+#dmLog .chatLine.mine { background: #263a66; margin-left: auto; }
+#dmLog { display: flex; flex-direction: column; }
+.frLink { background: none; border: 0; color: #eee; text-align: left; cursor: pointer; padding: 0; font-family: inherit; }
+.frLink:hover { text-decoration: underline; }
+.frNew { margin-left: 6px; font-size: 10px; color: #111; background: #e0c23c; border-radius: 8px; padding: 1px 6px; vertical-align: middle; }
+@media (max-width: 760px) { #chatDock { width: calc(100vw - 28px); } }
 </style>
 
 
@@ -615,6 +666,14 @@
   <h1 style="font-size:36px; letter-spacing:4px;">MASTERMIND</h1>
   <button class="menuBtn" id="btnGameStart">게임 시작</button>
   <button class="menuBtn" id="btnLogToggle" style="font-size:14px; padding:8px 18px; background:#23252e;">로그 보기: 꺼짐</button>
+  <!-- (v12.85) 계정(MULTIPLAYER.md 2-9): 게스트 기본, 아이디·비밀번호 로그인, 친구 -->
+  <div id="accBox">
+    <span id="accStatus">게스트</span>
+    <button class="accBtn" id="btnAccLogin">로그인</button>
+    <button class="accBtn" id="btnAccSignup">회원가입</button>
+    <button class="accBtn" id="btnFriends" style="display:none;">친구</button>
+    <button class="accBtn" id="btnAccLogout" style="display:none;">로그아웃</button>
+  </div>
   <div id="gameVersionLabel" aria-label="게임 버전"></div>
 </div>
 
@@ -650,6 +709,56 @@
   <div class="skillDetailBox">
     <button id="skillDetailClose" aria-label="닫기">×</button>
     <div id="skillDetailBody"></div>
+  </div>
+</div>
+
+<!-- (v12.85) 로그인·회원가입 창 -->
+<div id="accOverlay" class="accOverlay" style="display:none;" role="dialog" aria-labelledby="accTitle">
+  <div class="accPanel">
+    <div id="accTitle" class="accTitle">로그인</div>
+    <input id="accIdInput" class="accInput" maxlength="16" placeholder="아이디" autocomplete="username" autocapitalize="off" spellcheck="false">
+    <input id="accPwInput" class="accInput" type="password" maxlength="64" placeholder="비밀번호" autocomplete="current-password">
+    <div id="accPw2Row" style="display:none;"><input id="accPw2Input" class="accInput" type="password" maxlength="64" placeholder="비밀번호 확인" autocomplete="new-password"></div>
+    <div id="accNickRow" style="display:none;"><input id="accNickInput" class="accInput" maxlength="12" placeholder="닉네임 (최대 12자)"></div>
+    <div id="accHelp" class="accHelp"></div>
+    <div id="accNotice" class="accNotice" style="display:none;"></div>
+    <div class="accBtns"><button class="menuBtn" id="accOkBtn">확인</button><button class="menuBtn" id="accCancelBtn" style="background:#3a3a44; border-color:#4a4a56;">취소</button></div>
+  </div>
+</div>
+<!-- (v12.85) 친구 창 -->
+<div id="friendsOverlay" class="accOverlay" style="display:none;" role="dialog" aria-labelledby="friendsTitle">
+  <div class="accPanel frPanel">
+    <div class="frHead"><span id="friendsTitle" class="accTitle">친구</span><span id="friendsCount" class="frCount"></span><button id="btnFriendsClose" class="frClose" aria-label="닫기">×</button></div>
+    <div id="frMain">
+      <div class="frAdd"><input id="friendAddInput" class="accInput" maxlength="16" placeholder="친구 아이디" autocapitalize="off" spellcheck="false"><button class="frBtn ok" id="btnFriendAdd">신청</button></div>
+      <div id="friendAddNotice" class="accNotice" style="display:none;"></div>
+      <div class="frSection">받은 신청</div><div id="friendReqList"></div>
+      <div class="frSection">친구 목록 (이름을 누르면 1:1 대화)</div><div id="friendList" class="frList"></div>
+    </div>
+    <!-- (v12.86) 1:1 대화 -->
+    <div id="dmView" style="display:none;">
+      <div class="dmHead"><button id="dmBackBtn" class="frBtn">← 목록</button><span id="dmTitle" class="frName"></span></div>
+      <div id="dmLog" class="chatLogBox"></div>
+      <div id="dmNotice" class="accNotice" style="display:none;"></div>
+      <div class="chatInputRow"><input id="dmInput" class="accInput" maxlength="200" placeholder="메시지 (Enter로 보내기)"><button id="dmSendBtn" class="frBtn ok">보내기</button></div>
+    </div>
+  </div>
+</div>
+<!-- (v12.86) 초대 받기 -->
+<div id="inviteOverlay" class="accOverlay" style="display:none;" role="dialog" aria-labelledby="inviteText">
+  <div class="accPanel">
+    <div id="inviteText" class="accTitle" style="font-size:16px;"></div>
+    <div id="inviteSub" class="accHelp"></div>
+    <div class="accBtns"><button class="menuBtn" id="btnInviteAccept">참가</button><button class="menuBtn" id="btnInviteDecline" style="background:#3a3a44; border-color:#4a4a56;">거절</button></div>
+  </div>
+</div>
+<!-- (v12.86) 방 채팅(대기실·편성·밴픽·드래프트·온라인 전투 - 전투는 로그 칸 자리) -->
+<div id="chatDock" style="display:none;" class="open">
+  <button id="chatToggle" type="button">채팅 ▼</button>
+  <div id="chatBody">
+    <div id="chatLog" class="chatLogBox"></div>
+    <div id="chatNotice" class="accNotice" style="display:none;"></div>
+    <div class="chatInputRow"><input id="chatInput" class="accInput" maxlength="200" placeholder="채팅 (Enter로 보내기)"><button id="chatSendBtn" class="frBtn ok">보내기</button></div>
   </div>
 </div>
 
@@ -699,7 +808,8 @@
       <button id="btnMpToSeat" class="mpSpecBtn" style="display:none;">참가자로 앉기</button></div>
     <div id="mpSpecList"></div>
   </div>
-  <button class="menuBtn" id="btnMpLobbyStart" style="margin-top:18px;">시작</button>
+  <button class="accBtn" id="btnMpInvite" style="margin-top:12px; display:none;">친구 · 초대</button>
+  <button class="menuBtn" id="btnMpLobbyStart" style="margin-top:12px;">시작</button>
   <div id="mpLobbyNotice" style="display:none; color:#e0c23c; font-size:13px; margin-top:8px;"></div>
 </div>
 
@@ -859,8 +969,8 @@
 </div>
 
 <script>
-const GAME_BUILD = 'a57be07b47'; // 빌드 식별값(자동 생성)
-const GAME_VERSION = '12.84'; // 버전 번호(VERSION 파일)
+const GAME_BUILD = '8326bbfd7e'; // 빌드 식별값(자동 생성)
+const GAME_VERSION = '12.86'; // 버전 번호(VERSION 파일)
 // ================= 기본 설정 =================
 // 판 크기는 스테이지마다 다를 수 있음 - loadStage가 setBoardSize로 바꿈(모든 사용처가 함수 안이라 바뀐 값이 바로 반영됨)
 let COLS = 20;
@@ -13438,6 +13548,7 @@ function orderedSelectable() {
 }
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Tab' && e.key !== 'Shift') return;
+  if (isTypingTarget(e)) return; // (v12.86) 채팅 등 입력칸에서는 단축키 무시
   e.preventDefault();
   const alive = orderedSelectable().filter(c => !c.moving); // 이동 애니메이션 중인 캐릭터만 추가로 제외
   if (alive.length === 0) return;
@@ -13460,6 +13571,7 @@ document.addEventListener('keydown', (e) => {
 // ================= 단축키: A = 공격 모드 전환/취소 토글 =================
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'a' && e.key !== 'A') return;
+  if (isTypingTarget(e)) return;
   if (!screenCanAct() || !selected || !isMyUnit(selected)) return;
   e.preventDefault();
   if (uiMode.type === 'attack') { clearUiMode(); updatePanel(); draw(); }
@@ -13469,6 +13581,7 @@ document.addEventListener('keydown', (e) => {
 // ================= 단축키: 1/2 = 스킬1/스킬2 사용 (타겟이 필요한 스킬은 사용 모드로 전환, 다시 누르면 취소) =================
 document.addEventListener('keydown', (e) => {
   if (e.key !== '1' && e.key !== '2') return;
+  if (isTypingTarget(e)) return;
   if (!screenCanAct() || !selected || !isMyUnit(selected)) return;
   e.preventDefault();
   const skillIndex = e.key === '1' ? 0 : 1;
@@ -15075,6 +15188,7 @@ function showMenuScreen(id) {
   document.querySelectorAll('.menuScreen').forEach(el => el.style.display = 'none');
   document.getElementById('gameContainer').style.display = 'none';
   document.getElementById(id).style.display = 'flex';
+  chatSync(); // (v12.86) 방 채팅 보이기·숨기기(18_chat)
 }
 
 document.getElementById('battleResultBackBtn').addEventListener('click', () => {
@@ -15115,6 +15229,7 @@ function setLogPanelPref(on) {
   showLogPanel = !!on;
   try { localStorage.setItem(LOG_PREF_KEY, showLogPanel ? '1' : '0'); } catch (e) { /* 저장 불가(사생활 보호 모드 등) - 이번 실행에만 적용 */ }
   applyLogPanelPref();
+  chatSync(); // 전투 화면: 로그를 켜면 채팅이 가려짐
 }
 document.getElementById('btnLogToggle').addEventListener('click', () => setLogPanelPref(!showLogPanel));
 applyLogPanelPref();
@@ -15495,6 +15610,7 @@ document.getElementById('btnMpNicknameOk').addEventListener('click', () => {
   const n = document.getElementById('mpNicknameInput').value.trim().slice(0, 12);
   if (!n) { document.getElementById('mpNicknameNotice').style.display = 'block'; return; }
   mpSaveNickname(n);
+  accSaveNick(n); // (v12.85) 계정이면 계정에도(다른 기기에서도 같은 닉네임)
   document.getElementById('mpRoomTitle').textContent = `멀티플레이 - ${n}`;
   document.getElementById('mpRoomNotice').style.display = 'none';
   showMenuScreen('screenMpRoom');
@@ -15533,6 +15649,7 @@ function renderMpLobby() {
   // 시작 버튼 / 안내
   const startBtn = $('btnMpLobbyStart'), n = $('mpLobbyNotice');
   renderMpSpectators(online);
+  { const ib = $('btnMpInvite'); if (ib) ib.style.display = online && accLoggedIn() ? 'inline-block' : 'none'; } // (v12.86) 친구 초대(로그인)
   if (online) {
     startBtn.style.display = net.isHost ? 'inline-block' : 'none';
     startBtn.disabled = !pvpSetup.names.enemy;
@@ -16436,6 +16553,531 @@ document.getElementById('drBackBtn').addEventListener('click', () => { // 나가
   renderMpLobby(); showMenuScreen('screenMpLobby');
 });
 
+// ================= 계정 (v12.85, MULTIPLAYER.md 2-9) =================
+// 기본은 게스트(익명 로그인). 아이디·비밀번호 계정 = Firebase 이메일/비밀번호(아이디 → 가짜 이메일 '아이디@mastermind.game', 비밀번호 찾기 없음).
+// 사용자 결정(2026-10-17): 아이디 영문 소문자·숫자 4~16자, 비밀번호 6자 이상 / 가입 = 지금 게스트를 그대로 계정으로(같은 uid) /
+//   닉네임은 계정에 저장(다른 기기에서도 같음, 게스트는 브라우저) / 로그인 창은 게임 시작 화면 / 로그아웃 = 새 게스트 / 비밀번호 변경·계정 삭제 없음.
+// DB: ids/<아이디> = uid(중복 방지), users/<uid> = {id, nick, active?}(active = 진행 중 대전 방 코드 - 다른 기기 재참가), online/<uid> = {state, at}
+// Firebase는 로그인·친구 버튼이나 멀티플레이에서만 불러옴. 시작 화면 표시는 브라우저에 남긴 표시(mm_account)로(싱글·오프라인에 영향 없음)
+const ACC_EMAIL_DOMAIN = 'mastermind.game';
+const ACC_HINT_KEY = 'mm_account';
+const ACC_ID_RE = /^[a-z0-9]{4,16}$/;
+let acc = { id: null, nick: null, uid: null, presenceRef: null, presenceCb: null, state: 'menu' };
+
+const accEmail = id => id + '@' + ACC_EMAIL_DOMAIN;
+function accLoadHint() { try { const v = JSON.parse(localStorage.getItem(ACC_HINT_KEY) || 'null'); return v && v.id ? v : null; } catch (e) { return null; } }
+function accSaveHint(v) { try { if (v) localStorage.setItem(ACC_HINT_KEY, JSON.stringify(v)); else localStorage.removeItem(ACC_HINT_KEY); } catch (e) {} }
+const accLoggedIn = () => !!acc.id;
+function accErrText(e) {
+  const c = e && e.code;
+  if (c === 'auth/email-already-in-use') return '이미 쓰는 아이디입니다';
+  if (c === 'auth/weak-password') return '비밀번호는 6자 이상이어야 합니다';
+  if (c === 'auth/invalid-credential' || c === 'auth/wrong-password' || c === 'auth/user-not-found' || c === 'auth/invalid-login-credentials') return '아이디 또는 비밀번호가 틀렸습니다';
+  if (c === 'auth/too-many-requests') return '시도가 너무 많습니다. 잠시 뒤 다시 해 주세요';
+  if (c === 'auth/network-request-failed') return '인터넷 연결을 확인하세요';
+  if (c === 'auth/operation-not-allowed') return 'Firebase 콘솔에서 이메일/비밀번호 로그인이 꺼져 있습니다';
+  if (c === 'auth/operation-not-supported-in-this-environment') return '웹 주소로 연 게임에서만 로그인할 수 있습니다';
+  return (e && e.message) || '알 수 없는 오류';
+}
+
+// netConnect가 로그인 복원 뒤 부름: 계정이면 정보 읽기 + 접속 표시, 게스트면 표시 지움
+async function accOnConnected(user) {
+  const isAcc = !!(user && !user.isAnonymous && user.email);
+  if (!isAcc) { acc.id = null; acc.nick = null; acc.uid = null; accSaveHint(null); accRender(); return; }
+  acc.uid = user.uid;
+  let info = null;
+  try { info = (await net.db.ref('users/' + user.uid).once('value')).val(); } catch (e) {}
+  acc.id = (info && info.id) || String(user.email).split('@')[0];
+  acc.nick = (info && info.nick) || mpLoadNickname() || acc.id;
+  mpSaveNickname(acc.nick); // 계정 닉네임을 이 브라우저에도(사용자 결정 3 (가))
+  accSaveHint({ id: acc.id, nick: acc.nick });
+  accPresenceStart();
+  accRender();
+  if (info && info.active && !netLoadActive()) { netSaveActive(info.active); mpOfferRejoin(); } // 다른 기기에서 하던 대전 → 재참가 확인
+  if (typeof frStart === 'function') frStart();
+}
+// ---- 가입: 지금 게스트(익명)에 이메일/비밀번호를 연결 - 같은 uid 유지(사용자 결정 2 (가)) ----
+async function accSignUp(id, pw, nick) {
+  id = String(id || '').trim().toLowerCase(); nick = String(nick || '').trim().slice(0, 12);
+  if (!ACC_ID_RE.test(id)) throw new Error('아이디는 영문 소문자·숫자 4~16자입니다');
+  if (String(pw || '').length < 6) throw new Error('비밀번호는 6자 이상이어야 합니다');
+  if (!nick) throw new Error('닉네임을 입력하세요');
+  await netConnect();
+  if (net.roomRef) throw new Error('방에서 나간 뒤 가입하세요');
+  const auth = firebase.auth(), user = auth.currentUser;
+  if (!user || !user.isAnonymous) throw new Error('이미 로그인되어 있습니다');
+  if ((await net.db.ref('ids/' + id).once('value')).exists()) throw new Error('이미 쓰는 아이디입니다');
+  try { await user.linkWithCredential(firebase.auth.EmailAuthProvider.credential(accEmail(id), pw)); }
+  catch (e) { throw new Error(accErrText(e)); }
+  const uid = auth.currentUser.uid;
+  await net.db.ref('ids/' + id).set(uid);
+  await net.db.ref('users/' + uid).set({ id, nick });
+  await accOnConnected(auth.currentUser);
+  return id;
+}
+async function accLogin(id, pw) {
+  id = String(id || '').trim().toLowerCase();
+  if (!ACC_ID_RE.test(id)) throw new Error('아이디는 영문 소문자·숫자 4~16자입니다');
+  await netConnect();
+  if (net.roomRef) throw new Error('방에서 나간 뒤 로그인하세요');
+  const auth = firebase.auth();
+  if (auth.currentUser && !auth.currentUser.isAnonymous) throw new Error('이미 로그인되어 있습니다');
+  let r;
+  try { r = await auth.signInWithEmailAndPassword(accEmail(id), pw); }
+  catch (e) { throw new Error(accErrText(e)); }
+  if (acc.presenceRef) accPresenceStop();
+  if (net.uid !== r.user.uid) netClearActive(); // 사용자가 바뀜 - 이 브라우저의 게스트 재참가 기록은 쓸 수 없음
+  net.uid = r.user.uid;
+  await accOnConnected(r.user);
+  return acc.id;
+}
+// 로그아웃 = 새 게스트(사용자 결정 7)
+async function accLogout() {
+  await netConnect();
+  if (net.roomRef) throw new Error('방에서 나간 뒤 로그아웃하세요');
+  if (typeof frStop === 'function') frStop();
+  await accPresenceStop(true);
+  const auth = firebase.auth();
+  await auth.signOut();
+  const u = (await auth.signInAnonymously()).user;
+  net.uid = u.uid;
+  netClearActive();
+  await accOnConnected(u);
+}
+// 닉네임 저장(멀티 닉네임 확인 때): 계정이면 계정에도
+function accSaveNick(n) {
+  if (!accLoggedIn() || !net.ready || !net.uid) return;
+  acc.nick = n; accSaveHint({ id: acc.id, nick: n });
+  net.db.ref('users/' + net.uid + '/nick').set(n).catch(() => {});
+}
+// 진행 중 대전 기록(다른 기기 재참가용): 18_net netSaveActive/netClearActive가 부름
+function accSetActive(code) { if (accLoggedIn() && net.ready && net.uid) net.db.ref('users/' + net.uid + '/active').set(code || null).catch(() => {}); }
+
+// ---- 접속 표시: online/<uid> = {state: 'menu' | 'room', at}. 연결될 때마다 기록 + 끊기면 지움 ----
+function accPresenceStart() {
+  if (!accLoggedIn() || !net.ready || acc.presenceRef) return;
+  acc.presenceRef = net.db.ref('online/' + net.uid);
+  const conn = net.db.ref('.info/connected');
+  acc.presenceCb = snap => { if (snap.val() === true && acc.presenceRef) { acc.presenceRef.onDisconnect().remove(); acc.presenceRef.set({ state: acc.state, at: Date.now() }).catch(() => {}); } };
+  conn.on('value', acc.presenceCb);
+}
+async function accPresenceStop(remove) {
+  if (!acc.presenceRef) return;
+  const ref = acc.presenceRef;
+  net.db.ref('.info/connected').off('value', acc.presenceCb);
+  acc.presenceRef = null; acc.presenceCb = null;
+  ref.onDisconnect().cancel();
+  if (remove) await ref.remove().catch(() => {});
+}
+// 상태 바꾸기: 방에 들어가면 'room'(친구 목록 "게임 중" - 사용자 결정 5 (가)), 나오면 'menu'
+function accSetPresence(state) {
+  acc.state = state;
+  if (acc.presenceRef) acc.presenceRef.set({ state, at: Date.now() }).catch(() => {});
+}
+
+// ---- 시작 화면 표시·창 ----
+function accRender() {
+  const $ = id => document.getElementById(id);
+  const hint = accLoadHint(), id = acc.id || (hint && hint.id);
+  const st = $('accStatus'); if (st) st.textContent = id ? `아이디 ${id}` : '게스트';
+  for (const [bid, show] of [['btnAccLogin', !id], ['btnAccSignup', !id], ['btnAccLogout', !!id], ['btnFriends', !!id]]) { const b = $(bid); if (b) b.style.display = show ? 'inline-block' : 'none'; }
+  if (typeof frRenderBadge === 'function') frRenderBadge();
+}
+let accMode = 'login';
+function accOpen(mode) {
+  accMode = mode;
+  const $ = id => document.getElementById(id);
+  $('accTitle').textContent = mode === 'signup' ? '회원가입' : '로그인';
+  $('accPw2Row').style.display = mode === 'signup' ? 'block' : 'none';
+  $('accNickRow').style.display = mode === 'signup' ? 'block' : 'none';
+  $('accIdInput').value = ''; $('accPwInput').value = ''; $('accPw2Input').value = ''; $('accNickInput').value = mpLoadNickname();
+  $('accHelp').textContent = mode === 'signup' ? '아이디: 영문 소문자·숫자 4~16자 / 비밀번호 6자 이상 (비밀번호 찾기는 없으니 꼭 기억해 두세요)' : '';
+  accNotice('');
+  $('accOkBtn').disabled = false;
+  $('accOverlay').style.display = 'flex';
+}
+function accNotice(t) { const n = document.getElementById('accNotice'); if (n) { n.textContent = t; n.style.display = t ? 'block' : 'none'; } }
+async function accSubmit() {
+  const $ = id => document.getElementById(id), btn = $('accOkBtn');
+  const id = $('accIdInput').value, pw = $('accPwInput').value;
+  if (accMode === 'signup' && pw !== $('accPw2Input').value) { accNotice('비밀번호가 서로 다릅니다'); return; }
+  btn.disabled = true; accNotice('연결 중...');
+  try {
+    if (accMode === 'signup') await accSignUp(id, pw, $('accNickInput').value); else await accLogin(id, pw);
+    $('accOverlay').style.display = 'none';
+  } catch (e) { accNotice(e.message || String(e)); }
+  btn.disabled = false;
+}
+document.getElementById('btnAccLogin').addEventListener('click', () => accOpen('login'));
+document.getElementById('btnAccSignup').addEventListener('click', () => accOpen('signup'));
+document.getElementById('accOkBtn').addEventListener('click', accSubmit);
+document.getElementById('accCancelBtn').addEventListener('click', () => { document.getElementById('accOverlay').style.display = 'none'; });
+document.getElementById('accIdInput').addEventListener('input', e => { const v = e.target.value, l = v.toLowerCase(); if (v !== l) e.target.value = l; });
+document.getElementById('btnAccLogout').addEventListener('click', () => {
+  showChoiceModal('로그아웃하면 새 게스트가 됩니다', [{ label: '로그아웃', onClick: async () => {
+    try { await accLogout(); } catch (e) { const st = document.getElementById('accStatus'); if (st) st.textContent = '로그아웃 실패: ' + (e.message || e); }
+  } }, { label: '취소', onClick() {} }]);
+});
+// (첫 표시 accRender()는 18_friends.js 끝에서 - 친구 상태(fr)가 만들어진 뒤)
+
+// ================= 채팅·초대 (v12.86, MULTIPLAYER.md 2-10) =================
+// 방 채팅: rooms/<코드>/chat/<push> = {uid, name, text, at} - 방 구성원(방장·참가자·관전자)만, 방이 없어지면 같이 지워짐, 재대전해도 이어짐, 들어오면 최근 50개.
+//   보이는 곳: 대기실·편성·밴픽·드래프트(작게 접힌 채로 시작)·온라인 전투(로그 칸 자리 - 로그를 켜면 가려짐). 핫시트는 없음.
+// 1:1 채팅(친구끼리): dm/<두 uid 정렬 '_'>/<push> = {from, text, at}, 새 메시지 표시 dmNote/<받는 uid>/<보낸 uid> = at. 최근 50개.
+// 초대: invites/<받는 uid>/<보낸 uid> = {id, nick, code, at}. 내가 대기실에 있을 때 접속 중인 친구에게만, 받는 쪽은 방 밖 메뉴 화면에서만(그 밖이면 버림), 1분 지나면 버림.
+// 한 번에 200자, 1초에 1개(사용자 결정 7)
+const CHAT_MAX_LEN = 200, CHAT_GAP_MS = 1000, CHAT_KEEP = 50, INVITE_TTL_MS = 60 * 1000;
+let chat = { ref: null, cb: null, lines: [], lastSendAt: 0, open: true, cat: null, unread: 0 };
+
+// ---- 입력칸에 글자를 치는 중인가(게임 단축키 무시용 - 15_input) ----
+function isTypingTarget(e) {
+  const t = e && e.target, tag = t && t.tagName ? String(t.tagName).toUpperCase() : '';
+  return tag === 'INPUT' || tag === 'TEXTAREA' || !!(t && t.isContentEditable);
+}
+function chatTextOk(text) {
+  const t = String(text || '').trim();
+  if (!t) return null;
+  return t.slice(0, CHAT_MAX_LEN);
+}
+function chatRateOk(state) {
+  const now = Date.now();
+  if (now - (state.lastSendAt || 0) < CHAT_GAP_MS) return false;
+  state.lastSendAt = now; return true;
+}
+
+// ---- 방 채팅 ----
+function chatAttach() {
+  if (!net.roomRef || chat.ref) return;
+  chat.lines = []; chat.unread = 0;
+  chat.ref = net.roomRef.child('chat');
+  chat.cb = snap => { const v = snap.val(); if (!v || !v.text) return; chat.lines.push(v); if (chat.lines.length > CHAT_KEEP) chat.lines.shift(); if (!chat.open) chat.unread++; chatRender(); };
+  chat.q = chat.ref.limitToLast(CHAT_KEEP); // 같은 쿼리 객체로 붙이고 뗌
+  chat.q.on('child_added', chat.cb);
+  chatSync();
+}
+function chatDetach() {
+  if (chat.q) chat.q.off('child_added', chat.cb);
+  chat.q = null; chat.ref = null; chat.cb = null; chat.lines = []; chat.unread = 0; chat.cat = null;
+  chatRender(); chatSync();
+}
+// 내 이름·자리(방 기록 기준)
+function chatMyName() {
+  const r = net.room || {};
+  if (r.host && r.host.uid === net.uid) return r.host.name;
+  if (r.guest && r.guest.uid === net.uid) return r.guest.name;
+  const s = typeof netSpecList === 'function' ? netSpecList(r).find(v => v.uid === net.uid) : null;
+  return (s && s.name) || mpLoadNickname() || '?';
+}
+function chatRoleOf(uid) {
+  const r = net.room || {};
+  if (r.host && r.host.uid === uid) return 'host';
+  if (r.guest && r.guest.uid === uid) return 'guest';
+  return 'spec';
+}
+async function chatSend(text) {
+  const t = chatTextOk(text);
+  if (!t || !chat.ref) return false;
+  if (!chatRateOk(chat)) { chatNotice('너무 빨라요 - 1초에 한 번'); return false; }
+  try { await chat.ref.push({ uid: net.uid, name: chatMyName(), text: t, at: Date.now() }); return true; }
+  catch (e) { chatNotice('보내지 못했습니다'); return false; }
+}
+function chatNotice(t) { const n = document.getElementById('chatNotice'); if (n) { n.textContent = t; n.style.display = t ? 'block' : 'none'; clearTimeout(chatNotice._t); if (t) chatNotice._t = setTimeout(() => chatNotice(''), 2000); } }
+function chatRender() {
+  const box = document.getElementById('chatLog'); if (!box) return;
+  box.innerHTML = '';
+  for (const m of chat.lines) {
+    const row = document.createElement('div'); row.className = 'chatLine';
+    const nm = document.createElement('span'); const role = chatRoleOf(m.uid);
+    nm.className = 'chatName ' + role; nm.textContent = (role === 'spec' ? '[관전] ' : '') + m.name + ': ';
+    const tx = document.createElement('span'); tx.className = 'chatText'; tx.textContent = m.text;
+    row.appendChild(nm); row.appendChild(tx); box.appendChild(row);
+  }
+  box.scrollTop = box.scrollHeight;
+  const bar = document.getElementById('chatToggle');
+  if (bar) bar.textContent = chat.open ? '채팅 ▼' : (chat.unread ? `채팅 ▲ (새 ${chat.unread})` : '채팅 ▲');
+}
+// 보이기: 방 안(온라인)일 때만. 전투 화면은 로그가 꺼져 있을 때만(로그 칸 자리 - 사용자 결정). 화면 종류가 바뀌면 기본 펼침/접힘
+function chatScreenCat() {
+  const vis = id => { const el = document.getElementById(id); return !!(el && el.style && el.style.display && el.style.display !== 'none'); };
+  if (vis('gameContainer')) return 'battle';
+  if (vis('screenMpLobby')) return 'lobby';
+  if (vis('squadFormationScreen') || vis('banPickScreen') || vis('draftScreen')) return 'setup';
+  return null;
+}
+function chatSync() {
+  const dock = document.getElementById('chatDock'); if (!dock) return;
+  const online = !!(chat.ref && net.roomRef && pvpSetup && pvpSetup.kind === 'online');
+  const cat = online ? chatScreenCat() : null;
+  if (cat !== chat.cat) { chat.cat = cat; if (cat) { chat.open = cat !== 'setup'; if (chat.open) chat.unread = 0; } } // 편성·밴픽·드래프트는 접힌 채로(사용자 결정 4 (가) 작게)
+  const show = !!cat && !(cat === 'battle' && showLogPanel);
+  dock.style.display = show ? 'flex' : 'none';
+  dock.className = chat.open ? 'open' : 'closed';
+  chatRender();
+}
+function chatToggle() { chat.open = !chat.open; if (chat.open) chat.unread = 0; chatSync(); }
+
+// ---- 1:1 채팅 ----
+const dmPair = (a, b) => (a < b ? a + '_' + b : b + '_' + a);
+let dm = { with: null, ref: null, cb: null, lines: [], lastSendAt: 0, noteRef: null, notes: {} };
+function dmStart() { // 새 메시지 표시 듣기(로그인 + 연결)
+  if (dm.noteRef || !accLoggedIn() || !net.ready) return;
+  dm.noteRef = net.db.ref('dmNote/' + net.uid);
+  dm.noteRef.on('value', snap => { dm.notes = snap.val() || {}; if (dm.with && dm.notes[dm.with]) dmMarkRead(dm.with); frRender(); });
+}
+function dmStop() {
+  dmClose();
+  if (dm.noteRef) dm.noteRef.off();
+  dm.noteRef = null; dm.notes = {};
+}
+function dmOpen(fuid) {
+  dmClose();
+  dm.with = fuid; dm.lines = [];
+  dm.ref = net.db.ref('dm/' + dmPair(net.uid, fuid));
+  dm.cb = snap => { const v = snap.val(); if (!v || !v.text) return; dm.lines.push(v); if (dm.lines.length > CHAT_KEEP) dm.lines.shift(); dmRender(); };
+  dm.q = dm.ref.limitToLast(CHAT_KEEP);
+  dm.q.on('child_added', dm.cb);
+  dmMarkRead(fuid);
+  dmRender();
+}
+function dmClose() {
+  if (dm.q) dm.q.off('child_added', dm.cb);
+  dm.q = null; dm.with = null; dm.ref = null; dm.cb = null; dm.lines = [];
+  dmRender();
+}
+function dmMarkRead(fuid) { if (dm.notes[fuid]) net.db.ref('dmNote/' + net.uid + '/' + fuid).remove().catch(() => {}); }
+async function dmSend(text) {
+  const t = chatTextOk(text);
+  if (!t || !dm.with) return false;
+  if (!chatRateOk(dm)) { dmNotice('너무 빨라요 - 1초에 한 번'); return false; }
+  const at = Date.now();
+  try {
+    await dm.ref.push({ from: net.uid, text: t, at });
+    net.db.ref('dmNote/' + dm.with + '/' + net.uid).set(at).catch(() => {});
+    return true;
+  } catch (e) { dmNotice('보내지 못했습니다 (친구가 아니면 보낼 수 없습니다)'); return false; }
+}
+function dmNotice(t) { const n = document.getElementById('dmNotice'); if (n) { n.textContent = t; n.style.display = t ? 'block' : 'none'; } }
+function dmRender() {
+  const $ = id => document.getElementById(id), view = $('dmView'), main = $('frMain');
+  if (!view || !main) return;
+  view.style.display = dm.with ? 'flex' : 'none';
+  main.style.display = dm.with ? 'none' : 'block';
+  if (!dm.with) return;
+  const f = (typeof fr !== 'undefined' && fr.list[dm.with]) || {};
+  $('dmTitle').textContent = `${(fr.names && fr.names[dm.with]) || f.id || ''} (${f.id || ''})`;
+  const box = $('dmLog'); box.innerHTML = '';
+  for (const m of dm.lines) {
+    const row = document.createElement('div'); row.className = 'chatLine' + (m.from === net.uid ? ' mine' : '');
+    row.textContent = m.text; box.appendChild(row);
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+// ---- 초대 ----
+let inv = { ref: null, cur: null, timer: null };
+function invStart() {
+  if (inv.ref || !accLoggedIn() || !net.ready) return;
+  inv.ref = net.db.ref('invites/' + net.uid);
+  inv.ref.on('value', snap => invOnUpdate(snap.val() || {}));
+}
+function invStop() { if (inv.ref) inv.ref.off(); inv.ref = null; invHide(); }
+// 받을 수 있는가: 방 밖 + 메뉴 화면(싱글 전투 중 아님) - 그 밖이면 버림(사용자 결정 2 (가))
+function invCanReceive() {
+  if (net.roomRef) return false;
+  const gc = document.getElementById('gameContainer');
+  return !(gc && gc.style && gc.style.display === 'flex');
+}
+function invOnUpdate(all) {
+  const now = Date.now();
+  for (const from of Object.keys(all)) {
+    const v = all[from], old = !v || !(now - (v.at || 0) < INVITE_TTL_MS);
+    if (old || !invCanReceive()) { net.db.ref('invites/' + net.uid + '/' + from).remove().catch(() => {}); continue; }
+    if (!inv.cur) invShow(from, v);
+  }
+  if (inv.cur && !all[inv.cur.from]) invHide(); // 보낸 쪽이 취소·만료
+}
+function invShow(from, v) {
+  inv.cur = { from, v };
+  const $ = id => document.getElementById(id);
+  $('inviteText').textContent = `${v.nick || v.id}(${v.id})님이 방에 초대했습니다`;
+  $('inviteSub').textContent = `방 코드 ${v.code}`;
+  $('inviteOverlay').style.display = 'flex';
+  clearTimeout(inv.timer);
+  inv.timer = setTimeout(() => { if (inv.cur && inv.cur.from === from) invAnswer(false); }, Math.max(0, (v.at || 0) + INVITE_TTL_MS - Date.now()));
+}
+function invHide() { clearTimeout(inv.timer); inv.cur = null; const ov = document.getElementById('inviteOverlay'); if (ov) ov.style.display = 'none'; }
+async function invAnswer(accept) {
+  const c = inv.cur; if (!c) return;
+  invHide();
+  net.db.ref('invites/' + net.uid + '/' + c.from).remove().catch(() => {});
+  if (!accept) return;
+  try {
+    await netJoinRoom(c.v.code, mpLoadNickname() || acc.nick || acc.id || '게스트');
+    document.querySelectorAll('.accOverlay').forEach(el => { el.style.display = 'none'; });
+    document.getElementById('mpLobbyTitle').textContent = '대기실 (온라인)';
+    showMenuScreen('screenMpLobby');
+  } catch (e) { showChoiceModal('참가하지 못했습니다: ' + (e.message || e), [{ label: '확인', onClick() {} }]); }
+}
+// 보내기: 내가 대기실에 있고, 친구가 접속 중일 때만(사용자 결정 1 (가))
+function invCanSend(fuid) {
+  return accLoggedIn() && !!net.roomRef && !!net.room && net.room.status === 'lobby' && frStatusOf(fuid) === 'on';
+}
+async function invSend(fuid) {
+  if (!invCanSend(fuid)) throw new Error('대기실에서, 접속 중인 친구에게만 초대할 수 있습니다');
+  await net.db.ref('invites/' + fuid + '/' + net.uid).set({ id: acc.id, nick: chatMyName(), code: net.roomCode, at: Date.now() });
+}
+
+// ---- 버튼·키 ----
+document.getElementById('chatToggle').addEventListener('click', chatToggle);
+document.getElementById('chatInput').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.isComposing) return; // 한글 조합 중 Enter는 무시(조합 끝난 뒤 한 번만)
+  e.preventDefault();
+  const inp = e.target; chatSend(inp.value).then(ok => { if (ok) inp.value = ''; });
+});
+document.getElementById('chatSendBtn').addEventListener('click', () => { const inp = document.getElementById('chatInput'); chatSend(inp.value).then(ok => { if (ok) inp.value = ''; }); });
+document.getElementById('dmInput').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.isComposing) return;
+  e.preventDefault();
+  const inp = e.target; dmSend(inp.value).then(ok => { if (ok) inp.value = ''; });
+});
+document.getElementById('dmSendBtn').addEventListener('click', () => { const inp = document.getElementById('dmInput'); dmSend(inp.value).then(ok => { if (ok) inp.value = ''; }); });
+document.getElementById('dmBackBtn').addEventListener('click', () => { dmClose(); frRender(); });
+document.getElementById('btnInviteAccept').addEventListener('click', () => invAnswer(true));
+document.getElementById('btnInviteDecline').addEventListener('click', () => invAnswer(false));
+
+// ================= 친구 (v12.85, MULTIPLAYER.md 2-9) =================
+// 아이디로 신청 → 상대가 수락(또는 거절). 목록에 접속 중(멀티플레이를 연 상태)·게임 중(방 안 - 대기실~전투)·오프라인. 삭제는 양쪽에서 지움.
+// 50명까지, 게스트는 친구 기능 없음(사용자 결정 6). DB: friendReq/<받는 uid>/<보낸 uid> = {id, nick, at}, friends/<uid>/<친구 uid> = {id, since}
+const FR_MAX = 50;
+let fr = { on: false, reqRef: null, listRef: null, reqs: {}, list: {}, online: {}, onlineRefs: {}, names: {} };
+
+function frStart() {
+  if (fr.on || !accLoggedIn() || !net.ready) return;
+  fr.on = true;
+  fr.reqRef = net.db.ref('friendReq/' + net.uid);
+  fr.listRef = net.db.ref('friends/' + net.uid);
+  fr.reqRef.on('value', snap => { fr.reqs = snap.val() || {}; frRender(); });
+  fr.listRef.on('value', snap => { fr.list = snap.val() || {}; frSyncOnline(); frRender(); });
+  dmStart(); invStart(); // (v12.86) 1:1 새 메시지 표시, 초대 받기(18_chat)
+}
+function frStop() {
+  if (!fr.on) return;
+  dmStop(); invStop();
+  if (fr.reqRef) fr.reqRef.off(); if (fr.listRef) fr.listRef.off();
+  for (const k in fr.onlineRefs) fr.onlineRefs[k].off();
+  fr = { on: false, reqRef: null, listRef: null, reqs: {}, list: {}, online: {}, onlineRefs: {}, names: {} };
+  frRender();
+}
+// 친구마다 접속 표시 듣기(목록이 바뀌면 맞춤) + 닉네임 한 번 읽기
+function frSyncOnline() {
+  for (const k in fr.onlineRefs) if (!fr.list[k]) { fr.onlineRefs[k].off(); delete fr.onlineRefs[k]; delete fr.online[k]; }
+  for (const k in fr.list) {
+    if (fr.onlineRefs[k]) continue;
+    const ref = net.db.ref('online/' + k);
+    ref.on('value', snap => { fr.online[k] = snap.val(); frRender(); });
+    fr.onlineRefs[k] = ref;
+    net.db.ref('users/' + k + '/nick').once('value').then(s => { fr.names[k] = s.val(); frRender(); }).catch(() => {});
+  }
+}
+const frStatusOf = uid => { const o = fr.online[uid]; return !o ? 'off' : o.state === 'room' ? 'room' : 'on'; };
+const FR_STATUS_TEXT = { on: '접속 중', room: '게임 중', off: '오프라인' };
+
+// ---- 신청·수락·거절·삭제 ----
+async function frRequest(id) {
+  id = String(id || '').trim().toLowerCase();
+  if (!accLoggedIn()) throw new Error('로그인해야 친구를 추가할 수 있습니다');
+  if (!ACC_ID_RE.test(id)) throw new Error('아이디는 영문 소문자·숫자 4~16자입니다');
+  if (id === acc.id) throw new Error('자기 자신은 추가할 수 없습니다');
+  if (Object.keys(fr.list).length >= FR_MAX) throw new Error(`친구는 ${FR_MAX}명까지입니다`);
+  const to = (await net.db.ref('ids/' + id).once('value')).val();
+  if (!to) throw new Error('없는 아이디입니다');
+  if (fr.list[to]) throw new Error('이미 친구입니다');
+  if (fr.reqs[to]) throw new Error('상대가 이미 신청했습니다 - 받은 신청에서 수락하세요');
+  await net.db.ref('friendReq/' + to + '/' + net.uid).set({ id: acc.id, nick: acc.nick || acc.id, at: Date.now() });
+  return id;
+}
+// 수락: 양쪽 목록에 기록 + 받은 신청 지움(한 번에 - 규칙은 받은 신청이 있어야 상대 목록에 쓸 수 있음)
+async function frAccept(from) {
+  const r = fr.reqs[from]; if (!r) return;
+  if (Object.keys(fr.list).length >= FR_MAX) throw new Error(`친구는 ${FR_MAX}명까지입니다`);
+  const now = Date.now(), up = {};
+  up['friends/' + net.uid + '/' + from] = { id: r.id, since: now };
+  up['friends/' + from + '/' + net.uid] = { id: acc.id, since: now };
+  up['friendReq/' + net.uid + '/' + from] = null;
+  up['friendReq/' + from + '/' + net.uid] = null; // (서로 신청한 경우 상대 쪽 신청도)
+  await net.db.ref().update(up);
+}
+async function frDecline(from) { await net.db.ref('friendReq/' + net.uid + '/' + from).remove(); }
+async function frRemove(uid) {
+  const up = {}; up['friends/' + net.uid + '/' + uid] = null; up['friends/' + uid + '/' + net.uid] = null;
+  await net.db.ref().update(up);
+}
+
+// ---- 창 ----
+function frRenderBadge() {
+  const n = Object.keys(fr.reqs).length, m = Object.keys(dm.notes || {}).filter(k => fr.list[k]).length;
+  const extra = [n ? `신청 ${n}` : '', m ? `메시지 ${m}` : ''].filter(Boolean).join(' · ');
+  const b = document.getElementById('btnFriends'); if (b) b.textContent = extra ? `친구 (${extra})` : '친구';
+  const lb = document.getElementById('btnMpInvite'); if (lb) lb.textContent = extra ? `친구 · 초대 (${extra})` : '친구 · 초대'; // (v12.86) 대기실
+}
+function frRender() {
+  frRenderBadge();
+  const $ = id => document.getElementById(id), ov = $('friendsOverlay');
+  if (!ov || ov.style.display === 'none') return;
+  $('friendsCount').textContent = `${Object.keys(fr.list).length}/${FR_MAX}`;
+  const reqBox = $('friendReqList'); reqBox.innerHTML = '';
+  const reqKeys = Object.keys(fr.reqs);
+  if (!reqKeys.length) { const e = document.createElement('div'); e.className = 'frEmpty'; e.textContent = '받은 신청 없음'; reqBox.appendChild(e); }
+  for (const k of reqKeys) {
+    const r = fr.reqs[k], row = document.createElement('div'); row.className = 'frRow';
+    const nm = document.createElement('span'); nm.className = 'frName'; nm.textContent = `${r.nick || r.id} (${r.id})`;
+    const ok = document.createElement('button'); ok.className = 'frBtn ok'; ok.textContent = '수락';
+    const no = document.createElement('button'); no.className = 'frBtn'; no.textContent = '거절';
+    ok.addEventListener('click', () => frAccept(k).catch(e => frNotice(e.message || String(e))));
+    no.addEventListener('click', () => frDecline(k).catch(() => {}));
+    row.appendChild(nm); row.appendChild(ok); row.appendChild(no); reqBox.appendChild(row);
+  }
+  const listBox = $('friendList'); listBox.innerHTML = '';
+  const order = { room: 0, on: 1, off: 2 };
+  const keys = Object.keys(fr.list).sort((a, b) => order[frStatusOf(a)] - order[frStatusOf(b)] || String(fr.list[a].id).localeCompare(String(fr.list[b].id)));
+  if (!keys.length) { const e = document.createElement('div'); e.className = 'frEmpty'; e.textContent = '친구 없음 - 위에서 아이디로 신청하세요'; listBox.appendChild(e); }
+  for (const k of keys) {
+    const f = fr.list[k], st = frStatusOf(k), row = document.createElement('div'); row.className = 'frRow';
+    const dot = document.createElement('span'); dot.className = 'frDot ' + st;
+    const nm = document.createElement('button'); nm.className = 'frName frLink'; nm.type = 'button'; nm.textContent = `${fr.names[k] || f.id} (${f.id})`; nm.title = '1:1 대화';
+    nm.addEventListener('click', () => dmOpen(k)); // (v12.86) 이름을 누르면 1:1 대화
+    if (dm.notes && dm.notes[k]) { const nd = document.createElement('span'); nd.className = 'frNew'; nd.textContent = '새 메시지'; nm.appendChild(nd); }
+    const sv = document.createElement('span'); sv.className = 'frState ' + st; sv.textContent = FR_STATUS_TEXT[st];
+    row.appendChild(dot); row.appendChild(nm); row.appendChild(sv);
+    if (invCanSend(k)) { // (v12.86) 대기실에서 접속 중인 친구 초대
+      const iv = document.createElement('button'); iv.className = 'frBtn ok'; iv.textContent = '초대';
+      iv.addEventListener('click', () => invSend(k).then(() => frNotice(`${f.id}님을 초대했습니다 (1분 안에 응답)`)).catch(e => frNotice(e.message || String(e))));
+      row.appendChild(iv);
+    }
+    const del = document.createElement('button'); del.className = 'frBtn'; del.textContent = '삭제';
+    del.addEventListener('click', () => showChoiceModal(`${f.id}님을 친구에서 삭제할까요?`, [{ label: '삭제', onClick: () => frRemove(k).catch(() => {}) }, { label: '취소', onClick() {} }]));
+    row.appendChild(del); listBox.appendChild(row);
+  }
+}
+function frNotice(t) { const n = document.getElementById('friendAddNotice'); if (n) { n.textContent = t; n.style.display = t ? 'block' : 'none'; } }
+async function frOpen() {
+  const ov = document.getElementById('friendsOverlay');
+  ov.style.display = 'flex'; frNotice('불러오는 중...');
+  try { await netConnect(); if (!accLoggedIn()) { frNotice('로그인해야 친구 기능을 쓸 수 있습니다'); return; } frStart(); frNotice(''); }
+  catch (e) { frNotice('연결 실패: ' + (e.message || e)); }
+  frRender();
+}
+document.getElementById('btnFriends').addEventListener('click', frOpen);
+document.getElementById('btnMpInvite').addEventListener('click', frOpen); // (v12.86) 대기실 "친구 · 초대"
+document.getElementById('btnFriendsClose').addEventListener('click', () => { dmClose(); document.getElementById('friendsOverlay').style.display = 'none'; });
+document.getElementById('btnFriendAdd').addEventListener('click', async () => {
+  const inp = document.getElementById('friendAddInput');
+  frNotice('보내는 중...');
+  try { const id = await frRequest(inp.value); inp.value = ''; frNotice(`${id}님에게 친구 신청을 보냈습니다`); }
+  catch (e) { frNotice(e.message || String(e)); }
+});
+accRender(); // 시작 화면 계정 표시(브라우저에 남긴 표시 기준 - Firebase는 아직 안 불러옴)
+
 // ================= 온라인 대전 통신 (Firebase) - MULTIPLAYER.md 2장 =================
 // 라이브러리는 멀티플레이에서 방 만들기/참가를 누를 때만 인터넷(구글 CDN)에서 불러옴 -> 싱글/오프라인 영향 없음.
 // 로그인은 익명(게스트). 방장 = 1P('player'), 참가자 = 2P('enemy').
@@ -16484,6 +17126,7 @@ async function netConnect() {
   net.uid = user.uid;
   net.db = firebase.database();
   net.ready = true;
+  await accOnConnected(user); // (v12.85) 계정이면 정보·접속 표시·친구(18_account), 게스트면 표시 지움
   return net;
 }
 function netRandomCode() {
@@ -16585,8 +17228,10 @@ function netNextHostUid(room) {
 }
 function netEnterRoom(code, isHost) {
   net.roomCode = code; net.isHost = isHost; net.phase = 'lobby'; net.armedAlone = null;
+  accSetPresence('room'); // (v12.85) 친구 목록 "게임 중"
   net.roomRef = net.db.ref('rooms/' + code);
   net.roomRef.on('value', snap => { net.room = snap.val(); netOnRoomUpdate(); });
+  chatAttach(); // (v12.86) 방 채팅(18_chat)
 }
 // (v12.80) 대기실·편성 단계 끊김 예약(MULTIPLAYER.md 2-4): 방장 혼자면 방·색인 삭제, 참가자가 있으면 방장 자리만 비움(참가자가 방장이 됨), 참가자는 자기 자리 비움
 // (v12.84) 관전석: 자기 칸 비움. 방장은 참가자·관전자가 하나라도 있으면 방장 자리만 비움(넘겨받음)
@@ -16605,9 +17250,11 @@ function netArmLobbyDisconnect() {
 }
 function netLeaveRoom() {
   const ref = net.roomRef, code = net.roomCode, wasHost = net.isHost, room = net.room, wasSpec = net.spectator, slot = net.specSlot;
+  chatDetach();
   netTeardownBattle();
   netClearActive(); // 재연결 기록 지움(나가면 더 이상 돌아갈 대전 없음)
   net.roomRef = null; net.roomCode = null; net.room = null; net.isHost = false; net.phase = 'lobby'; net.armedAlone = null; net.spectator = false; net.specSlot = -1; spectatorView = false;
+  accSetPresence('menu');
   if (!ref) return;
   ref.off();
   const idx = net.db.ref('roomIndex/' + code);
@@ -16729,8 +17376,8 @@ function netOnRoomUpdate() {
   if (net.phase === 'battle') return;
   if (!room) { // 방이 사라짐(방장이 나감/끊김)
     const wasGuest = !net.isHost;
-    if (net.roomRef) net.roomRef.off();
-    net.roomRef = null; net.roomCode = null; net.phase = 'lobby';
+    chatDetach(); if (net.roomRef) net.roomRef.off();
+    net.roomRef = null; net.roomCode = null; net.phase = 'lobby'; accSetPresence('menu');
     if (wasGuest) { pvpFormationStep = 0; hidePvpCover(); if (bpRun) bpStop(); if (drRun) drStop(); document.getElementById('squadFormationScreen').style.display = 'none'; document.getElementById('banPickScreen').style.display = 'none'; document.getElementById('draftScreen').style.display = 'none'; showMenuScreen('screenMpRoom'); mpRoomNotice('방장이 방을 나갔습니다'); }
     return;
   }
@@ -16746,8 +17393,8 @@ function netOnRoomUpdate() {
     net.isHost = room.host.uid === net.uid;
     net.spectator = !net.isHost && !isGuest && slot >= 0; net.specSlot = net.spectator ? slot : -1;
     if (!net.isHost && !isGuest && slot < 0 && !net.moving && !net.promoting) { // 자리가 없어짐(끊김 처리 등) → 방에서 나간 것으로
-      netTeardownBattle(); if (net.roomRef) net.roomRef.off(); // 쓰지 않고 조용히 나옴(내 자리가 없으니 지울 것도 없음)
-      net.roomRef = null; net.roomCode = null; net.room = null; net.isHost = false; net.spectator = false; net.specSlot = -1; net.armedAlone = null;
+      chatDetach(); netTeardownBattle(); if (net.roomRef) net.roomRef.off(); // 쓰지 않고 조용히 나옴(내 자리가 없으니 지울 것도 없음)
+      net.roomRef = null; net.roomCode = null; net.room = null; net.isHost = false; net.spectator = false; net.specSlot = -1; net.armedAlone = null; accSetPresence('menu');
       netBackFromSetup(); pvpSetup = null; showMenuScreen('screenMpRoom'); mpRoomNotice('방에서 자리가 없어졌습니다');
       return;
     }
@@ -16814,9 +17461,9 @@ function netListen(path, ev, cb) { // 전투 중 리스너(나갈 때 일괄 해
 }
 // ---- 진행 중 대전 기록(재연결용, 같은 브라우저) ----
 const NET_ACTIVE_KEY = 'mm_activeBattle';
-function netSaveActive(code) { try { localStorage.setItem(NET_ACTIVE_KEY, JSON.stringify({ code })); } catch (e) {} }
+function netSaveActive(code) { try { localStorage.setItem(NET_ACTIVE_KEY, JSON.stringify({ code })); } catch (e) {} accSetActive(code); } // 계정이면 계정에도(다른 기기 재참가 - v12.85)
 function netLoadActive() { try { const v = JSON.parse(localStorage.getItem(NET_ACTIVE_KEY) || 'null'); return v && v.code ? v : null; } catch (e) { return null; } }
-function netClearActive() { try { localStorage.removeItem(NET_ACTIVE_KEY); } catch (e) {} }
+function netClearActive() { const had = !!netLoadActive(); try { localStorage.removeItem(NET_ACTIVE_KEY); } catch (e) {} if (had) accSetActive(null); }
 
 // ---- 재참가: 방 확인 -> 같은 시작 상태 -> 서버 명령을 처음부터 빠르게 다시 재생(2-4-1) ----
 // 실패 시 Error(message). definite = true면 다시 시도해도 안 되는 경우(기록을 지움)
@@ -16832,6 +17479,7 @@ async function netRejoinBattle(code) {
   if (room.result) throw fail(`대전이 이미 끝났습니다 (${room.result.winner === side ? '승리' : '패배'})`);
   if (room.status !== 'battle' || !room.start || !room.squads || !room.guest) throw fail('전투 중인 대전이 아닙니다');
   net.roomCode = code; net.isHost = side === 'player'; net.roomRef = ref; net.room = room; net.phase = 'formation';
+  chatAttach(); // (v12.86) 재참가도 방 채팅
   netStartBattle(room, { rejoin: true });
   return side;
 }
@@ -16888,6 +17536,7 @@ function netStartBattle(room, opts = {}) {
   requestAnimationFrame(() => requestAnimationFrame(centerBoardScroll));
   { const b = document.getElementById('spectatorBadge'); if (b) b.style.display = spec ? 'block' : 'none'; }
   addLog(spec ? `--- 온라인 대전 관전: ${pvpSideName('player')} vs ${pvpSideName('enemy')} ---` : `--- 온라인 대전: 나는 ${pvpSideName(me)} (${me === 'player' ? '1P' : '2P'}) ---`, 'logInfo');
+  chatSync(); // (v12.86) 전투 화면 채팅(로그 칸 자리)
   if (opts.rejoin) netPump(); // 재생 시작(명령이 하나도 없으면 바로 복구 완료)
 }
 // 재생 완료: 빠른 모드 해제 + 지금 차례의 부수 효과(타이머·최초 투입 창)만 이어서 처리(이번 턴 시작 처리는 재생 중에 이미 됨)

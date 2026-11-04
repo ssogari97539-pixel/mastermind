@@ -1476,8 +1476,8 @@ button.charInfoListBtn.ci-card { position: relative; display: flex; flex-directi
 </div>
 
 <script>
-const GAME_BUILD = '79f9e071ce'; // 빌드 식별값(자동 생성)
-const GAME_VERSION = '13.94'; // 버전 번호(VERSION 파일)
+const GAME_BUILD = '00978bc53f'; // 빌드 식별값(자동 생성)
+const GAME_VERSION = '13.98'; // 버전 번호(VERSION 파일)
 // ================= 기본 설정 =================
 // 판 크기는 스테이지마다 다를 수 있음 - loadStage가 setBoardSize로 바꿈(모든 사용처가 함수 안이라 바뀐 값이 바로 반영됨)
 let COLS = 20;
@@ -2903,7 +2903,7 @@ function applyBurn(target, amount, vfxDelay = 0, source = null, opts = null) { /
 // 대상의 턴 종료 시 호출 (현재는 적 턴 종료 시점인 tickEnemyDebuffs에서만 사용됨 - 화상이 적용되는 대상이 전부 적이기 때문)
 // (v13.84 밸런스) 화상 피해가 들어갈 때마다 중첩 -50%(내림). 3턴 동안 새로 안 걸리면 소멸도 그대로.
 const BURN_DECAY = 0.5;
-const BURN_NO_DECAY = []; // (v13.84) 화상 중첩이 줄지 않는 조건 fn(c) → true(티보르 대검 투하)
+const BURN_NO_DECAY = []; // (v13.84) 화상 중첩이 줄지 않는 조건 fn(c) → true(티보르 대화재)
 function registerBurnNoDecay(fn) { BURN_NO_DECAY.push(fn); }
 function tickBurn(c) {
   if (!isBurning(c)) return;
@@ -7463,10 +7463,10 @@ defineHooks('renechika', { botCombo: { makes: { summon: [0] }, uses: { summon: [
 // 숨 불어넣기(v13.84 변경): 아군(티보르 본인·소환물 포함)이 적에게 화상을 걸 때마다 대상 최대 체력 8%(최대 1500) 화상 추가(티보르 것).
 //   대상마다 턴당 1회(티보르마다, 양쪽 진영 턴 시작에 초기화) - 추가 화상이 다시 반응하지 않는 것도 이 1회 제한으로 막힘. 예전 턴마다 5000 한도는 삭제.
 // 불타는 대검(스킬1, 10코/2턴): 다음 기본 공격 150% + 명중 시 대상 최대 체력 12%(최대 2250 - v13.84) 화상. 빗나가도 소모(사용자 결정 4 (가)).
-// 대검 투하(스킬2, 50코/5턴 - v13.84 완전 교체, 사용자): 바로 사용. 3턴간(쓴 턴 포함 - (가)안) 티보르 진영 턴이 끝날 때마다 그때 티보르 칸 중심 7×7 안의 모든 적에게
+// 대화재(스킬2, 60코/7턴 - v13.84 완전 교체, v13.97 이름·수치 - 사용자): 바로 사용. 3턴간(쓴 턴 포함 - (가)안) 티보르 진영 턴이 끝날 때마다 그때 티보르 칸 중심 7×7 안의 모든 적에게
 //   공격력 150% 화상. 지속 중엔 전장의 모든 적(티보르와 다른 편)의 화상이 피해 뒤에 줄지 않음 - 세 번째 화상 뒤 상대 턴 끝 화상 피해까지, 티보르 진영 다음 턴 시작에 끝.
 //   티보르가 퇴각·사망하면 바로 끝. 예전 대화재(화염)는 삭제.
-// 연출: 15_tibor_vfx.js(굵은 불타는 검격, 대검 준비 불꽃, 숨 불어넣기 불똥 튐, 대검 투하 - 내리꽂기·7×7 불길·전장 붉은 기운·재와 불씨)
+// 연출: 15_tibor_vfx.js(굵은 불타는 검격, 대검 준비 불꽃, 숨 불어넣기 불똥 튐, 대화재 - 내리꽂기·7×7 불길·전장 붉은 기운·재와 불씨)
 const TIBOR_FIRE = '#ff4a1c';
 characters.push(
   {
@@ -7488,7 +7488,7 @@ characters.push(
         effect(caster) { tiborArmBlade(caster); }
       },
       {
-        name:'대검 투하', cooldownMax:5, costReq:50, cooldownCur:5, targetType:'instant', // (v13.84 완전 교체 - 예전 대화재)
+        name:'대화재', cooldownMax:7, costReq:60, cooldownCur:7, targetType:'instant', // (v13.84 완전 교체, v13.97 이름 대화재→대화재·7턴/60코 - 사용자)
         desc:'3턴간 아군 턴 종료 시 티보르 중심 7×7 안 모든 적에게 공격력 150% 화상. 지속 중 전장의 모든 적은 화상 피해를 받아도 중첩이 줄지 않음. 티보르가 퇴각·사망하면 종료',
         infoText:`티보르가 전장에 불타는 대검을 내리꽂습니다. 3턴간 아군 턴 종료 시 티보르 중심 7*7 범위 안의 모든 적에게 공격력 150%의 화상을 부여합니다. 전장의 모든 적의 화상 피해 발동 시 중첩 감소 제거`,
         effect(caster) { tiborInfernoOn(caster); }
@@ -7500,7 +7500,7 @@ const tiborBladeBurn = t => Math.min(TIBOR_BLADE_MAX, Math.round(t.maxHp * TIBOR
 const tiborOnField = t => baseIdOf(t) === 'tibor' && !t.dead && !t.inReserve && !t.notInBattle && !t.isGhost;
 const TIBOR_BREATH_PCT = 0.08, TIBOR_BREATH_MAX = 1500, /* v13.84 5%(500)·턴마다 5000 → 8%(1500)·대상마다 턴당 1회 */ TIBOR_BLADE_PCT = 0.12, TIBOR_BLADE_MAX = 2250, /* v13.84 15%(1000) → 12%(2250) */ TIBOR_ABSORB = 0.15; // v13.35: 흡수 10→15%
 const TIBOR_BLADE_MULT = 1.5; // (v12.98 B3) 대검 배율
-const TIBOR_INFERNO_TICKS = 3, TIBOR_INFERNO_RADIUS = 3, TIBOR_INFERNO_BURN = 1.5; // (v13.84) 대검 투하: 3번, 7×7(체비셰프 3), 공격력 150%
+const TIBOR_INFERNO_TICKS = 3, TIBOR_INFERNO_RADIUS = 3, TIBOR_INFERNO_BURN = 1.5; // (v13.84) 대화재: 3번, 7×7(체비셰프 3), 공격력 150%
 
 function tiborArmBlade(caster) {
   caster.tiborBlade = true;
@@ -7509,17 +7509,17 @@ function tiborArmBlade(caster) {
   tiborBladeIgniteFx(caster);
   draw();
 }
-// ---- 대검 투하(v13.84) ----
+// ---- 대화재(v13.84) ----
 // tiborInferno = { ticks }: 남은 화상 횟수(티보르 진영 턴 끝마다 1 감소). 0이 되어도 지우지 않고 티보르 진영 다음 턴 시작에 지움(그 사이 상대 턴 끝 화상 피해까지 감소 없음)
 const tiborInfernoArea = (t, u) => Math.max(Math.abs(u.x - t.x), Math.abs(u.y - t.y)) <= TIBOR_INFERNO_RADIUS;
 function tiborInfernoOn(caster) {
   caster.tiborInferno = { ticks: TIBOR_INFERNO_TICKS };
-  addLog(`${caster.name}: 대검 투하 - ${TIBOR_INFERNO_TICKS}턴간 아군 턴 끝마다 7×7 적 화상 ${TIBOR_INFERNO_BURN * 100}%, 적 화상 중첩 감소 없음`, 'logSkill');
-  spawnFloatText(caster, '대검 투하', TIBOR_FIRE);
+  addLog(`${caster.name}: 대화재 - ${TIBOR_INFERNO_TICKS}턴간 아군 턴 끝마다 7×7 적 화상 ${TIBOR_INFERNO_BURN * 100}%, 적 화상 중첩 감소 없음`, 'logSkill');
+  spawnFloatText(caster, '대화재', TIBOR_FIRE);
   tiborInfernoCastFx(caster);
   draw();
 }
-function tiborInfernoEnd(t, why) { if (!t.tiborInferno) return; delete t.tiborInferno; addLog(`${t.name}: 대검 투하 종료${why ? ' (' + why + ')' : ''}`, 'logInfo'); }
+function tiborInfernoEnd(t, why) { if (!t.tiborInferno) return; delete t.tiborInferno; addLog(`${t.name}: 대화재 종료${why ? ' (' + why + ')' : ''}`, 'logInfo'); }
 function tiborInfernoTick(side) {
   for (const t of characters) {
     if (!t.tiborInferno || !(t.tiborInferno.ticks > 0) || teamOf(t) !== side) continue;
@@ -7527,7 +7527,7 @@ function tiborInfernoTick(side) {
     const amt = Math.round(effectiveAtk(t) * TIBOR_INFERNO_BURN);
     const victims = characters.filter(v => !v.dead && !v.inReserve && !v.notInBattle && !v.isGhost && !v.isStructure && teamOf(v) !== teamOf(t) && tiborInfernoArea(t, v));
     t.tiborInferno.ticks -= 1;
-    addLog(`${t.name}: 대검 투하 - 7×7 적 ${victims.length}명에게 화상 ${amt} (남은 ${t.tiborInferno.ticks}회)`, 'logSkill');
+    addLog(`${t.name}: 대화재 - 7×7 적 ${victims.length}명에게 화상 ${amt} (남은 ${t.tiborInferno.ticks}회)`, 'logSkill');
     tiborInfernoTickFx(t);
     for (const v of victims) applyBurn(v, amt, 0, t);
   }
@@ -7582,17 +7582,17 @@ defineHooks('tibor', {
   statusBadges(c) {
     const b = [];
     if (c.tiborBlade) b.push({ label:'불타는 대검', color:TIBOR_FIRE, tooltip:`다음 기본 공격 150% + 대상 최대 체력 ${TIBOR_BLADE_PCT * 100}%(최대 ${TIBOR_BLADE_MAX}) 화상. 빗나가도 소모.` });
-    if (c.tiborInferno) b.push({ label: c.tiborInferno.ticks > 0 ? `대검 투하 (${c.tiborInferno.ticks}회)` : '대검 투하 (마무리)', color:TIBOR_FIRE,
-      tooltip:`대검 투하: 아군 턴이 끝날 때마다 티보르 중심 7×7 적에게 공격력 ${TIBOR_INFERNO_BURN * 100}% 화상(남은 ${c.tiborInferno.ticks}회). 지속 중 적의 화상 중첩이 줄지 않음. 퇴각·사망하면 종료.` });
+    if (c.tiborInferno) b.push({ label: c.tiborInferno.ticks > 0 ? `대화재 (${c.tiborInferno.ticks}회)` : '대화재 (마무리)', color:TIBOR_FIRE,
+      tooltip:`대화재: 아군 턴이 끝날 때마다 티보르 중심 7×7 적에게 공격력 ${TIBOR_INFERNO_BURN * 100}% 화상(남은 ${c.tiborInferno.ticks}회). 지속 중 적의 화상 중첩이 줄지 않음. 퇴각·사망하면 종료.` });
     return b;
   },
   powerAura(c) { return c.tiborInferno ? { type: 'fire', color: TIBOR_FIRE, extra: 'inferno' } : null; },
 });
 
-// ---- 봇(B3-5, v13.84 갱신): 불타는 대검 = 다음 기본 공격 150% + 최대 체력 12%(2250) 화상(빗나가도 소모) / 대검 투하 = 지금 7×7 적에게 150% 화상 1번(쓴 턴 끝) + 감소 없음(모델 fx tiborInferno)
+// ---- 봇(B3-5, v13.84 갱신): 불타는 대검 = 다음 기본 공격 150% + 최대 체력 12%(2250) 화상(빗나가도 소모) / 대화재 = 지금 7×7 적에게 150% 화상 1번(쓴 턴 끝) + 감소 없음(모델 fx tiborInferno)
 //   숨 불어넣기 = 아군(본인 포함) 화상에 대상마다 턴당 1회 8%(1500) 추가 / 불꽃 흡수 = 상대 화상 피해 15% 회복 ----
 const TIBOR_BOT_BLADE_WORTH = 0.3; // 준비된 대검의 미래 가치(공격력 비율)
-const TIBOR_BOT_INFERNO_LATER = 0.6; // 대검 투하 남은 2번의 미래 가치(쓴 턴 끝 1번에 곱하는 비율의 합 - 적이 범위를 벗어날 수 있으므로 낮춰 봄)
+const TIBOR_BOT_INFERNO_LATER = 0.6; // 대화재 남은 2번의 미래 가치(쓴 턴 끝 1번에 곱하는 비율의 합 - 적이 범위를 벗어날 수 있으므로 낮춰 봄)
 registerBotBurnNoDecay((s, u) => s.units.some(t => !t.dead && t.side !== u.side && bmGet(t, 'tiborInferno')));
 defineHooks('tibor', {
   botSkill(s, u, idx) {
@@ -7620,7 +7620,7 @@ defineHooks('tibor', {
   botValue(s, u) { return bmGet(u, 'tiborBlade') ? effectiveAtk(u.ref) * TIBOR_BOT_BLADE_WORTH : 0; },
 });
 
-// ---- 봇 승리 플랜(v13.00, BOT.md 4-3): 묶음 구조만 - 아군 화상에 숨 불어넣기. 효과 크기는 봇이 모델로 직접 잼 (v13.84: 화염 삭제 → 대검 투하도 화상을 만듦) ----
+// ---- 봇 승리 플랜(v13.00, BOT.md 4-3): 묶음 구조만 - 아군 화상에 숨 불어넣기. 효과 크기는 봇이 모델로 직접 잼 (v13.84: 화염 삭제 → 대화재도 화상을 만듦) ----
 defineHooks('tibor', { botCombo: { makes: { burn: [0, 1] }, uses: { burn: ['P'] } } });
 
 // ================= 바실리 (후위, v12.88 신규 - 원문 NEW_CHARACTERS.md) =================
@@ -8113,7 +8113,7 @@ defineHooks('hilda', { botCombo: { makes: { freeze: [1, 'A'] }, uses: { freeze: 
 //   (v13.27) 고기 분쇄기를 쓴 턴에는 그 이리나의 탄약이 회복되지 않음(c.irinaNoReload - 그 진영 턴 끝에 해제).
 // 네이팜 폭탄(2턴·25코): 사거리 안 타일 중심 3×3 적에게 공격력 60% 화상 + 화상 지대(2턴 - 이리나 진영 턴 끝마다 1 감소, 시전한 턴은 세지 않음).
 //   적 진영 턴 끝: 지대 안 적이 공격력 30% 화상을 먼저 받고(onBeforeBurnTick) 그다음 화상 피해. 화상량은 시전 시점 공격력 고정.
-// 고기 분쇄기(구 전탄 난사, 5턴·50코): 탄약 20발 이상, 전부 소모. 마우스 방향 자유 각도(targetType 'aim'): 이리나 칸 대각선(√2)을 밑변으로 ±15°(합 30°)로 벌어지는 10칸 길이 범위,
+// 고기 분쇄기(구 전탄 난사, 7턴·70코 - v13.97): 탄약 20발 이상, 전부 소모. 마우스 방향 자유 각도(targetType 'aim'): 이리나 칸 대각선(√2)을 밑변으로 ±15°(합 30°)로 벌어지는 10칸 길이 범위,
 //   칸 면적 50% 이상 들어온 칸이 피격 칸. 피격 칸의 적은 소모 탄약 수만큼 타격(기본 공격 판정 - 회피·치명·엄폐(이리나 현재 위치 기준)),
 //   1타 = 거리(칸 중심 직선) 2 이하 90% → 9 이상 20%, 사이는 선형(v13.35). 화상 = 1타 배율이 40%를 넘는 구간(거리 7 미만)만 명중 1발마다 공격력 45%(거리 2) → 15%(거리 7)(v13.84).
 // 연출: 15_irina_vfx.js
@@ -8146,7 +8146,7 @@ characters.push(
         effect(caster, target) { irinaNapalm(caster, target); }
       },
       {
-        name:'고기 분쇄기', cooldownMax:5, costReq:50, cooldownCur:5, targetType:'aim',
+        name:'고기 분쇄기', cooldownMax:7, costReq:70, cooldownCur:7, /* v13.97 5턴/50코→7턴/70코 */ targetType:'aim',
         desc:`탄약 ${IRINA_BARRAGE_MIN}발 이상 필요, 탄약 전부 소모. 마우스 방향 30° 범위(10칸)의 모든 적에게 소모 탄약 수만큼 타격(기본 공격 판정 - 치명·엄폐 적용). 1발: 거리 ${IRINA_NEAR} 이내 공격력 ${Math.round(IRINA_MAX_MULT * 100)}% → 거리 ${IRINA_FAR} 이상 ${Math.round(IRINA_MIN_MULT * 100)}%. 1발 피해량이 ${Math.round(IRINA_BURN_ABOVE * 100)}%를 넘는 구간(조준 때 주황 칸)은 명중한 1발마다 공격력 ${Math.round(IRINA_BURN_MAX_ATK * 100)}%(거리 ${IRINA_NEAR} 이내) → ${Math.round(IRINA_BURN_MIN_ATK * 100)}%(구간 끝) 화상. 사용한 턴에는 탄약이 회복되지 않음`,
         infoText:`최소 20발의 탄약이 필요합니다. 탄약을 모두 소모합니다. 방향을 선택하고, 30°각도 내에 있는 모든 적에게 피해를 주고 화상을 부여합니다. 피해량은 거리에 따라 달라지며, 기본 공격으로 판정되어 치명타와 엄폐 효과가 적용됩니다. 고기 분쇄기를 사용한 턴에는 탄약이 회복되지 않습니다.\n탄약 1발당 최대 피해량: 공격력 90%의 피해\n탄약 1발당 최소 피해량: 공격력 20%의 피해\n피해량이 40%를 넘는 구간까지만 화상을 부여합니다. (화상 구간 안에서 거리에 따라 달라짐)\n탄약 1발당 최대 화상 부여량: 공격력 45%의 화상\n탄약 1발당 최소 화상 부여량: 공격력 15%의 화상`,
         usableIf(c) { return (c.irinaAmmo || 0) >= IRINA_BARRAGE_MIN; },
@@ -20133,7 +20133,8 @@ function drawIrinaNapalms() {
   }
   irinaNapalms = irinaNapalms.filter(p => !p.exploded || now - p.start < p.flight + 100);
 }
-// 화상 지대 바닥: 칸마다 주황 불빛(지역장악의 옅은 붉은색과 구별 - 짙은 주황·검게 그을린 테두리) + 일렁이는 불꽃 2~3개
+// 화상 지대 바닥: 칸마다 주황 불빛(지역장악의 옅은 붉은색과 구별 - 짙은 주황·검게 그을린 테두리) + 화상 상태와 같은 불씨·재·연기(v13.98 D안 - 불꽃 모양 없음)
+const IRINA_ZONE_EMBERS = 3;
 function irinaTileSeed(x, y, k) { const s = Math.sin(x * 127.1 + y * 311.7 + k * 74.7) * 43758.5453; return s - Math.floor(s); }
 function drawIrinaZones() {
   if (typeof irinaZones === 'undefined' || !irinaZones.length) return;
@@ -20141,7 +20142,7 @@ function drawIrinaZones() {
   for (const z of irinaZones) {
     const age = now - (z.showAt || 0);
     if (age < 0) continue;
-    const grow = Math.min(1, age / 350);
+    const grow = Math.min(1, age / 350), zdt = Math.min(100, now - (z._emAt || now)); z._emAt = now; // zdt: 지난 그리기 이후 시간(불씨 수를 프레임과 무관하게)
     for (const key of irinaZoneTiles(z)) {
       const [x, y] = key.split(',').map(Number), px = x * TILE, py = y * TILE;
       const fl = 0.75 + 0.25 * Math.sin(now * 0.006 + irinaTileSeed(x, y, 0) * 6);
@@ -20154,19 +20155,10 @@ function drawIrinaZones() {
       } else ctx.fillStyle = 'rgba(240,110,20,0.32)';
       ctx.fillRect(px, py, TILE, TILE);
       ctx.strokeStyle = 'rgba(40,12,0,0.55)'; ctx.lineWidth = 1; ctx.strokeRect(px + 0.5, py + 0.5, TILE - 1, TILE - 1); // 그을린 테두리
-      // 불꽃 혀
-      ctx.globalCompositeOperation = 'lighter';
-      const nF = 2 + (irinaTileSeed(x, y, 1) > 0.5 ? 1 : 0);
-      for (let i = 0; i < nF; i++) {
-        const fx = px + TILE * (0.2 + 0.6 * irinaTileSeed(x, y, 2 + i)), fy = py + TILE * (0.45 + 0.45 * irinaTileSeed(x, y, 5 + i));
-        const h = TILE * (0.28 + 0.16 * Math.sin(now * 0.011 + i * 2.1 + x)) * grow, wd = TILE * 0.13, sway = Math.sin(now * 0.008 + i + y) * TILE * 0.05;
-        if (ctx.createLinearGradient) { const g2 = ctx.createLinearGradient(fx, fy, fx, fy - h); if (g2 && g2.addColorStop) { g2.addColorStop(0, 'rgba(255,90,10,0.85)'); g2.addColorStop(0.5, 'rgba(255,170,40,0.7)'); g2.addColorStop(1, 'rgba(255,240,160,0)'); ctx.fillStyle = g2; } }
-        ctx.beginPath(); ctx.moveTo(fx - wd, fy); ctx.quadraticCurveTo(fx - wd * 0.6 + sway, fy - h * 0.55, fx + sway * 1.6, fy - h); ctx.quadraticCurveTo(fx + wd * 0.6 + sway, fy - h * 0.55, fx + wd, fy); ctx.closePath(); ctx.fill();
-      }
       ctx.restore();
       // 연기·불씨(가끔)
       if (!replayFast && vfxRand() < 0.012) irinaSmoke.push({ x: px + TILE * (0.2 + vfxRand() * 0.6), y: py + TILE * (0.3 + vfxRand() * 0.5), start: now, dur: 1400 + vfxRand() * 900, r: TILE * (0.18 + vfxRand() * 0.15), vy: -TILE * (0.35 + vfxRand() * 0.3), dark: 0.35 });
-      if (!replayFast && vfxRand() < 0.02) pushEmberAt(px + TILE * vfxRand(), py + TILE * (0.4 + vfxRand() * 0.5), now, 0.9, 0.3);
+      if (!replayFast && vfxRand() < IRINA_ZONE_EMBERS * zdt / 1000) pushEmberAt(px + TILE * (0.1 + vfxRand() * 0.8), py + TILE * (0.4 + vfxRand() * 0.55), now, 1, 0.45); // (v13.98 D안) 칸당 초당 약 IRINA_ZONE_EMBERS개
     }
   }
 }
@@ -22843,7 +22835,7 @@ registerRenderLayer('overFog', drawKnockPreview);
 // ================= 티보르 연출 (v12.87) =================
 // 기본 공격: 벨라의 불타는 검격을 굵게(대검) + 맞는 순간 불씨. 불타는 대검 발동 공격은 더 굵고 불씨가 훨씬 많음.
 // 불타는 대검 준비 중: 대검 칼날에서만 불꽃이 피어오름(사용자 수정). 숨 불어넣기: 일반 화상보다 많은 불씨 + 사방으로 튀는 불똥.
-// 대검 투하(v13.84): 내리꽂기(화면 흔들림·불씨 폭발·7×7 불길), 지속 중 전장이 살짝 붉고 재·불씨가 흩날림, 아군 턴 끝 화상마다 7×7 불길. 연출 전용 난수(vfxRand)만 씀
+// 대화재(v13.84, v13.96 다시): 티보르 칸에 대검이 떨어져 꽂혀 지속시간 동안 남음(주변 재·불씨 많이), 티보르 주변 7×7 상시 불길, 전장은 붉은 기운 + 바람에 흩날리는 재·불씨. 연출 전용 난수(vfxRand)만 씀
 function tiborSlashVfx(c, target, { delay = 0, armed = false } = {}) {
   const hitDelay = meleeSwingFx(c, target, { delay }); // (v13.48) 공용 근접 무기 연출('tibor' / 불타는 대검 'tibor_armed' - 예비동작·돌진·불꽃 검격)
   if (!replayFast) setTimeout(() => { if (!target.dead || target.isGhost) tiborEmberBurst(target, armed ? 26 : 10, armed ? 1.5 : 1.15, armed ? 1.4 : 0.8); }, Math.max(0, hitDelay - 20));
@@ -22915,68 +22907,165 @@ function tiborBladeIgniteFx(c) {
   for (let i = 0; i < 26; i++) { const p = tiborBladePoint(c); pushEmberAt(p.x, p.y, now, 1.4, 0.3); }
   ensureVfxLoop();
 }
-// ---- 대검 투하(v13.84) ----
-// 7×7 불길: 티보르 칸 중심 사각형이 주황으로 확 타올랐다 사라짐(바닥 효과 - underTokens) + 범위 안 바닥에서 불씨
-let tiborInfernoFlashes = [];
-function tiborInfernoFlash(t, strong) {
-  if (replayFast) return;
-  const now = performance.now(), r = TIBOR_INFERNO_RADIUS;
-  tiborInfernoFlashes.push({ cx: t.x, cy: t.y, start: now, dur: strong ? 900 : 650, strong });
-  for (let i = 0; i < (strong ? 70 : 40); i++) {
-    const tx = t.x + Math.floor(vfxRand() * (2 * r + 1)) - r, ty = t.y + Math.floor(vfxRand() * (2 * r + 1)) - r;
-    if (tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS) continue;
-    if (fogEnabled && !isTileVisibleTo(viewSeeSide(), tx, ty)) continue;
-    pushEmberAt((tx + vfxRand()) * TILE, (ty + 0.4 + vfxRand() * 0.6) * TILE, now + vfxRand() * 200, 1.1 + vfxRand() * 0.6, 0.7);
-  }
+// ---- 대화재(v13.84, v13.95 연출 다시 - 사용자) ----
+// ① 내리꽂기(v13.96 다시): 커다란 불타는 대검이 티보르 칸 위 하늘에서 잠깐 멈칫(예비동작)했다가 내리꽂힘 - 크고 긴 흔들림·흙먼지·충격파, 꽂힌 자리에서 충격파.
+//    검은 지속시간 동안 그 자리(꽂힌 칸)에 남고 검 주변에서 재·불씨가 많이 흩날림. 연출만 - 효과가 끝나면(퇴각·사망 포함) 사라짐.
+// ② 티보르 주변 7×7(v13.96 다시): 범위 안 칸 전부가 위험지대 - 달아오른 바닥 + 화상 상태와 같은 불씨·재가 계속 올라옴(v13.98 D안 - 불꽃 모양 없음), 진한 붉은 테두리. 티보르를 따라 움직임. 턴 끝 화상 때 확 타오름.
+// ③ 전장: 살짝 붉은 기운 + 바람에 비스듬히 흩날리는 재 조각·불씨(피어오르는 불이 아님). 연출 난수(vfxRand)만 씀
+const TIBOR_ZONE_EMBERS = 3; // (v13.98) 7×7 칸당 초당 불씨 수
+const TIBOR_SWORD_HANG_MS = 200, TIBOR_SWORD_DROP_MS = 140, TIBOR_SWORD_HIT_MS = TIBOR_SWORD_HANG_MS + TIBOR_SWORD_DROP_MS; // 멈칫 → 내리꽂힘
+const tiborSwords = new Map(); // 티보르 id → { x, y, start, tilt }
+let tiborInfernoFlashes = [], tiborDrift = [];
+function tiborInfernoCastFx(c) {
+  const sw = { x: c.x, y: c.y, start: performance.now(), tilt: (c.facingRight ? -1 : 1) * 0.08, impacted: false }; // (v13.96) 티보르 칸(뒤에 그림)
+  tiborSwords.set(c.id, sw);
+  if (replayFast) { sw.start -= TIBOR_SWORD_HIT_MS + 1000; return; }
+  tiborBladeIgniteFx(c);
   ensureVfxLoop();
 }
-function drawTiborInfernoFlashes() {
-  const now = performance.now();
-  tiborInfernoFlashes = tiborInfernoFlashes.filter(f => now - f.start < f.dur);
-  if (!tiborInfernoFlashes.length) return;
-  const r = TIBOR_INFERNO_RADIUS;
-  ctx.save(); ctx.globalCompositeOperation = 'lighter';
-  for (const f of tiborInfernoFlashes) {
-    const k = (now - f.start) / f.dur, a = (k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85) * (f.strong ? 0.42 : 0.3);
-    const x0 = Math.max(0, f.cx - r) * TILE, y0 = Math.max(0, f.cy - r) * TILE, x1 = Math.min(COLS, f.cx + r + 1) * TILE, y1 = Math.min(ROWS, f.cy + r + 1) * TILE;
-    const g = ctx.createRadialGradient ? ctx.createRadialGradient((f.cx + 0.5) * TILE, (f.cy + 0.5) * TILE, TILE * 0.5, (f.cx + 0.5) * TILE, (f.cy + 0.5) * TILE, TILE * (r + 1.2)) : null;
-    if (g) { g.addColorStop(0, `rgba(255,150,40,${a})`); g.addColorStop(1, `rgba(220,40,10,${a * 0.45})`); }
-    ctx.fillStyle = g || `rgba(255,110,30,${a * 0.7})`; // 가짜 캔버스(테스트)엔 그라디언트 없음 → 단색 ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-    ctx.strokeStyle = `rgba(255,110,30,${a * 1.6})`; ctx.lineWidth = 2; ctx.strokeRect(x0 + 1, y0 + 1, x1 - x0 - 2, y1 - y0 - 2);
+function tiborSwordImpact(sw) {
+  sw.impacted = true;
+  if (replayFast || (fogEnabled && !isTileVisibleTo(viewSeeSide(), sw.x, sw.y))) return;
+  const now = performance.now(), gx = (sw.x + 0.5) * TILE, gy = (sw.y + 0.8) * TILE;
+  startScreenShake(620, 11); // (v13.96) 묵직하게: 크고 길게
+  tiborInfernoFlashes.push({ ring: true, x: gx, y: gy, start: now, dur: 620 }, { ring: true, x: gx, y: gy, start: now + 90, dur: 700 });
+  for (let i = 0; i < 16; i++) { const a = vfxRand() * Math.PI * 2; tiborInfernoFlashes.push({ dust: true, x: gx + Math.cos(a) * TILE * 0.2, y: gy + Math.sin(a) * TILE * 0.1, vx: Math.cos(a) * TILE * (0.9 + vfxRand()), vy: Math.sin(a) * TILE * 0.35 - TILE * 0.25, r: TILE * (0.2 + vfxRand() * 0.2), start: now, dur: 700 + vfxRand() * 500 }); } // 흙먼지
+  for (let i = 0; i < 40; i++) { const a = -Math.PI * vfxRand(), sp = TILE * (1.2 + vfxRand() * 2.4);
+    tiborSparks.push({ x: gx, y: gy - TILE * 0.1, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.9, start: now, dur: 420 + vfxRand() * 380, size: 1.3 + vfxRand() * 1.6, hue: vfxRand() }); }
+  for (let i = 0; i < 26; i++) tiborDriftAdd(gx + (vfxRand() - 0.5) * TILE * 1.4, gy - vfxRand() * TILE * 0.8, true, now);
+}
+// 7×7 확 타오름(턴 끝 화상): 영역이 한 번 밝아짐
+function tiborInfernoTickFx(t) { if (!replayFast && isVisibleTo(viewSeeSide(), t)) { tiborInfernoFlashes.push({ zone: t.id, start: performance.now(), dur: 700 }); ensureVfxLoop(); } }
+
+// 재·불씨 흩날림 입자: 바람(오른쪽)으로 비스듬히 흘러가며 위아래로 흔들림. ember = 작은 빛나는 불씨, 아니면 회색 재 조각(회전)
+const TIBOR_WIND = TILE * 0.85;
+function tiborDriftAdd(x, y, nearSword, now) {
+  const ember = vfxRand() < (nearSword ? 0.55 : 0.4);
+  tiborDrift.push({ x, y, start: now, dur: (nearSword ? 1800 : 3200) + vfxRand() * 2200, ember,
+    vx: TIBOR_WIND * (0.6 + vfxRand() * 0.7), vy: nearSword ? -TILE * (0.25 + vfxRand() * 0.35) : TILE * (vfxRand() - 0.35) * 0.25,
+    wob: TILE * (0.08 + vfxRand() * 0.12), wf: 0.0015 + vfxRand() * 0.002, ph: vfxRand() * 6.28,
+    size: ember ? 1 + vfxRand() * 1.4 : 1.6 + vfxRand() * 2.2, rot: vfxRand() * 6.28, spin: (vfxRand() - 0.5) * 4, gray: Math.round(55 + vfxRand() * 70) });
+}
+function drawTiborDrift(now) {
+  tiborDrift = tiborDrift.filter(p => now - p.start < p.dur);
+  ctx.save();
+  for (const p of tiborDrift) {
+    const el = (now - p.start) / 1000, k = (now - p.start) / p.dur;
+    const x = p.x + p.vx * el, y = p.y + p.vy * el + Math.sin(now * p.wf + p.ph) * p.wob;
+    const a = Math.min(1, k / 0.15) * Math.min(1, (1 - k) / 0.3);
+    if (p.ember) {
+      ctx.globalCompositeOperation = 'lighter';
+      const fl = 0.7 + 0.3 * Math.sin(now * 0.02 + p.ph);
+      ctx.fillStyle = `rgba(255,${Math.round(140 + 60 * fl)},60,${a * fl})`; ctx.beginPath(); ctx.arc(x, y, p.size, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `rgba(255,120,40,${a * 0.25})`; ctx.beginPath(); ctx.arc(x, y, p.size * 2.6, 0, Math.PI * 2); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    } else {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot + p.spin * el);
+      ctx.fillStyle = `rgba(${p.gray},${p.gray - 8},${p.gray - 14},${a * 0.85})`; ctx.fillRect(-p.size, -p.size * 0.45, p.size * 2, p.size * 0.9);
+      ctx.restore();
+    }
   }
   ctx.restore();
 }
-// 내리꽂기: 칼날 불꽃 + 화면 흔들림 + 몸에서 불씨 폭발·불똥 + 7×7 불길
-function tiborInfernoCastFx(c) {
-  if (replayFast || !isVisibleTo(viewSeeSide(), c)) return;
-  tiborBladeIgniteFx(c);
-  startScreenShake(320, 5);
-  tiborEmberBurst(c, 40, 1.7, 1.5);
-  tiborBreathFx(c, 0);
-  tiborInfernoFlash(c, true);
+
+// 꽂힌 대검(깊이 정렬 - 앞뒤 유닛과 겹침이 맞게). 떨어지는 동안은 위에서 빠르게 내려옴
+function drawTiborSword(sw, now) {
+  const el = now - sw.start, gx = (sw.x + 0.5) * TILE, gy = (sw.y + 0.8) * TILE;
+  // 멈칫(높이 1, 살짝 떨림) → 내리꽂힘(가속)
+  const drop = el < TIBOR_SWORD_HANG_MS ? 1 + Math.sin(el * 0.08) * 0.015 : el < TIBOR_SWORD_HIT_MS ? 1 - Math.pow((el - TIBOR_SWORD_HANG_MS) / TIBOR_SWORD_DROP_MS, 2.2) : 0;
+  const L = TILE * 2.3, W = TILE * 0.34, oy = -drop * TILE * 6; // (v13.95) 대검답게 크게
+  ctx.save();
+  // 바닥 불빛
+  const fl = 0.85 + 0.15 * Math.sin(now * 0.012) + 0.08 * Math.sin(now * 0.031);
+  if (!drop) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,90,20,${0.22 * fl})`; ctx.beginPath(); ctx.ellipse(gx, gy, TILE * 0.7, TILE * 0.26, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
+  ctx.translate(gx, gy + oy); ctx.rotate(sw.tilt);
+  // 칼날(바닥에 박혀 끝은 안 보임): 어두운 강철 + 달아오른 날
+  ctx.fillStyle = '#2c2422'; ctx.beginPath(); ctx.moveTo(-W / 2, 0); ctx.lineTo(-W / 2, -L); ctx.lineTo(W / 2, -L); ctx.lineTo(W / 2, 0); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = `rgba(255,${Math.round(90 + 50 * fl)},30,0.9)`; ctx.fillRect(-W / 2, -L, W * 0.18, L); ctx.fillRect(W / 2 - W * 0.18, -L, W * 0.18, L); // 날 양쪽 붉게
+  ctx.fillStyle = 'rgba(255,170,80,0.55)'; ctx.fillRect(-W * 0.07, -L * 0.95, W * 0.14, L * 0.9); // 홈
+  // 코등이·손잡이·폼멜
+  ctx.fillStyle = '#4a2a1c'; ctx.fillRect(-TILE * 0.55, -L - TILE * 0.14, TILE * 1.1, TILE * 0.14);
+  ctx.fillStyle = '#ff6a2a'; ctx.fillRect(-TILE * 0.55, -L - TILE * 0.14, TILE * 1.1, TILE * 0.035);
+  ctx.fillStyle = '#3a1e14'; ctx.fillRect(-W * 0.28, -L - TILE * 0.62, W * 0.56, TILE * 0.48);
+  ctx.fillStyle = '#c84a1c'; ctx.beginPath(); ctx.arc(0, -L - TILE * 0.68, W * 0.36, 0, Math.PI * 2); ctx.fill();
+  // 칼날을 감싼 불꽃(위로 너울)
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 8; i++) {
+    const yy = -L * (0.06 + 0.115 * i), hh = TILE * (0.22 + 0.12 * Math.sin(now * 0.013 + i * 1.7)), side = i % 2 ? 1 : -1;
+    ctx.fillStyle = `rgba(255,${120 + i * 15},40,${0.35 * fl})`;
+    ctx.beginPath(); ctx.moveTo(side * W * 0.5, yy); ctx.quadraticCurveTo(side * (W * 0.5 + TILE * 0.12), yy - hh * 0.5, side * W * 0.3, yy - hh); ctx.quadraticCurveTo(side * W * 0.5, yy - hh * 0.4, side * W * 0.5, yy); ctx.fill();
+  }
+  ctx.restore();
 }
-// 아군 턴 끝 화상: 7×7 불길(대상 화상 글자·불씨는 applyBurn·숨 불어넣기가 띄움)
-function tiborInfernoTickFx(t) { if (!replayFast && isVisibleTo(viewSeeSide(), t)) tiborInfernoFlash(t, false); }
-// 지속 중: 전장 전체가 살짝 붉게 + 판 여기저기서 재·불씨가 조금씩 흩날림(화상 입자 pushEmberAt 재사용)
-const TIBOR_INFERNO_TINT = 0.09, TIBOR_INFERNO_EMBER_EVERY = 60;
-let tiborInfernoEmbAcc = 0, tiborInfernoLast = 0;
+registerDepthObjects(() => {
+  const out = [], now = performance.now();
+  for (const [id, sw] of tiborSwords) {
+    const t = characters.find(c => c.id === id);
+    if (!t || !t.tiborInferno || !tiborOnField(t)) { tiborSwords.delete(id); continue; }
+    if (!sw.impacted && now - sw.start >= TIBOR_SWORD_HIT_MS) tiborSwordImpact(sw);
+    if (fogEnabled && !isTileVisibleTo(viewSeeSide(), sw.x, sw.y)) continue;
+    out.push({ y: sw.y - 0.002, draw: () => drawTiborSword(sw, performance.now()) }); // 같은 칸 유닛(티보르)보다 뒤
+  }
+  return out;
+});
+
+// 7×7 위험지대(바닥 - underTokens, v13.98 D안): 칸마다 달아오른 바닥(일렁임) + 화상 상태와 같은 불씨·재(불꽃 모양 없음), 진한 붉은 테두리. 턴 끝 화상 때 확 밝아지고 불씨 3배.
+// 꽂힌 대검의 충격파·흙먼지도 여기서(바닥)
+function drawTiborInfernoZones() {
+  const now = performance.now(), r = TIBOR_INFERNO_RADIUS;
+  tiborInfernoFlashes = tiborInfernoFlashes.filter(f => now - f.start < f.dur);
+  ctx.save();
+  for (const t of characters) {
+    if (!t.tiborInferno || !tiborOnField(t) || !isVisibleTo(viewSeeSide(), t)) continue;
+    const rx = Math.round(t.renderX !== undefined ? t.renderX : t.x), ry = Math.round(t.renderY !== undefined ? t.renderY : t.y);
+    const tx0 = Math.max(0, rx - r), ty0 = Math.max(0, ry - r), tx1 = Math.min(COLS - 1, rx + r), ty1 = Math.min(ROWS - 1, ry + r);
+    const burst = tiborInfernoFlashes.filter(f => f.zone === t.id).reduce((m, f) => { const k = (now - f.start) / f.dur; return Math.max(m, k < 0.2 ? k / 0.2 : 1 - (k - 0.2) / 0.8); }, 0);
+    for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) { // 칸마다 달아오른 바닥
+      const h = Math.sin(tx * 12.9898 + ty * 78.233) * 43758.5453, rnd = h - Math.floor(h), wv = 0.5 + 0.5 * Math.sin(now * 0.004 + rnd * 6.28);
+      ctx.fillStyle = `rgba(${Math.round(190 + 40 * wv)},${Math.round(40 + 25 * wv)},12,${0.2 + 0.08 * wv + 0.25 * burst})`; ctx.fillRect(tx * TILE, ty * TILE, TILE, TILE);
+    }
+    ctx.strokeStyle = `rgba(200,25,10,${0.85})`; ctx.lineWidth = 2; ctx.strokeRect(tx0 * TILE + 1, ty0 * TILE + 1, (tx1 - tx0 + 1) * TILE - 2, (ty1 - ty0 + 1) * TILE - 2); // 진한 붉은 테두리
+    // (v13.98 D안) 불꽃 모양 없이 화상 상태와 같은 불씨·재만: 범위 안 칸마다 초당 약 TIBOR_ZONE_EMBERS개(시간 누적 - 프레임 수와 무관), 턴 끝 화상 때 더 많이
+    if (!replayFast) {
+      const tiles = (tx1 - tx0 + 1) * (ty1 - ty0 + 1), dt = Math.min(100, now - (t._tzEmberAt || now)); t._tzEmberAt = now;
+      t._tzEmberAcc = (t._tzEmberAcc || 0) + dt / 1000 * TIBOR_ZONE_EMBERS * tiles * (1 + burst * 2);
+      for (let n = 0; t._tzEmberAcc >= 1 && n < 30; n++, t._tzEmberAcc--) pushEmberAt((tx0 + 0.1 + vfxRand() * (tx1 - tx0 + 0.8)) * TILE, (ty0 + 0.4 + vfxRand() * (ty1 - ty0 + 0.55)) * TILE, now, 1, 0.45);
+      t._tzEmberAcc = Math.min(t._tzEmberAcc, 1);
+    }
+  }
+  for (const f of tiborInfernoFlashes) {
+    if (f.ring) { const k = (now - f.start) / f.dur; if (k < 0) continue; ctx.strokeStyle = `rgba(255,170,80,${(1 - k) * 0.9})`; ctx.lineWidth = 4 * (1 - k) + 1; ctx.beginPath(); ctx.ellipse(f.x, f.y, TILE * (0.3 + 2.6 * k), TILE * (0.12 + 0.95 * k), 0, 0, Math.PI * 2); ctx.stroke(); }
+    else if (f.dust) { const el = (now - f.start) / 1000, k = (now - f.start) / f.dur; ctx.fillStyle = `rgba(90,70,55,${(1 - k) * 0.45})`; ctx.beginPath(); ctx.arc(f.x + f.vx * el, f.y + f.vy * el, f.r * (1 + k * 1.6), 0, Math.PI * 2); ctx.fill(); }
+  }
+  ctx.restore();
+}
+// 전장: 살짝 붉은 기운 + 재·불씨가 바람에 흩날림(판 위쪽·왼쪽 가장자리에서 들어옴) + 검 주변은 훨씬 많이
+const TIBOR_INFERNO_TINT = 0.09, TIBOR_DRIFT_EVERY = 110, TIBOR_SWORD_DRIFT_EVERY = 35;
+let tiborDriftAcc = 0, tiborSwordDriftAcc = 0, tiborInfernoLast = 0;
 const tiborInfernoActive = () => characters.some(t => t.tiborInferno && tiborOnField(t));
 function drawTiborInfernoField() {
-  if (!tiborInfernoActive()) { tiborInfernoLast = 0; return; }
-  const now = performance.now(), dt = tiborInfernoLast ? Math.min(100, now - tiborInfernoLast) : 0;
+  const now = performance.now(), active = tiborInfernoActive();
+  if (!active && !tiborDrift.length) { tiborInfernoLast = 0; return; }
+  const dt = tiborInfernoLast ? Math.min(100, now - tiborInfernoLast) : 0;
   tiborInfernoLast = now;
-  const pulse = 0.8 + 0.2 * Math.sin(now / 900);
-  ctx.save(); ctx.fillStyle = `rgba(200,40,15,${TIBOR_INFERNO_TINT * pulse})`; ctx.fillRect(0, 0, COLS * TILE, ROWS * TILE); ctx.restore();
-  if (typeof __mmNoIdleAnim !== 'undefined' && __mmNoIdleAnim) return;
-  tiborInfernoEmbAcc += dt;
-  while (tiborInfernoEmbAcc >= TIBOR_INFERNO_EMBER_EVERY) {
-    tiborInfernoEmbAcc -= TIBOR_INFERNO_EMBER_EVERY;
-    pushEmberAt(vfxRand() * COLS * TILE, (0.3 + vfxRand() * (ROWS - 0.3)) * TILE, now, 0.9 + vfxRand() * 0.5, 0.8);
+  if (active) {
+    const pulse = 0.8 + 0.2 * Math.sin(now / 900);
+    ctx.save(); ctx.fillStyle = `rgba(200,40,15,${TIBOR_INFERNO_TINT * pulse})`; ctx.fillRect(0, 0, COLS * TILE, ROWS * TILE); ctx.restore();
+    if (!(typeof __mmNoIdleAnim !== 'undefined' && __mmNoIdleAnim) && !replayFast) {
+      tiborDriftAcc += dt;
+      while (tiborDriftAcc >= TIBOR_DRIFT_EVERY) { tiborDriftAcc -= TIBOR_DRIFT_EVERY;
+        if (vfxRand() < 0.35) tiborDriftAdd(-TILE * 0.5, vfxRand() * ROWS * TILE, false, now); // 왼쪽 가장자리에서
+        else tiborDriftAdd(vfxRand() * COLS * TILE, vfxRand() * ROWS * TILE * 0.9, false, now); }
+      tiborSwordDriftAcc += dt;
+      while (tiborSwordDriftAcc >= TIBOR_SWORD_DRIFT_EVERY) { tiborSwordDriftAcc -= TIBOR_SWORD_DRIFT_EVERY;
+        for (const sw of tiborSwords.values()) if (sw.impacted && !(fogEnabled && !isTileVisibleTo(viewSeeSide(), sw.x, sw.y))) tiborDriftAdd((sw.x + 0.5 + (vfxRand() - 0.5) * 0.9) * TILE, (sw.y + 0.8 - vfxRand() * 1.6) * TILE, true, now); }
+    }
   }
+  drawTiborDrift(now);
 }
-registerRenderLayer('underTokens', drawTiborInfernoFlashes);
+registerRenderLayer('underTokens', drawTiborInfernoZones);
 registerRenderLayer('screenFx', drawTiborInfernoField);
-registerVfxActive(() => tiborInfernoFlashes.length > 0);
+registerVfxActive(() => tiborInfernoFlashes.length > 0 || tiborDrift.length > 0 || [...tiborSwords.values()].some(sw => !sw.impacted || performance.now() - sw.start < TIBOR_SWORD_HIT_MS + 400));
 registerVfxActive(() => !battleEnded && tiborInfernoActive(), { ambient: true });
 
 // ---- 상시 불꽃: 대검 준비 중(티보르) - 일반 화상(75ms마다 1개)보다 많이 ----
@@ -22996,7 +23085,7 @@ function tiborAuraEmit() {
 registerRenderLayer('overTokensFx', () => { tiborAuraEmit(); drawTiborSparks(); });
 registerVfxActive(() => tiborSparks.length > 0);
 registerVfxActive(() => !(typeof __mmNoIdleAnim !== 'undefined' && __mmNoIdleAnim) && !battleEnded && characters.some(c => c.tiborBlade && !c.dead && !c.inReserve), { ambient: true });
-registerSystem('onStageLoad', () => { tiborSparks = []; tiborAuraLast = 0; tiborInfernoFlashes = []; tiborInfernoEmbAcc = 0; tiborInfernoLast = 0; });
+registerSystem('onStageLoad', () => { tiborSparks = []; tiborAuraLast = 0; tiborInfernoFlashes = []; tiborDrift = []; tiborSwords.clear(); tiborDriftAcc = 0; tiborSwordDriftAcc = 0; tiborInfernoLast = 0; });
 
 // ================= 발레리안 연출 (v13.30) - 판정과 무관. 컨셉: 검은색·금색 귀족풍 =================
 // - 보호 사슬: 발레리안과 보호 대상 사이를 잇는 금빛 사슬(살짝 처짐, 고리가 천천히 흐름). 피해가 넘어가면 사슬을 따라 금빛이 번쩍 + 발레리안 위 숫자
@@ -25158,7 +25247,7 @@ function bmDamage(s, src, t, ev, pKill) {
   for (const o of s.units) if (!o.dead && o.side !== t.side && o !== t) bmPassive(o, 'foeDamaged', s, o, t, ev, src); // (v13.52) 상대 편이 피해를 받음(가디언 고무 - 엔진 onDamaged)
   if (src && src !== t && !src.dead) bmPassive(src, 'dealt', s, src, t, ev);
   if (src && src !== t && !t.dead && src.side !== t.side && bmGet(src, 'trialTurnsLeft') > 0 && typeof MARTINA_TRIAL_BURN !== 'undefined') bmBurn(s, t, Math.round(ev * MARTINA_TRIAL_BURN), src); // (v13.84) 불의 시험 대상의 공격 → 화상 30%(엔진 onDamageDealt)
-  // (v13.84) 티보르 화염 삭제(대검 투하로 교체) // (B3-5) 티보르 화염 대상 타격 → 화상(엔진 공통 규칙 - 티보르가 없어도 화염은 남음)
+  // (v13.84) 티보르 화염 삭제(대화재로 교체) // (B3-5) 티보르 화염 대상 타격 → 화상(엔진 공통 규칙 - 티보르가 없어도 화염은 남음)
   if (!wasDead && t.dead) { bmOnDeath(s, t); if (src && src !== t && !src.dead && src.side !== t.side) bmPassive(src, 'kill', s, src, t); }
 }
 function bmOnDeath(s, t) {
@@ -29069,7 +29158,7 @@ function reportCommandError(cmd, e) {
 // 동기화 확인용 상태 요약값(양쪽이 같은 명령을 실행했으면 같아야 함)
 function stateHash() {
   const parts = characters.filter(c => !c.isGhost).map(c => [c.id, c.side, c.inReserve ? '-' : c.x, c.inReserve ? '-' : c.y, Math.round(c.hp), c.shield || 0, c.dead ? 1 : 0, c.inReserve ? 1 : 0, c.ap,
-    c.burnStacks || 0, c.zoneControlArmed ? 1 : 0, c.redeployLockTurns || 0, Math.round(c.specialShield || 0) + '/' + (c.specialShieldTurns || 0) /* v12.67 특수 방어막 */, (c.stunTurns || 0) + (c._stunActive ? 'S' : '') /* v13.51 기절 */, (c.twistCharges || 0) + (c.twistPending ? '~' + c.twistPending.skillIdx + '.' + c.twistPending.dice.join('') + '.' + c.twistPending.locked.map(Number).join('') : '') /* v12.69 트위스터 */, (c.poisonStacks || 0) + 'p' + (c.poisonLeft || 0) + 't' + (c.podTurns || 0) /* v12.71 중독·포드 */, (c.jetEternity || 0) + 'e' + (c.jetBeetles || 0) /* v12.73 제트 */, (c.kreaAmmo ? c.kreaAmmo.join('') : '') + 'a' + (c.kreaAllow || 0) /* v12.74 크레아 탄창·수당 */, (c.rafP ? c.rafP.join('') + '/' + (c.rafR || []).join('') + 's' + (c.rafShake || 0) + 'f' + (c.rafFocus || 0) + (c.rafPistolPaid ? 'p' : '') : '') /* v12.75 라파엘 */, (() => { const f = (c.tempStatMods || []).find(m => m.id === 'freeze'); return (f ? 'F' + (f.count || 0) + '.' + f.turnsLeft : '') + (c.frostbite ? 'fb' + c.frostbite : ''); })() /* v12.78 빙결 횟수·동상 */,(c.tiborBlade ? 'TB' : '') + (c.tiborInferno ? 'TI' + c.tiborInferno.ticks : '') /* v12.87 티보르 대검, v13.84 화염 → 대검 투하 */,(c.vasBomb ? 'VB' : '') + (c.tempDmgTakenMods || []).map(m => m.id + m.turnsLeft).join('') /* v12.88 바실리 폭파·받는 피해 증감(파괴 등) */,Math.round(c.maxHp || 0) + 'm' + (c.tempStatMods || []).filter(m => m.id === 'mihai_deal').map(m => m.turnsLeft).join('') /* v12.89 최대 체력·악마와의 거래 */,(c.hildaDouble ? 'HD' : '') + (c.tempStatMods || []).filter(m => m.id === 'hilda_militia_atk').map(m => 'HM' + m.turnsLeft).join('') /* v12.91 힐다 2연격·의용군단 */,(c.skills || []).map(s => (s && s.cooldownCur) || 0).join('.'), c.sikuLife || 0 /* v13.24 시쿠 병사 수명 */, c.guardCounter ? JSON.stringify(c.guardCounter) : '' /* v13.25 반격 */, c.irinaAmmo || 0 /* v13.26 이리나 탄약 */, c.yaroMorale || 0 /* v13.28 사기 진작 */, c.yuriaData || 0 /* v13.29 연구 데이터 */, (c.protectedBy || '') + '/' + (c.valProtectId || '') + '/' + (c.valPriamurWith || '') /* v13.30 발레리안 보호·군주 */, (c.kainaWounds || 0) + (c.kainaBleed ? 'B' : '') + (c.kainaExec ? 'X' + c.kainaExec.left : '') /* v13.54 카이나 상처·출혈·처형 */, (c.adrianShock || 0) + 'h' + (c.adrianAmmo || 0) /* v13.57 아드리안 충격군·허리케인 탄 */, (c.freezesThisTurn || 0) + 'f' + (c.roskvaCycle || 0) + (c.roskvaChill ? 'C' : '') + (c.roskvaPolar ? 'P' : '') + (c.roskvaLances || '') /* v13.59 이번 턴 빙결 수·로스크바 */, (c.viaHeat || 0) + (c.viaBerserk ? 'V' + c.viaTurns : '') + (c.viaBurstUsed ? 'B' : '') /* v13.61 비아 과열·폭주 */].join(':')); // v12.14: 화상·지역장악·재배치 잠금·쿨타임 추가, 대기 중(inReserve) 좌표 제외(이전 전투 위치가 남아 화면마다 달라 거짓 경고)
+    c.burnStacks || 0, c.zoneControlArmed ? 1 : 0, c.redeployLockTurns || 0, Math.round(c.specialShield || 0) + '/' + (c.specialShieldTurns || 0) /* v12.67 특수 방어막 */, (c.stunTurns || 0) + (c._stunActive ? 'S' : '') /* v13.51 기절 */, (c.twistCharges || 0) + (c.twistPending ? '~' + c.twistPending.skillIdx + '.' + c.twistPending.dice.join('') + '.' + c.twistPending.locked.map(Number).join('') : '') /* v12.69 트위스터 */, (c.poisonStacks || 0) + 'p' + (c.poisonLeft || 0) + 't' + (c.podTurns || 0) /* v12.71 중독·포드 */, (c.jetEternity || 0) + 'e' + (c.jetBeetles || 0) /* v12.73 제트 */, (c.kreaAmmo ? c.kreaAmmo.join('') : '') + 'a' + (c.kreaAllow || 0) /* v12.74 크레아 탄창·수당 */, (c.rafP ? c.rafP.join('') + '/' + (c.rafR || []).join('') + 's' + (c.rafShake || 0) + 'f' + (c.rafFocus || 0) + (c.rafPistolPaid ? 'p' : '') : '') /* v12.75 라파엘 */, (() => { const f = (c.tempStatMods || []).find(m => m.id === 'freeze'); return (f ? 'F' + (f.count || 0) + '.' + f.turnsLeft : '') + (c.frostbite ? 'fb' + c.frostbite : ''); })() /* v12.78 빙결 횟수·동상 */,(c.tiborBlade ? 'TB' : '') + (c.tiborInferno ? 'TI' + c.tiborInferno.ticks : '') /* v12.87 티보르 대검, v13.84 화염 → 대화재 */,(c.vasBomb ? 'VB' : '') + (c.tempDmgTakenMods || []).map(m => m.id + m.turnsLeft).join('') /* v12.88 바실리 폭파·받는 피해 증감(파괴 등) */,Math.round(c.maxHp || 0) + 'm' + (c.tempStatMods || []).filter(m => m.id === 'mihai_deal').map(m => m.turnsLeft).join('') /* v12.89 최대 체력·악마와의 거래 */,(c.hildaDouble ? 'HD' : '') + (c.tempStatMods || []).filter(m => m.id === 'hilda_militia_atk').map(m => 'HM' + m.turnsLeft).join('') /* v12.91 힐다 2연격·의용군단 */,(c.skills || []).map(s => (s && s.cooldownCur) || 0).join('.'), c.sikuLife || 0 /* v13.24 시쿠 병사 수명 */, c.guardCounter ? JSON.stringify(c.guardCounter) : '' /* v13.25 반격 */, c.irinaAmmo || 0 /* v13.26 이리나 탄약 */, c.yaroMorale || 0 /* v13.28 사기 진작 */, c.yuriaData || 0 /* v13.29 연구 데이터 */, (c.protectedBy || '') + '/' + (c.valProtectId || '') + '/' + (c.valPriamurWith || '') /* v13.30 발레리안 보호·군주 */, (c.kainaWounds || 0) + (c.kainaBleed ? 'B' : '') + (c.kainaExec ? 'X' + c.kainaExec.left : '') /* v13.54 카이나 상처·출혈·처형 */, (c.adrianShock || 0) + 'h' + (c.adrianAmmo || 0) /* v13.57 아드리안 충격군·허리케인 탄 */, (c.freezesThisTurn || 0) + 'f' + (c.roskvaCycle || 0) + (c.roskvaChill ? 'C' : '') + (c.roskvaPolar ? 'P' : '') + (c.roskvaLances || '') /* v13.59 이번 턴 빙결 수·로스크바 */, (c.viaHeat || 0) + (c.viaBerserk ? 'V' + c.viaTurns : '') + (c.viaBurstUsed ? 'B' : '') /* v13.61 비아 과열·폭주 */].join(':')); // v12.14: 화상·지역장악·재배치 잠금·쿨타임 추가, 대기 중(inReserve) 좌표 제외(이전 전투 위치가 남아 화면마다 달라 거짓 경고)
   parts.sort();
   for (const side of ['player', 'enemy']) { // 양 진영 자원(차례 진영은 전역, 상대는 보관함)
     const r = (side === mySide || !sideStore[side]) ? { sharedCost, emergencyDropsLeft, dropZoneCooldown } : sideStore[side];

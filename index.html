@@ -1476,8 +1476,8 @@ button.charInfoListBtn.ci-card { position: relative; display: flex; flex-directi
 </div>
 
 <script>
-const GAME_BUILD = '00978bc53f'; // 빌드 식별값(자동 생성)
-const GAME_VERSION = '13.98'; // 버전 번호(VERSION 파일)
+const GAME_BUILD = '37ee8e0278'; // 빌드 식별값(자동 생성)
+const GAME_VERSION = '13.99'; // 버전 번호(VERSION 파일)
 // ================= 기본 설정 =================
 // 판 크기는 스테이지마다 다를 수 있음 - loadStage가 setBoardSize로 바꿈(모든 사용처가 함수 안이라 바뀐 값이 바로 반영됨)
 let COLS = 20;
@@ -9439,7 +9439,7 @@ const ROSKVA_LANCE_AIM = { name: '극지의 심판', targetType: 'aim', aimTiles
   previewDamage: (c, t) => t && t.angle != null ? roskvaLancePreview(c, t.angle) : [], aimCommand: (c, ang) => ({ t: 'roskvaLance', id: c.id, angle: ang }) };
 function roskvaUiSync() {
   const u = roskvaPendingUnit();
-  if (!u || replayFast || typeof uiMode === 'undefined' || !isMyUnit(u) || !screenCanAct() || (typeof botActive === 'function' && botActive())) return;
+  if (!u || replayFast || typeof uiMode === 'undefined' || !isMyUnit(u) || !screenCanAct() || (typeof botActive === 'function' && botActive() && teamOf(u) === bot.side)) return; // (v13.99) 봇전에서도 내 로스크바는 다시 조준(예전엔 봇전 전체를 막아 1발 뒤 멈춤)
   if (uiMode && uiMode.type === 'skill' && uiMode.skill === ROSKVA_LANCE_AIM && uiMode.casterId === u.id) return;
   uiMode = { type: 'skill', casterId: u.id, skillIndex: 1, skill: ROSKVA_LANCE_AIM, aimAngle: null };
   attackRangeTiles = new Set(); validTargets = []; flankedTargetIds = new Set(); hoverPreview = null;
